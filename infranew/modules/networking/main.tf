@@ -12,7 +12,10 @@ resource "azurerm_subnet" "subnets" {
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = each.value.address_prefixes
-  private_endpoint_network_policies_enabled = each.key == var.private_endpoints_subnet_name ? false : true
+  service_endpoints    = each.value.service_endpoints
+
+  # --- FIX: Replaced deprecated '..._enabled' with the new block ---
+  private_endpoint_network_policies = each.key == var.private_endpoints_subnet_name ? "Disabled" : "Enabled"
 }
 
 resource "azurerm_private_dns_zone" "app_service" {
@@ -38,4 +41,7 @@ resource "azurerm_private_dns_zone" "servicebus" {
   resource_group_name = var.resource_group_name
   tags                = var.tags
 }
+```
+
+---
 
