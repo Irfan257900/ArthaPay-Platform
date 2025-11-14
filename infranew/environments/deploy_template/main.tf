@@ -32,6 +32,9 @@ module "networking" {
   vnet_address_space          = local.vnet_address_space
   subnets                     = local.subnets
   private_endpoints_subnet_name = local.private_endpoints_subnet_name
+
+  # --- FIX: Add dependency to ensure correct delete order ---
+  depends_on = [azurerm_resource_group.rg_infra]
 }
 
 module "windows_vm_sql" {
