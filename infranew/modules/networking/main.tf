@@ -12,9 +12,12 @@ resource "azurerm_subnet" "subnets" {
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = each.value.address_prefixes
-  service_endpoints    = each.value.service_endpoints
+  
+  # --- THE FINAL FIX: ---
+  # Use lookup() to provide a default '[]' if service_endpoints is missing.
+  # This makes the code defensive against the stale cache.
+  service_endpoints    = lookup(each.value, "service_endpoints", [])
 
-  # --- FIX: Replaced deprecated '..._enabled' with the new block ---
   private_endpoint_network_policies = each.key == var.private_endpoints_subnet_name ? "Disabled" : "Enabled"
 }
 
