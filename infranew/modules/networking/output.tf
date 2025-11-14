@@ -5,7 +5,6 @@ output "subnet_ids" {
 
 output "private_endpoint_subnet_id" {
   description = "The ID of the Private Endpoint subnet."
-  # --- FIX: Use the variable for the name, not a hardcoded string ---
   value       = azurerm_subnet.subnets[var.private_endpoints_subnet_name].id
 }
 
@@ -17,4 +16,4 @@ output "private_dns_zone_ids" {
     storage_blob = azurerm_private_dns_zone.storage_blob.id
     servicebus   = azurerm_private_dns_zone.servicebus.id
   }
-}# Forcing a new commit to clear the cache
+}
