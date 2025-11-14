@@ -21,18 +21,19 @@ locals {
   key_vault_name             = "${local._name_prefix}-kv-${random_string.kv_suffix.result}"
   static_web_app_name        = "${local._name_prefix}-ui" # For your React App
 
-  # --- 4. NEW NETWORKING DEFINITIONS ---
+  # --- 4. NETWORKING DEFINITIONS ---
   # These are the variables your networking module requires
   vnet_address_space          = ["10.0.0.0/16"]
   private_endpoints_subnet_name = "pep-subnet"
   subnets = {
     "vm-subnet" = {
-      address_prefixes = ["10.0.1.0/24"]
-      service_endpoints = []
+      address_prefixes  = ["10.0.1.0/24"]
+      # --- THIS IS THE FIX ---
+      service_endpoints = [] 
     }
     (local.private_endpoints_subnet_name) = {
-      address_prefixes = ["10.0.2.0/24"]
-      service_endpoints = ["Microsoft.Storage"] # Example
+      address_prefixes  = ["10.0.2.0/24"]
+      service_endpoints = ["Microsoft.Storage"]
     }
   }
 }
