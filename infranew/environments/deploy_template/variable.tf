@@ -12,7 +12,8 @@ variable "environment_name" {
 variable "location" {
   description = "The Azure region for the deployment."
   type        = string
-  default     = "East US"
+  # --- FIX: Changed default location ---
+  default     = "southeastasia"
 }
 
 # --- Credentials (From GitHub Secrets) ---

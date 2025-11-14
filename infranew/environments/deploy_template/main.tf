@@ -29,7 +29,6 @@ module "networking" {
   resource_group_name = azurerm_resource_group.rg_infra.name
   tags                = local.common_tags
 
-  # --- FIX: Passing required networking arguments ---
   vnet_address_space          = local.vnet_address_space
   subnets                     = local.subnets
   private_endpoints_subnet_name = local.private_endpoints_subnet_name
@@ -40,11 +39,7 @@ module "windows_vm_sql" {
   vm_name             = local.vm_name
   location            = azurerm_resource_group.rg_infra.location
   resource_group_name = azurerm_resource_group.rg_infra.name
-  
-  # --- FIX #1: Use the 'subnet_ids' output map ---
-  # (This assumes your networking module outputs a map called 'subnet_ids')
   subnet_id           = module.networking.subnet_ids["vm-subnet"] 
-  
   admin_username      = var.vm_admin_username
   admin_password      = var.vm_admin_password
   tags                = local.common_tags
@@ -102,8 +97,6 @@ module "function_apps" {
   dotnet_version                 = var.dotnet_version
   app_service_plan_id            = module.app_service_plan.id
   app_insights_instrumentation_key = "dummy-key" # We should fix this later
-  
-  # --- FIX #2: Corrected typo 'storage_to_account' -> 'storage_account' ---
   storage_account_name           = module.storage_account.name
   storage_account_access_key     = module.storage_account.primary_access_key
 }
@@ -112,7 +105,8 @@ module "function_apps" {
 module "static_web_app" {
   source                = "../../modules/static_web_app"
   name                  = local.static_web_app_name
-  location              = azurerm_resource_group.rg_apps.location
+  # --- FIX: Changed location to an approved region ---
+  location              = "eastasia"
   resource_group_name   = azurerm_resource_group.rg_apps.name
   tags                  = local.common_tags
 }
