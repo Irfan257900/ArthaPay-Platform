@@ -44,3 +44,4 @@ resource "random_string" "kv_suffix" {
   special = false
   upper   = false
 }# Force cache bust v4
+# Force cache bust v4
