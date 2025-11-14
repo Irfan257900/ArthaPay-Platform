@@ -1,0 +1,11 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.fastxe.app.dev",
+      "sha256_cert_fingerprints":
+        ["69:C3:BB:9E:A9:57:63:0B:86:9A:DE:B0:68:0D:77:EF:66:8C:D8:E2:66:82:59:ED:10:C7:F7:4D:19:5F:BD:BB"]
+    }
+  }
+]

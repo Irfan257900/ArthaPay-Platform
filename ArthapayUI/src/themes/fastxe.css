@@ -1,0 +1,439 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Questrial&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root{
+        --bodyBg:#F8FAFC;
+        --primaryColor:#1E48DE;
+        --stepsText:#465668;
+        --inputBorder:#E1E1E1;
+        --textWhite:#ffffff;
+        --textBlack:#000000;
+        --bgblack:#f1f1f1;
+        --lightWhite:#000000;
+        --lightDark:#ffffff;
+        --sectionBG:#FAFAFA;
+        --borderLightGreen:rgba(216, 244, 246, 0.20); /* change  */
+        --inputDarkBorder:#E5ECF2;
+        --labelGrey:#374151; 
+        --stepsGrey:#374151; /* change if required change  */
+        --placeholderGrey:#7c889d;
+        --summaryLabelGrey:#6B7280; /* change if required change  */
+        --sidebarBr:#3C4147;
+        --breadcrum:#6B7280;
+        --profileBr:#3C4147;
+        --borderHr:#E1E1E1;
+        --textPrimary:#1E48DE;       
+        --cancelButtonBlackBg:#ffffff; /* change if required change  */
+        --cancelButtonGreyBorder:#E1E1E1; /* change if required change  */
+        --buttonActiveBg:#7194ec; 
+        --cancelBtnHover:#f5f3f0;
+        --menuText:#6B7280;
+        --menuhover:#EDF1F4;
+        --logoutBtn:#DCE1E8;
+        --logoutBtnHover:#EF5350;
+        --descriptionGreyTwo:#3C4147;
+        --buttonGreyBg:#34383E; /* change if required change  */
+        --leftamountbg:#ECECEC;
+        --leftamontBr:#E1E1E1;
+        --searchBg:#ffffff;
+        --searchBr:#ECECEC;
+        --tableheaderBlack:#f0f5fa;/* change if required change  */
+        --tableheaderBorder:#CCCCCC;/* change if required change  */
+        --coinListBg:#E1E1E1;
+        --coinListActive:#ECECEC;
+        --coinBr:#E1E1E1;
+        --nameCircle:#1E48DE;
+        --rightincard:#f3f3f3;
+        --rightincardBr:#ECECEC;
+        --summaryLabel:#000000;
+        --summaryText:#1F2125;
+        --summarytotalbr:#E1E1E1;
+        --tabletdBg:#F3F3F3;/*ned to change*/
+        --tabletdBghover:#e8ecf6;
+        --modaltextbr:#454C50;
+        --modalcontText:#BBBBBB;
+        --numerBadge:#8C8E91;
+        --btnDisabled:#d1d5db;
+        --signUpDarkBg:#1E48DE;
+        --screenBlackBg:#ffffff;
+        --textGrey:#121212;
+        --uploadCard:#f3f3f3;
+        --textGreen:#33CCAB;
+        --textLightRed:#EF5350;
+        --amountBr:#dbe2e7;
+        --textSkyblue:#4764cb;
+        --darkyellowStatus:#CCAB33;
+        --greySupportedPlotforms:#999999;/* change if required change  */
+        --loginGreyBorder:#e5ecf2;
+        --transparentBlackBg:rgba(56, 57, 59, 0); /* change if required change  */
+        --permissionTopbr:#E1E1E1;
+        --textGray:#B6B8BA;
+        --textGray2:#99999A;
+        --requiredRed:#EF5350;
+        --cardBg:rgba(56, 57, 59, 0.04);
+        --cardBorder:#dfdfed;
+        --amounttableHeader:#F3F3F3; /* change if required change  */
+        --addLabelBg:#FAFAFA;/* change if required change  */
+        --kendoheader:#ffffff;
+        --kendoheadbr:#ffffff;
+        --kbodyrow:#ffffff;
+        --kbodyrowbr:#ffffff;
+        --kendotdBghover:#F0F1F1;
+        --kendotdBghoverBr:#EBEFF1;
+        --kendofooter:#ffffff;
+        --kendofooterbr:#ffffff;
+        --kfooterarrow:#5D5858;
+        --kheadText:#636466;
+        --kpagetrbg:#7caff15e;
+        --kpagenum:#5D5858;
+        --tableInputBg:#ffffff;   /* change if required change  */
+        --scrollBar:#f3f4f9;
+        --referralbg:#FDFDFD;
+        --errorBorderRed:#EF5350;
+        --closedStatus:#808286;
+        --textRed:#EF5350;
+        --referralborder:#717378;
+        --lighttext:#000000;
+        --tabbg:#ffffff;
+        --tabActive:#1E48DE;
+        --tabcolor:#555e67;
+        --profileBtn:#34383E;
+        --amountBbr:#000000;
+        --getcodebr:#505050;
+        --labelborder:#31363A;
+        --profileTabActiveBg:#EDF1F4;
+        --notifPara:#636466;
+        --profilehrbr:#E1E1E1;
+        --profilesubtext:#000000;
+        --blueBorder:#1C77EA;
+        --errorpara:#A1A2A3;
+        --textApproved:#33CCAB;
+        --textPending:#CCAB33;
+        --textReject:#EF5350;
+        --textSubmit:#1E48DE;
+        --inputDisabled:#dcdbdc;
+        --greennotification:#33CCAB;
+        --secondaryBg:#ebebed;
+        --qrcodeBg:#E1E1E1;
+        --overlayblack:rgba(254, 525, 505, 0.50);
+        --registerLabelBg:#ffffff;
+        --errorBg:#EF5350;
+        --warningBg:#CCAB33;
+        --infoBg:#17a2b8;
+        --partiallyPaid:#CCAB33;
+        --StrokeColor:#DBE2E7;
+        --tabletext:#8F9092;
+        --inputfield:#2F3337;
+        --feesviewborder:#773E13;
+        --membershipcardsbg:#ECECEC;
+        --membershiptextblue:#0EB0FB;
+        --membershipborder:#1C77EA;
+        --membershiptextsilver:#D0B28B; 
+        --membershipbordersilver:#CFBDA9;
+        --membershipgoldtext:#E9BD5C;
+        --membershiplightsilver:#AEBABA;
+        --membershipfreecardbg:#e9e6e6;
+        --membershipvaultsbg:#1B1C1F;
+        --membershiptableborder:#e0eaf3;
+        --browncolor:#A56C41;
+        --deposisttablebr:#25272B;
+        --topbr:#222428;        
+        --membershiptopbr:#222428;
+        --referralBg:#f1f1f1;
+        --referralBr:#e5ecf2;
+        --dbkpiPara:#6B7280;
+        --dbkpiText:#0a0d11;
+        --dbkpiStroke:#DBE2E7;
+        --titleColor:#041140;
+        --kpcardhover:#f1f2f9;
+        --advcard:#eef1f3;
+        --paraColor:#6B7280;
+        --subTextColor:#041140;
+        --BlackBg:#e8ecf6;
+        --sidedrawerBg:#ffffff;
+        --defaultBadge:#1E88E5;
+        --radioBtn:#000000;
+        --Unfreezed: #3CB371;
+        --FreezePending: #CCAB33;
+        --UnfreezePending: #FF7F50;
+        --UnderMaintenance: #B22222;
+        --Freezed: #B0BEC5;
+        --leftlistHover:#1E48DE;
+        --pendingStatus:#CCAB33;
+        --cardbackground:#ffffff;
+        --tabsBg:#f0f5fa;
+        --cryptoline:#ced2da;
+        --Borderbr:#293648;
+        --inputBg:#f0f5fa;
+        --notPaid:#5981FF;
+        --paidApproved:#33CCAB;
+        --canceled:#EF5350;
+        --submiteted:#2757f6;
+        --rewardsTabsText:#555e67;
+        --rewardsBtnBg:#e1e2ed;
+        --questGreenBg:#8ae8b1;
+        --questGreenBorder:#0ed14321;
+        --questPurpleBg:#c6afe9;
+        --questPurpleBorder:#4e349a;
+        --inputTextBorder:#b4bbc1;
+        --orangeBg:#e9ceaf;
+        --textvodika:#3354CC;
+        --disableBtnBg:#E2E8F0;
+        --kpidarkColor:#132A7C;
+        --inactiveTabColor:#000000;
+        --skeletonLoader: linear-gradient(90deg, rgba(0, 0, 0, 0.06) 25%, rgba(0, 0, 0, 0.15) 37%, rgba(0, 0, 0, 0.06) 63%);
+        --themeIcons:url(./icons/fasxe-light-theme-icons.svg);
+
+    }
+    :root[class="dark"] {
+        --bodyBg:#000000;
+        --primaryColor:#4A7DFF;
+        --stepsText:#8A8A8C;
+        --inputBorder:#242d4c;
+        --textWhite:#ffffff;
+        --textBlack:#000000;
+        --lightWhite:#ffffff;
+        --lightDark:#ffffff;
+        --bgblack:#000000;
+        --sectionBG:#181a24;
+        --borderLightGreen:rgba(216, 244, 246, 0.20);
+        --Borderbr:#293648;
+        --inputDarkBorder:#414656;
+        --labelGrey:#A3B3D3;
+        --stepsGrey:#A3B3D3;
+        --placeholderGrey:#687286;
+        --summaryLabelGrey:#96a6be;
+        --breadcrum:#DBE2E7;
+        --sidebarBr:#414656;
+        --profileBr:#414656;
+        --borderHr:#d8f4f60a;
+        --textPrimary:#4A7DFF;
+        --cancelButtonBlackBg:#020923;
+        --cancelButtonGreyBorder:#1E232A;
+        --buttonActiveBg:#7194ec;
+        --cancelBtnHover:#2C333A;
+        --textRed:#EF5350;
+        --menuText:#abbdca;
+        --menuhover:#9da5c41a;
+        --logoutBtn:#293240;
+        --logoutBtnHover:#EF5350;
+        --descriptionGreyTwo:rgba(255, 255, 255, 0.60);
+        --buttonGreyBg:#34383E;
+        --leftamountbg:#1A1A1A;
+        --leftamontBr:#3C4147;
+        --searchBg:#000000;
+        --searchBr:#323130;
+        --tableheaderBlack:#2d303b;
+        --tableheaderBorder:#3C4147;
+        --kheadText:#DBE2E7;
+        --coinListBg:#2d303b;
+        --coinListActive:#2d303b;
+        --coinBr:#3C4147;
+        --nameCircle:#4A7DFF;
+        --transparentBlackBg:rgba(56, 57, 59, 0.04);
+        --rightincard:#242d40;
+        --rightincardBr:#3C4147;
+        --summaryLabel:#DBE2E7;
+        --summaryText:#FFFFFF;
+        --summarytotalbr:#444B4F;
+        --tabletdBg:#2d303b;
+        --tabletdBghover:#313441;
+        --signUpDarkBg:#282c33;
+        --screenBlackBg:#2d303b;
+        --textGrey:#ccd0d3;
+        --loginGreyBorder:#1E232A;
+        --modaltextbr:#454C50;
+        --modalcontText:#BBBBBB;
+        --numerBadge:#8C8E91;
+        --btnDisabled:#f5f5f4;
+        --uploadCard:#1E1F22;
+        --greySupportedPlotforms:#999999;
+        --textGreen:#33CCAB;
+        --textLightRed:#EF5350;
+        --textSkyblue:#38CFED;
+        --amountBr:#262e48;
+        --darkyellowStatus:#B88A00;
+        --permissionTopbr:#3C4147;
+        --textGray:#B6B8BA;
+        --textGray2:#99999A;
+        --bgOrange:#4A7DFF;
+        --requiredRed:#EF5350;
+        --cardBg:rgba(56, 57, 59, 0.04);
+        --cardBorder:rgba(216, 244, 246, 0.09);
+        --addLabelBg:#101014;
+        --amounttableHeader:rgba(56, 57, 59, 0.04);
+        --kendoheader:#2d303b;
+        --kendoheadbr:#242d4c;
+        --kbodyrow:#16171A;
+        --kbodyrowbr:#1E232A;
+        --kendotdBghover:#2d303b;
+        --kendotdBghoverBr:#3C4147;
+        --kendofooter:#34383E;
+        --kendofooterbr:#555E63;
+        --kfooterarrow:#999B9E;
+        --kpagetrbg:#00C9FF36;
+        --kpagenum:#999B9E;
+        --tableInputBg:#151619;
+        --scrollBar:#000000;
+        --referralbg:#000F1E;
+        --referralborder:#717378;
+        --lighttext:#A5A6A8;
+        --tabbg:#1E48DE1a;
+        --profileTabActiveBg:#9da5c41a;
+        --tabActive:#1E48DE;
+        --overlayblack:rgba(73, 78, 103, 0.12);
+        --profileBtn:#34383E;
+        --amountBbr:#262e48;
+        --errorBorderRed:#EF5350;
+        --closedStatus:#808286;
+        --tabcolor:#94A3B8;
+        --getcodebr:#505050;
+        --labelborder:#31363A;
+        --notifPara:#908D8D;
+        --profilehrbr:#242d4c;
+        --profilesubtext:#F1F1F1;
+        --blueBorder:#1C77EA;
+        --errorpara:#A1A2A3;
+        --textApproved:#33CCAB;
+        --textPending:#356DE9;
+        --textReject:#EF5350;
+        --textSubmit:#7b95ea;
+        --inputDisabled:#3d46648a;
+        --secondaryBg:#1F2125;
+        --greennotification:#33CCAB;
+        --qrcodeBg:#34383E;
+        --registerLabelBg:#1F2125;
+        --errorBg:#EF5350;
+        --warningBg:#CCAB33;
+        --infoBg:#17a2b8;
+        --partiallyPaid:#CCAB33;
+        --StrokeColor:#2f3242;
+        --tabletext:#8F9092;
+        --inputfield:#9da5c41a;
+        --feesviewborder:#773E13;
+        --membershipcardsbg:#000F0C;
+        --membershiptextblue:#0EB0FB;
+        --membershipborder:#80D7FF;
+        --membershiptextsilver:#D0B28B; 
+        --membershipbordersilver:#CFBDA9;
+        --membershipgoldtext:#CCAB33;
+        --membershiplightsilver:#AEBABA;
+        --membershipfreecardbg:#1F2023;
+        --membershipvaultsbg:#1B1C1F;
+        --membershiptableborder:#272A2D;
+        --browncolor:#A56C41;
+        --deposisttablebr:#25272B;
+        --membershiptopbr:#222428;
+        --referralBg:#020923;
+        --referralBr:#242d4c;
+        --dbkpiPara:#96a6be;
+        --dbkpiText:#E5ECF2;
+        --dbkpiStroke:#2f3242;
+        --titleColor:#DBE2E7;
+        --kpcardhover:#181a24;
+        --advcard:#373e4c;
+        --paraColor:#abbdca;
+        --subTextColor:#ffffff;
+        --BlackBg:#000000;
+        --sidedrawerBg:#181a24;
+        --defaultBadge:#1E88E5;
+        --radioBtn:#576287;
+        --Unfreezed: #3CB371;
+        --FreezePending: #FFD700;
+        --UnfreezePending: #FF7F50;
+        --UnderMaintenance: #B22222;
+        --Freezed: #B0BEC5;
+        --leftlistHover:#9da5c41a;
+        --pendingStatus:#CCAB33;
+        --cardbackground:#181a24;
+        --tabsBg:#2f3242;
+        --cryptoline:#2f3242;
+        --inputBg:#9da5c41a;
+        --notPaid:#5981FF;
+        --paidApproved:#3CB371;
+        --canceled:#f65757;
+        --submiteted:#7b95ea;
+        --rewardsTabsText:#E5ECF2;
+        --rewardsBtnBg:#4f617d63;
+        --questGreenBg:#006b2d;
+        --questGreenBorder:#04694b6b;
+        --questPurpleBg:#975bdc;
+        --questPurpleBorder:#6c40ed;
+        --inputTextBorder:#3e4f68;
+        --orangeBg:#6c550e;
+        --kpidarkColor:#E5ECF2;
+        --inactiveTabColor:#6B9EFF;
+        --skeletonLoader: linear-gradient(90deg, rgba(26, 46, 73, 0.442) 25%, rgba(26, 36, 84, 0.464) 37%, rgba(56, 46, 98, 0.421) 63%);
+        --textvodika:#BACBFC;
+        --disableBtnBg:#334155;
+        --dropdownBg:#181a24;
+        --dropdownSelectBg:#334155;
+        --skeletonLoader: linear-gradient(90deg, rgba(85, 101, 114, 0.1) 25%, rgba(154, 155, 157, 0.23) 37%, rgba(114, 114, 114, 0.27) 63%);
+        --themeIcons:url(./icons/fasxe-dark-theme-icons.svg);
+    } 
+    
+}
+.ant-picker-cell-hover.ant-picker-cell-selected .ant-picker-cell-inner{@apply !text-textWhite}
+/**** list and kendo hover color ****/
+.light .physical-badge {@apply !font-medium}
+.light .coin-item.coin-flexgrow.db-coinlist:hover .ant-list-item-meta-title p, .light .coin-item.coin-flexgrow.db-coinlist.active .ant-list-item-meta-title p{@apply text-lighttext}
+.light .coin-flexgrow.db-coinlist.active .ant-list-item-meta-avatar .custom-rounded-coin,.light .coin-flexgrow.db-coinlist:hover .ant-list-item-meta-avatar .custom-rounded-coin{@apply !bg-transparent !rounded-full !text-lighttext}
+.light .coin-flexgrow.db-coinlist.active .ant-list-item-meta-avatar div,.light .coin-flexgrow.db-coinlist:hover .ant-list-item-meta-avatar div{@apply !bg-advcard !rounded-full !text-lighttext}
+.light .coin-flexgrow.db-coinlist.active .ant-list-item-meta-title p,.light .coin-flexgrow.db-coinlist:hover .ant-list-item-meta-title p,
+.light .coin-flexgrow.db-coinlist.active .ant-list-item-meta-title span,.light .coin-flexgrow.db-coinlist:hover .ant-list-item-meta-title span,
+.light .coin-flexgrow.db-coinlist:hover .coin-fillname,.light .coin-flexgrow.db-coinlist.active .coin-fillname,
+.light .coin-flexgrow.db-coinlist.active .d-nonecoinlist .coinval-width span,.light .coin-flexgrow.db-coinlist:hover .d-nonecoinlist .coinval-width span,
+.light .coin-flexgrow.db-coinlist:hover .d-coinlist .coinval-width,.light .coin-flexgrow.db-coinlist.active .d-coinlist .coinval-width{@apply !text-lightDark}
+.light .coin-flexgrow.db-coinlist.active .ant-list-item-meta-description div,.light .coin-flexgrow.db-coinlist:hover .ant-list-item-meta-description div{@apply !text-lightDark !font-normal}
+.light .coin-flexgrow.db-coinlist.active .physical-badge ,.light .coin-flexgrow.db-coinlist:hover .physical-badge,
+.light .coin-flexgrow.db-coinlist:hover .virtual-badge,.light .coin-flexgrow.db-coinlist.active .virtual-badge{@apply !bg-advcard }
+.light .coin-item.active .ant-list-item-meta-title .coin-title,.light .coin-item.active .ant-list-item-meta-description .coin-fullname,
+.light .coin-item:hover .ant-list-item-meta-title .coin-title,
+.light .coin-item:hover .ant-list-item-meta-description .coin-fullname,.light .coin-flexgrow.db-coinlist.active .coinval-width span,.light .coin-flexgrow.db-coinlist:hover .coinval-width span{@apply !text-lightDark}
+.light .coin-flexgrow.db-coinlist.active .d-coinlist,.light .coin-flexgrow.db-coinlist:hover .d-coinlist{@apply !text-lightDark}
+.light .coin-item.active .d-nonecoinlist .coin-balance,.light .coin-item:hover .d-nonecoinlist .coin-balance{@apply !text-lightDark font-medium}
+.light .coin-item.active .d-nonecoinlist.d-coinlist span,.light .coin-item:hover .d-nonecoinlist.d-coinlist span{@apply !text-subTextColor font-medium}
+.light .coin-item.active .d-nonecoinlist span,.light .coin-item:hover .d-nonecoinlist span{@apply !text-lightDark font-medium}
+/* kendo*/
+.light .k-grid-table .k-master-row:hover td{@apply !bg-primaryColor;}
+.light .k-grid-table .k-master-row:hover td .transaction-id-text,.light .k-grid-table .k-master-row:hover td,
+.light .k-grid-table .k-master-row:hover td p,.light .k-grid-table .k-master-row:hover td span,.light .k-grid-table .k-master-row:hover td div,
+.light .k-grid-table .k-master-row:hover td .c-pointertransaction-id-text{@apply !text-lightDark;}
+.light .k-grid-table .k-master-row:hover td .custom-icon{@apply  !bg-advcard !text-lighttext;}
+.light .k-grid-table .k-master-row:hover td .anticon-copy{width: 24px;height: 24px;background-position: -576px -9px !important;}
+.light .k-grid-table .k-master-row:hover td .custom-checkbox input[type="checkbox"]+span {  width: 20px;  height: 20px; cursor: pointer;  background-position: -569px -326px !important;}
+.light .k-grid-table .k-master-row:hover td .custom-checkbox input[type="checkbox"]:checked+span {  width: 20px;  height: 20px; cursor: pointer;  background-position: -536px -373px !important;}
+ 
+.light .coin-item.active .ant-list-item-meta-avatar .icon.notificationwithdraw,.light .coin-item:hover .ant-list-item-meta-avatar .icon.notificationwithdraw{background-position:-711px -659px !important;width:30px;height:30px;}
+.light .coin-item.active .ant-list-item-meta-avatar .icon.notificationdeposit,.light .coin-item:hover .ant-list-item-meta-avatar .icon.notificationdeposit{background-position:-630px -659px !important;width:30px;height:30px;}
+.light .coin-item.active .ant-list-item-meta-avatar .icon.notificationpayeeApproved,.light .coin-item:hover .ant-list-item-meta-avatar .icon.notificationpayeeApproved{background-position:-744px -706px !important;width:30px;height:30px;}
+.light .coin-item.active .ant-list-item-meta-avatar .icon.notificationpayeerejected,.light .coin-item:hover .ant-list-item-meta-avatar .icon.notificationpayeerejected{background-position:-782px -706px !important;width:30px;height:30px;}
+.light .coin-item.active .ant-list-item-meta-avatar .icon.notificationaccountcreation,.light .coin-item:hover .ant-list-item-meta-avatar .icon.notificationaccountcreation{background-position:-979px -659px !important;width:30px;height:30px;}
+.light .coin-item.active .ant-list-item-meta-avatar .icon.notificationcardrecharge,.light .coin-item:hover .ant-list-item-meta-avatar .icon.notificationcardrecharge{background-position:-670px -706px !important;width:30px;height:30px;}
+.light .coin-item.active .ant-list-item-meta-avatar .icon.notificationtopup,.light .coin-item:hover .ant-list-item-meta-avatar .icon.notificationtopup{background-position:-668px -659px !important;width:30px;height:30px;}
+.light .coin-item.active .ant-list-item-meta-avatar .icon.notificationkyc,.light .coin-item:hover .ant-list-item-meta-avatar .icon.notificationkyc{background-position:-1017px -659px !important;width:30px;height:30px;}
+.light .coin-item.active .ant-list-item-meta-avatar .icon.notificationbuy,.light .coin-item:hover .ant-list-item-meta-avatar .icon.notificationbuy{background-position:-751.5px -659px !important;width:30px;height:30px;}
+.light .coin-item.active .ant-list-item-meta-avatar .icon.notificationsell,.light .coin-item:hover .ant-list-item-meta-avatar .icon.notificationsell{background-position:-788px -659px !important;width:30px;height:30px;}
+.light .coin-item.active .ant-list-item-meta-avatar .icon.notificationapplycard,.light .coin-item:hover .ant-list-item-meta-avatar .icon.notificationapplycard{background-position:-825px -659px !important;width:30px;height:30px;}
+.light .coin-item.active .ant-list-item-meta-avatar .icon.notificationpurchase,.light .coin-item:hover .ant-list-item-meta-avatar .icon.notificationpurchase{background-position:-430.5px -659px !important;width:30px;height:30px;}
+.light .coin-item.active .ant-list-item-meta-avatar .icon.notificationpayeesubmitted,.light .coin-item:hover .ant-list-item-meta-avatar .icon.notificationpayeesubmitted{background-position:-863.2px -706px !important;width:30px;height:30px;}
+.light .coin-item.active .ant-list-item-meta-avatar .icon.notificationsumsub,.light .coin-item:hover .ant-list-item-meta-avatar .icon.notificationsumsub{background-position:-902.2px -706px  !important;width:30px;height:30px;}
+.light .coin-item.active .ant-list-item-meta-avatar .icon.notificationcustomer,.light .coin-item:hover .ant-list-item-meta-avatar .icon.notificationcustomer{background-position:-1016.2px -707px !important;width:30px;height:30px;}
+.light .coin-item.active .ant-list-item-meta-avatar .icon.notificationcardapply,.light .coin-item:hover .ant-list-item-meta-avatar .icon.notificationcardapply{background-position:-1016.2px -742px !important;width:30px;height:30px;}
+.light .coin-item.active .ant-list-item-meta-avatar .icon.notificationcardactive,.light .coin-item:hover .ant-list-item-meta-avatar .icon.notificationcardactive{background-position:-630px -705px !important;width:30px;height:30px;}
+.light .coin-item.active .ant-list-item-meta-avatar .icon.notificationcardOnlinePayments,.light .coin-item:hover .ant-list-item-meta-avatar .icon.notificationcardOnlinePayments{background-position:-980.5px -743px !important;width:30px;height:30px;}
+.custom-input-border.ant-select:not(.ant-select-customize-input) .ant-select-selector {@apply !border-inputBg}
+.custom-input-border .ant-select:not(.ant-select-customize-input) .ant-select-selector {@apply !border-inputBg}
+.light .rewards-transaction table tbody tr:hover{@apply !bg-primaryColor}
+/* .light .rewards-transaction table tbody tr:not(.recent-activity-empty):hover{@apply !bg-tabletdBghover}
+.light .rewards-transaction table tbody tr:not(.recent-activity-empty):hover td span{@apply !text-subTextColor}
+.light .rewards-transaction table tbody tr:not(.recent-activity-empty):hover td{@apply !text-subTextColor} */
+.light .rewards-transaction table tbody tr:hover td,.light .rewards-transaction table tbody tr:hover td div,.light .rewards-transaction table tbody tr:hover td span{@apply !text-lightDark}
+.light .rewards-transaction table tbody tr:hover td .anticon-copy{width: 24px;height: 24px;background-position: -576px -9px !important;}
+
+.custom-btn-links,.custom-btn-links:hover{@apply !text-textWhite}

@@ -1,0 +1,11 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "money.rapidz.rapidzmoney.dev",
+      "sha256_cert_fingerprints":
+        ["D6:41:6E:94:59:80:BB:B0:CE:0F:CA:37:2C:63:51:CC:84:CA:8B:E5:D2:24:8F:1B:C4:4D:64:1E:66:69:5D:71"]
+    }
+  }
+]

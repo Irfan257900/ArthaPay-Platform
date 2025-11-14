@@ -1,0 +1,55 @@
+trigger: none
+pr: none
+
+variables:
+  AcrServiceConnection: 'paybaseprd'         # Azure DevOps ACR service connection name
+  BuildConfiguration: 'Release'
+  DockerImageName: 'uipaybase'
+  ACR_NAME: 'Paybaseacr'                      # ACR name without domain
+  ACR_LOGIN_SERVER: 'paybaseacr.azurecr.io'   # Full ACR login server
+
+stages:
+- stage: CI_Build_Scan
+  displayName: 'CI Build & Security Scans'
+
+  jobs:
+  - job: BuildAndScanApp
+    displayName: 'Application Build and Security Scan'
+    pool:
+      name: paybaseprd
+      demands:
+        - Agent.Name -equals paybaseprd
+
+    steps:
+    - checkout: self
+
+    # === Build Docker Image ===
+    - task: Docker@2
+      displayName: 'Build Docker Image'
+      inputs:
+        containerRegistry: '$(AcrServiceConnection)'
+        repository: '$(DockerImageName)'
+        command: 'build'
+        Dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
+        tags: '$(Build.BuildId)'
+
+    # === Push Docker Image ===
+    - task: Docker@2
+      displayName: 'Push Docker Image'
+      inputs:
+        containerRegistry: '$(AcrServiceConnection)'
+        repository: '$(DockerImageName)'
+        command: 'push'
+        tags: |
+          $(Build.BuildId)
+
+    - task: CmdLine@2
+      inputs:
+        script: |
+          # List all Docker images, sort by creation date (oldest first), exclude latest 2, and delete them
+          
+          docker image rm $(docker image ls -q --format '{{.ID}}' | sort | head -n -2)
+          
+          #clean up chache
+          
+          docker buildx prune -a -f

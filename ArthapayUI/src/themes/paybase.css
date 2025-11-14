@@ -1,0 +1,451 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Questrial&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --bodyBg: #ECEDEE;
+        --primaryColor: #9EEB37;
+        --kridhoverfilterhoverbg: #ECEDEE;
+        --kridhoverfilterhoverbgtext: #131315;
+        --stepsText: #465668;
+        --inputBorder: #E1E1E1;
+        --textWhite: #ECEDEE;
+        --textBlack: #131315;
+        --bgblack: rgb(19 19 21 / 6%);
+        --lightWhite: #131315;
+        --lightDark: #131315;
+        --sectionBG: #ECEDEE;
+        --borderLightGreen: rgba(216, 244, 246, 0.20);
+        /* change  */
+        --inputDarkBorder: #E5ECF2;
+        --labelGrey: #0F3239;
+        --stepsGrey: #374151;
+        /* change if required change  */
+        --placeholderGrey: #787878;
+        --summaryLabelGrey: #6B7280;
+        /* change if required change  */
+        --sidebarBr: #3C4147;
+        --breadcrum: #6B7280;
+        --profileBr: #3C4147;
+        --borderHr: #E1E1E1;
+        --textPrimary: #0F3239;
+        --cancelButtonBlackBg: #ffffff;
+        /* change if required change  */
+        --cancelButtonGreyBorder: #E1E1E1;
+        /* change if required change  */
+        --buttonActiveBg: #0F3239;
+        --cancelBtnHover: #f5f3f0;
+        --menuText: rgb(19 19 21 / 60%);
+        --menuhover: #ECEDEE;
+        --logoutBtn: rgb(19 19 21 / 6%);
+        --logoutBtnHover: #EF5350;
+        --descriptionGreyTwo: #3C4147;
+        --buttonGreyBg: #0F3239;
+        /* change if required change  */
+        --leftamountbg: #ECECEC;
+        --leftamontBr: #E1E1E1;
+        --searchBg: #ffffff;
+        --searchBr: #ECECEC;
+        --tableheaderBlack: rgb(19 19 21 / 6%);
+        /* change if required change  */
+        --tableheaderBorder: #CCCCCC;
+        /* change if required change  */
+        --coinListBg: #E1E1E1;
+        --coinListActive: #ffffff;
+        --coinBr: #E1E1E1;
+        --nameCircle: #0F3239;
+        --rightincard: #ECEDEE;
+        --rightincardBr: #ECECEC;
+        --summaryLabel: #000000;
+        --summaryText: #1F2125;
+        --summarytotalbr: #E1E1E1;
+        --tabletdBg: #F3F3F3;
+        /*ned to change*/
+        --tabletdBghover: rgb(219 241 246 / 40%);
+        --modaltextbr: #454C50;
+        --modalcontText: #BBBBBB;
+        --numerBadge: #8C8E91;
+        --btnDisabled: #d1d5db;
+        --signUpDarkBg: #9EEB37;
+        --screenBlackBg: #ffffff;
+        --textGrey: #121212;
+        --uploadCard: #f3f3f3;
+        --textGreen: #21811f;
+        --textLightRed: #ef2a26;
+        --amountBr: #dbe2e7;
+        --textSkyblue: #4764cb;
+        --darkyellowStatus: #b1901b;
+        --greySupportedPlotforms: #999999;
+        /* change if required change  */
+        --loginGreyBorder: #e5ecf2;
+        --transparentBlackBg: rgba(56, 57, 59, 0);
+        /* change if required change  */
+        --permissionTopbr: #E1E1E1;
+        --textGray: #B6B8BA;
+        --textGray2: #99999A;
+        --requiredRed: #EF5350;
+        --cardBg: rgba(56, 57, 59, 0.04);
+        --cardBorder: #dfdfed;
+        --amounttableHeader: #F3F3F3;
+        /* change if required change  */
+        --addLabelBg: #FAFAFA;
+        /* change if required change  */
+        --kendoheader: #ffffff;
+        --kendoheadbr: #ffffff;
+        --kbodyrow: #ffffff;
+        --kbodyrowbr: #ffffff;
+        --kendotdBghover: #ECEDEE;
+        --kendotdBghoverBr: #EBEFF1;
+        --kendofooter: #ffffff;
+        --kendofooterbr: #ffffff;
+        --kfooterarrow: #5D5858;
+        --kheadText: #636466;
+        --kpagetrbg: #7caff15e;
+        --kpagenum: #5D5858;
+        --tableInputBg: #ffffff;
+        /* change if required change  */
+        --scrollBar: #f3f4f9;
+        --referralbg: #FDFDFD;
+        --errorBorderRed: #EF5350;
+        --closedStatus: #808286;
+        --textRed: #EF5350;
+        --referralborder: #717378;
+        --lighttext: #000000;
+        --tabbg: #ffffff;
+        --tabActive: #0F3239;
+        --tabcolor: #0F3239;
+        --profileBtn: #34383E;
+        --amountBbr: #000000;
+        --getcodebr: #505050;
+        --labelborder: #31363A;
+        --profileTabActiveBg: #ECEDEE;
+        --notifPara: #636466;
+        --profilehrbr: #E1E1E1;
+        --profilesubtext: #000000;
+        --blueBorder: #1C77EA;
+        --errorpara: #A1A2A3;
+        --textApproved: #33CCAB;
+        --textPending: #CCAB33;
+        --textReject: #EF5350;
+        --textSubmit: #rgb(19 19 21 / 10%);
+        --inputDisabled: #dcdbdc;
+        --greennotification: #0F3239;
+        --secondaryBg: #ebebed;
+        --qrcodeBg: #E1E1E1;
+        --overlayblack: #ECEDEE;
+        --registerLabelBg: #ffffff;
+        --errorBg: #EF5350;
+        --warningBg: #CCAB33;
+        --infoBg: #17a2b8;
+        --partiallyPaid: #CCAB33;
+        --StrokeColor: rgb(19 19 21 / 7%);
+        --tabletext: #8F9092;
+        --inputfield: #2F3337;
+        --feesviewborder: #773E13;
+        --membershipcardsbg: #ECECEC;
+        --membershiptextblue: #0EB0FB;
+        --membershipborder: #1C77EA;
+        --membershiptextsilver: #D0B28B;
+        --membershipbordersilver: #CFBDA9;
+        --membershipgoldtext: #E9BD5C;
+        --membershiplightsilver: #AEBABA;
+        --membershipfreecardbg: #e9e6e6;
+        --membershipvaultsbg: #1B1C1F;
+        --membershiptableborder: #e0eaf3;
+        --browncolor: #A56C41;
+        --deposisttablebr: #25272B;
+        --topbr: #222428;
+        --membershiptopbr: #222428;
+        --referralBg: #f1f1f1;
+        --referralBr: #e5ecf2;
+        --dbkpiPara: #6B7280;
+        --dbkpiText: #0a0d11;
+        --dbkpiStroke: #DBE2E7;
+        --titleColor: #131315;
+        --kpcardhover: #ffffff;
+        --advcard: #eef1f3;
+        --paraColor: rgb(19 19 21 / 60%);
+        --subTextColor: #131315;
+        --BlackBg: #ECEDEE;
+        --sidedrawerBg: #ffffff;
+        --defaultBadge: #9EEB37;
+        --radioBtn: #131315;
+        --Unfreezed: #3CB371;
+        --FreezePending: #CCAB33;
+        --UnfreezePending: #FF7F50;
+        --UnderMaintenance: #B22222;
+        --Freezed: #B0BEC5;
+        --leftlistHover: rgb(19 19 21 / 6%);
+        --pendingStatus: #b1911f;
+        --cardbackground: #ffffff;
+        --tabsBg: #f0f5fa;
+        --cryptoline: #ced2da;
+        --Borderbr: #293648;
+        --inputBg: rgb(219 241 246 / 50%);
+        --notPaid: #5981FF;
+        --paidApproved: #33CCAB;
+        --canceled: #EF5350;
+        --submiteted: #2757f6;
+        --rewardsTabsText: #555e67;
+        --rewardsBtnBg: #e1e2ed;
+        --questGreenBg: #8ae8b1;
+        --questGreenBorder: #0ed14321;
+        --questPurpleBg: #c6afe9;
+        --questPurpleBorder: #4e349a;
+        --inputTextBorder: #b4bbc1;
+        --orangeBg: #e9ceaf;
+        --textvodika: #0F3239;
+        --disableBtnBg: rgb(19 19 21 / 10%);
+        --kpidarkColor: #132A7C;
+        --inactiveTabColor: #000000;
+        --namecircletext:#ECEDEE;
+        --skeletonLoader: linear-gradient(90deg, rgba(0, 0, 0, 0.06) 25%, rgba(0, 0, 0, 0.15) 37%, rgba(0, 0, 0, 0.06) 63%);
+        --themeIcons: url(./icons/paybase-light-theme-icons.svg);
+
+    }
+
+    :root[class="dark"] {
+        --bodyBg: #232323;
+        --primaryColor: #9EEB37;
+        --tabhovertext: #ECEDEE;
+        --kridhoverfilterhoverbg: rgb(236 237 238 / 11%);
+        --kridhoverfilterhoverbgtext: #ECEDEE;
+        --stepsText: #8A8A8C;
+        --inputBorder: #333541;
+        --textWhite: #9EEB37;
+        --textBlack: #000000;
+        --lightWhite: #ECEDEE;
+        --lightDark: #000000;
+        --bgblack: #000000;
+        --sectionBG: #131315;
+        --borderLightGreen: rgba(216, 244, 246, 0.20);
+        --Borderbr: #293648;
+        --inputDarkBorder: rgb(219 241 246 / 11%);
+        --labelGrey: #DBF1F6;
+        --stepsGrey: #A3B3D3;
+        --placeholderGrey: rgba(238, 236, 238, 0.42);
+        --summaryLabelGrey: #96a6be;
+        --breadcrum: #DBE2E7;
+        --sidebarBr: #414656;
+        --profileBr: #000000;
+        --borderHr: #d8f4f60a;
+        --textPrimary: #9EEB37;
+        --cancelButtonBlackBg: #020923;
+        --cancelButtonGreyBorder: #1E232A;
+        --buttonActiveBg: #9EEB37;
+        --cancelBtnHover: #2C333A;
+        --textRed: #EF5350;
+        --menuText: rgb(236 237 238 / 45%);
+        --menuhover: rgb(236 237 238 / 8%);
+        --logoutBtn: rgb(236 237 238 / 18%);
+        --logoutBtnHover: #EF5350;
+        --descriptionGreyTwo: rgba(255, 255, 255, 0.60);
+        --buttonGreyBg: #0F3239;
+        --leftamountbg: #1A1A1A;
+        --leftamontBr: #3C4147;
+        --searchBg: #000000;
+        --searchBr: #323130;
+        --tableheaderBlack: rgb(236 237 238 / 5%);
+        --tableheaderBorder: #000000;
+        --kheadText: #DBE2E7;
+        --coinListBg: #2d303b;
+        --coinListActive: rgb(236 237 238 / 11%);
+        --coinBr: #3C4147;
+        --nameCircle: #9EEB37;
+        --transparentBlackBg: rgba(56, 57, 59, 0.04);
+        --rightincard: rgb(236 237 238 / 5%);
+        --rightincardBr: #3C4147;
+        --summaryLabel: #DBE2E7;
+        --summaryText: #FFFFFF;
+        --summarytotalbr: #444B4F;
+        --tabletdBg: #2d303b;
+        --tabletdBghover: rgb(15 50 57 / 26%);
+        --signUpDarkBg: #282c33;
+        --screenBlackBg: rgb(219 241 246 / 4%);
+        --textGrey: #ccd0d3;
+        --loginGreyBorder: #1E232A;
+        --modaltextbr: #454C50;
+        --modalcontText: #BBBBBB;
+        --numerBadge: #8C8E91;
+        --btnDisabled: #f5f5f4;
+        --uploadCard: #1E1F22;
+        --greySupportedPlotforms: #999999;
+        --textGreen: #33CCAB;
+        --textLightRed: #EF5350;
+        --textSkyblue: #38CFED;
+        --amountBr: #262e48;
+        --darkyellowStatus: #B88A00;
+        --permissionTopbr: #3C4147;
+        --textGray: #B6B8BA;
+        --textGray2: #99999A;
+        --bgOrange: #ffffff;
+        --requiredRed: #EF5350;
+        --cardBg: rgba(56, 57, 59, 0.04);
+        --cardBorder: rgb(219 241 246 / 8%);
+        --addLabelBg: #101014;
+        --amounttableHeader: rgba(56, 57, 59, 0.04);
+        --kendoheader: #2d303b;
+        --kendoheadbr: #242d4c;
+        --kbodyrow: #16171A;
+        --kbodyrowbr: #1E232A;
+        --kendotdBghover: rgb(236 237 238 / 11%);
+        --kendotdBghoverBr: #1d1e23;
+        --kendofooter: #34383E;
+        --kendofooterbr: #1d1e23;
+        --namecircletext:#0F3239;
+        --kfooterarrow: #999B9E;
+        --kpagetrbg: #00C9FF36;
+        --kpagenum: #999B9E;
+        --tableInputBg: #151619;
+        --scrollBar: #000000;
+        --referralbg: #000F1E;
+        --referralborder: #717378;
+        --lighttext: #A5A6A8;
+        --tabbg: rgb(15 50 57 / 5%);
+        --profileTabActiveBg: rgb(236 237 238 / 11%);
+        --tabActive: #9EEB37;
+        --overlayblack: rgb(236 237 238 / 4%);
+        --profileBtn: #34383E;
+        --amountBbr: #262e48;
+        --errorBorderRed: #EF5350;
+        --closedStatus: #808286;
+        --tabcolor: #ECEDEE;
+        --getcodebr: #505050;
+        --labelborder: #31363A;
+        --notifPara: #0F3239;
+        --profilehrbr: #242d4c;
+        --profilesubtext: #F1F1F1;
+        --blueBorder: #1C77EA;
+        --errorpara: #A1A2A3;
+        --textApproved: #33CCAB;
+        --textPending: #356DE9;
+        --textReject: #EF5350;
+        --textSubmit: #7b95ea;
+        --inputDisabled: #3d46648a;
+        --secondaryBg: #1F2125;
+        --greennotification: #0F3239;
+        --qrcodeBg: #34383E;
+        --registerLabelBg: #1F2125;
+        --errorBg: #EF5350;
+        --warningBg: #CCAB33;
+        --infoBg: #17a2b8;
+        --partiallyPaid: #CCAB33;
+        --StrokeColor: rgb(219 241 246 / 8%);
+        --tabletext: #8F9092;
+        --inputfield: #9da5c41a;
+        --feesviewborder: #773E13;
+        --membershipcardsbg: #000F0C;
+        --membershiptextblue: #0EB0FB;
+        --membershipborder: #80D7FF;
+        --membershiptextsilver: #D0B28B;
+        --membershipbordersilver: #CFBDA9;
+        --membershipgoldtext: #CCAB33;
+        --membershiplightsilver: #AEBABA;
+        --membershipfreecardbg: #1F2023;
+        --membershipvaultsbg: #1B1C1F;
+        --membershiptableborder: #272A2D;
+        --browncolor: #A56C41;
+        --deposisttablebr: #25272B;
+        --membershiptopbr: #222428;
+        --referralBg: #020923;
+        --referralBr: #242d4c;
+        --dbkpiPara: #96a6be;
+        --dbkpiText: #E5ECF2;
+        --dbkpiStroke: rgb(219 241 246 / 8%);
+        --titleColor: #ECEDEE;
+        --kpcardhover: #000000;
+        --advcard: #373e4c;
+        --paraColor: rgb(236 237 238 / 45%);
+        --subTextColor: #ECEDEE;
+        --BlackBg: #131315;
+        --sidedrawerBg: #131315;
+        --defaultBadge: #9EEB37;
+        --radioBtn: rgb(236 237 238 / 31%);
+        --Unfreezed: #3CB371;
+        --FreezePending: #FFD700;
+        --UnfreezePending: #FF7F50;
+        --UnderMaintenance: #B22222;
+        --Freezed: #B0BEC5;
+        --leftlistHover: rgb(236 237 238 / 11%);
+        --pendingStatus: #CCAB33;
+        --cardbackground: #131315;
+        --tabsBg: rgb(219 241 246 / 8%);
+        --cryptoline: rgb(219 241 246 / 11%);
+        --inputBg: #0f32397d;
+        --notPaid: #5981FF;
+        --paidApproved: #3CB371;
+        --canceled: #f65757;
+        --submiteted: #7b95ea;
+        --rewardsTabsText: #E5ECF2;
+        --rewardsBtnBg: #4f617d63;
+        --questGreenBg: #006b2d;
+        --questGreenBorder: #04694b6b;
+        --questPurpleBg: #975bdc;
+        --questPurpleBorder: #6c40ed;
+        --inputTextBorder: #3e4f68;
+        --orangeBg: #6c550e;
+        --kpidarkColor: #E5ECF2;
+        --inactiveTabColor: #6B9EFF;
+        --skeletonLoader: linear-gradient(90deg, rgba(26, 46, 73, 0.442) 25%, rgba(26, 36, 84, 0.464) 37%, rgba(56, 46, 98, 0.421) 63%);
+        --textvodika: #9eeb37;
+        --disableBtnBg: rgb(236 237 238 / 9%) ;
+        --dropdownBg: #131315;
+        --dropdownSelectBg: rgb(236 237 238 / 11%);
+        --skeletonLoader: linear-gradient(90deg, rgba(85, 101, 114, 0.1) 25%, rgba(154, 155, 157, 0.23) 37%, rgba(114, 114, 114, 0.27) 63%);
+        --themeIcons: url(./icons/paybase-dark-theme-icons.svg);
+    }
+
+}
+
+@font-face {
+    font-family: 'Codec Pro';
+    src: url('fonts/codec-pro/codecpro-regular-webfont.woff2') format('woff2'),
+        url('fonts/codec-pro/codecpro-light-webfont.woff2') format('woff2'),
+        url('fonts/codec-pro/codecpro-bold-webfont.woff2') format('woff2'),
+        url('fonts/codec-pro/codecpro-bolditalic-webfont.woff2') format('woff2'),
+        url('fonts/codec-pro/codecpro-extrabold-webfont.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* Apply Codec Pro font family globally or to specific elements */
+body,
+.paybase {
+    font-family: 'Codec Pro', sans-serif !important;
+}
+
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+div,
+.ant-typography,
+span {
+    font-family: 'Codec Pro', sans-serif !important;
+}
+
+button.ant-btn-variant-outlined, button.cancel-btn, .cardssecondary-outline{@apply !bg-buttonGreyBg hover:!bg-buttonGreyBg text-white hover:!text-primaryColor !border-0 !border-none font-semibold }
+.secondary-outline,.quicklinks{@apply bg-buttonGreyBg text-primaryColor hover:text-primaryColor !border-0}
+.ant-btn-color-primary.ant-btn-variant-solid.primary-btn{@apply !bg-primaryColor !text-textPrimary dark:!text-notifPara border-0 font-semibold }
+.custom-crypto-tabs.ant-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn, .custom-tabs .ant-tabs-tab.ant-tabs-tab-active span{@apply !text-primaryColor dark:!text-notifPara}
+.currency-active{@apply bg-primaryColor !text-textvodika dark:!text-notifPara}
+.fileuploadtext{@apply !text-buttonGreyBg dark:!text-primaryColor}
+.ant-image-preview-close:hover{@apply !bg-primaryColor dark:!bg-buttonGreyBg}
+.ant-image-preview-close{@apply !bg-kendotdBghover }
+.ant-image-preview-root .ant-image-preview{@apply !bg-cardBg}
+a:hover{@apply !text-primaryColor}
+.ant-btn-color-link.ant-btn-variant-link{@apply !text-primaryColor}
+.verifybg{@apply !bg-primaryColor !border border-buttonGreyBg}
+.verifytext{@apply !text-namecircletext}
+.walletadd{@apply !bg-buttonGreyBg}
+.gridLink{@apply font-semibold}
+.qr-image{@apply bg-lightWhite dark:bg-notifPara}
+.ant-select:not(.ant-select-customize-input) .ant-select-selector:hover {@apply !border !border-primaryColor }

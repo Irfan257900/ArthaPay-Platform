@@ -1,0 +1,20 @@
+export const ApiControllers = {
+    withdraw: "Withdraw/",
+    transaction: "Transaction/",
+    buySell: "Buysell/",
+    master: "Master/",
+    addressbook: "addressbook/",
+    deposit: "Deposit/",
+    customers: "Customer/",
+    markets: "Markets/",
+    wallets: "Wallets/",
+    dashboard: "DashBoard/",
+    common: "Common/",
+    address:"Address/",
+    commissions:'Commissions/',
+    registration:'Registration/',
+    exchangewallet:"ExchangeWallet/",
+    security:"Security/",
+    exchangeTransaction:"ExchangeTransaction/",
+    notification:"Notification/"
+}
