@@ -123,4 +123,4 @@ jobs:
           
           # This command saves the output variables for the next jobs
           echo "static_web_app_api_key=$(terraform output -raw static_web_app_api_key)" >> $GITHUB_OUTPUT
-          echo "static_web_app_url=$(terraform output -raw static_web_app_url)" >> $GITHUB_OUTPUT
+          echo "static_web_app_url=$(terraform output -raw static_web_app_url)" >> $GITHUB_OUTPUT# Force cache bust v7
