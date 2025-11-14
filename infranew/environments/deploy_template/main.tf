@@ -25,20 +25,29 @@ resource "azurerm_resource_group" "rg_infra" {
 module "networking" {
   source              = "../../modules/networking" # Use the generic module
   vnet_name           = local.vnet_name
-  nsg_name            = local.nsg_name
   location            = azurerm_resource_group.rg_infra.location
   resource_group_name = azurerm_resource_group.rg_infra.name
   tags                = local.common_tags
+
+  # --- FIX: Passing required networking arguments ---
+  vnet_address_space          = local.vnet_address_space
+  subnets                     = local.subnets
+  private_endpoints_subnet_name = local.private_endpoints_subnet_name
 }
+
 module "windows_vm_sql" {
   source              = "../../modules/windows_vm_sql" # Use the generic module
   vm_name             = local.vm_name
   location            = azurerm_resource_group.rg_infra.location
   resource_group_name = azurerm_resource_group.rg_infra.name
-  subnet_id           = module.networking.subnet_id
+  # --- FIX: We must get the subnet_id from the networking module's output ---
+  subnet_id           = module.networking.subnets["vm-subnet"].id 
   admin_username      = var.vm_admin_username
   admin_password      = var.vm_admin_password
   tags                = local.common_tags
+  
+  # Ensure networking is created before the VM
+  depends_on = [module.networking] 
 }
 
 # --- Application Resources (in rg_apps) ---
@@ -90,7 +99,7 @@ module "function_apps" {
   dotnet_version                 = var.dotnet_version
   app_service_plan_id            = module.app_service_plan.id
   app_insights_instrumentation_key = "dummy-key" # We should fix this later
-  storage_account_name           = module.storage_account.name
+  storage_account_name           = module.storage_to_account.name
   storage_account_access_key     = module.storage_account.primary_access_key
 }
 

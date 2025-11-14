@@ -14,13 +14,27 @@ locals {
   # 3. Resource Names
   # Example: "Voltica-tst-vnet"
   vnet_name                  = "${local._name_prefix}-vnet"
-  nsg_name                   = "${local._name_prefix}-nsg"
   vm_name                    = "${local._name_prefix}-sql-vm"
   storage_account_name       = "st${replace(lower(var.client_name), "-", "")}${var.environment_name}771" # Must be globally unique
   app_service_plan_name      = "${local._name_prefix}-asp"
   service_bus_namespace_name = "${local._name_prefix}-sb-namespace"
   key_vault_name             = "${local._name_prefix}-kv-${random_string.kv_suffix.result}"
   static_web_app_name        = "${local._name_prefix}-ui" # For your React App
+
+  # --- 4. NEW NETWORKING DEFINITIONS ---
+  # These are the variables your networking module requires
+  vnet_address_space          = ["10.0.0.0/16"]
+  private_endpoints_subnet_name = "pep-subnet"
+  subnets = {
+    "vm-subnet" = {
+      address_prefixes = ["10.0.1.0/24"]
+      service_endpoints = []
+    }
+    (local.private_endpoints_subnet_name) = {
+      address_prefixes = ["10.0.2.0/24"]
+      service_endpoints = ["Microsoft.Storage"] # Example
+    }
+  }
 }
 
 # Suffix for globally unique names
