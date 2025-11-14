@@ -1,0 +1,85 @@
+name: "Reusable: Deploy React UI"
+
+on:
+  workflow_call:
+    inputs:
+      client_name:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: true
+      swa_deploy_token:
+        type: string
+        required: true
+    secrets:
+      AUTH0_DOMAIN:
+        required: true
+      AUTH0_CLIENT_ID:
+        required: true
+
+  workflow_dispatch:
+    inputs:
+      client_name:
+        description: "Client name (e.g., Voltica)"
+        type: string
+        required: true
+        default: "Voltica"
+      environment:
+        description: "Environment to deploy (e.g., tst, stg, prd)"
+        type: choice
+        options:
+          - tst
+          - stg
+          - prd
+        default: "tst"
+      swa_deploy_token:
+        description: "The SWA Deployment Token (Get from 'Deploy Infra' run)"
+        type: string
+        required: true
+
+jobs:
+  deploy-ui:
+    name: "Deploy React UI"
+    runs-on: ubuntu-latest
+
+    environment:
+      name: ${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}
+
+    defaults:
+      run:
+        working-directory: ./ArthapayUI # Set default directory to your React app
+
+    steps:
+      - name: "1. Check out Application Code"
+        uses: actions/checkout@v4
+
+      - name: "2. Setup Node.js (v18)"
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: "3. Install NPM Dependencies"
+        run: npm install --force
+
+      - name: "4. Build React App"
+        run: npm run build:prod
+        env:
+          VITE_API_URL: "https://api.${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}.com" # Example
+          VITE_AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
+          VITE_AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
+
+      - name: "5. Deploy to Static Web App"
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          # Use the deployment token passed as an input/secret
+          azure_static_web_apps_api_token: ${{ inputs.swa_deploy_token || github.event.inputs.swa_deploy_token }}
+
+          # This is the path to the code we just built
+          app_location: "ArthapayUI/dist"
+
+          # --- CRITICAL FIX ---
+          # Tell the action "I already built the app, just deploy this folder!"
+          skip_app_build: true
+          skip_api_build: true
+          api_location: "" # We don't have an API in this folder

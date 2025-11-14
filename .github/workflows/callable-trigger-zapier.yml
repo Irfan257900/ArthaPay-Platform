@@ -1,0 +1,70 @@
+name: "Reusable: Trigger Zapier"
+
+on:
+  workflow_call:
+    inputs:
+      client_name:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: true
+      app_url:
+        type: string
+        required: true
+    secrets:
+      ZAPIER_WEBHOOK_URL:
+        required: true
+  
+  workflow_dispatch:
+    inputs:
+      client_name:
+        description: "Client name (e.g., Voltica)"
+        type: string
+        required: true
+        default: "Voltica"
+      environment:
+        description: "Environment (e.g., tst, stg, prd)"
+        type: choice
+        options:
+          - tst
+          - stg
+          - prd
+        default: "tst"
+      app_url:
+        description: "The URL of the deployed application"
+        type: string
+        required: true
+
+jobs:
+  trigger-zapier:
+    name: "Trigger Zapier Webhook"
+    runs-on: ubuntu-latest
+
+    # This workflow also uses the environment, just to get the ZAPIER_WEBHOOK_URL secret
+    environment:
+      name: ${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}
+
+    steps:
+      - name: "1. Send Webhook"
+        env:
+          ZAPIER_WEBHOOK_URL: ${{ secrets.ZAPIER_WEBHOOK_URL }}
+          CLIENT_NAME: ${{ inputs.client_name || github.event.inputs.client_name }}
+          ENVIRONMENT: ${{ inputs.environment || github.event.inputs.environment }}
+          APP_URL: ${{ inputs.app_url || github.event.inputs.app_url }}
+        run: |
+          echo "Sending payload to Zapier..."
+          
+          JSON_PAYLOAD=$(cat <<EOF
+          {
+            "projectName": "$CLIENT_NAME-$ENVIRONMENT",
+            "appServiceUrl": "$APP_URL", 
+            "appServiceIp": "N/A (Static Web App)",
+            "ownerEmail": "irfanmd2579@gmail.com"
+          }
+          EOF
+          )
+          
+          curl -X POST "$ZAPIER_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$JSON_PAYLOAD"

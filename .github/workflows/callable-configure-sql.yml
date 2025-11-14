@@ -1,0 +1,120 @@
+name: "Reusable: Configure SQL Database"
+
+on:
+  workflow_call:
+    inputs:
+      client_name:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: true
+      vm_rg_name:
+        type: string
+        required: true
+      vm_name:
+        type: string
+        required: true
+    secrets:
+      AZURE_CREDENTIALS:
+        required: true
+      VM_ADMIN_PASSWORD:
+        required: true
+      APP_SQL_PASSWORD:
+        required: true
+
+  workflow_dispatch:
+    inputs:
+      client_name:
+        description: "Client name (e.g., Voltica)"
+        type: string
+        required: true
+        default: "Voltica"
+      environment:
+        description: "Environment to deploy (e.g., tst, stg, prd)"
+        type: choice
+        options:
+          - tst
+          - stg
+          - prd
+        default: "tst"
+      vm_rg_name:
+        description: "VM Resource Group Name"
+        type: string
+        required: true
+        default: "rg-Voltica-tst-vm"
+      vm_name:
+        description: "VM Name"
+        type: string
+        required: true
+        default: "Voltica-tst-sql-vm"
+
+jobs:
+  configure-sql:
+    name: "Configure SQL Database"
+    runs-on: ubuntu-latest
+
+    environment:
+      name: ${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}
+
+    steps:
+      - name: "1. Log in to Azure"
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          enable-AzPSSession: true # Enable PowerShell commands
+
+      - name: "2. Run SQL Configuration Script"
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+            echo "Installing Az.Compute module..."
+            Install-Module -Name Az.Compute -Repository PSGallery -Force -AllowClobber -Scope CurrentUser
+
+            echo "Starting SQL Server configuration..."
+            $scriptBlock = @"
+            Write-Host '========================================='
+            Write-Host 'Starting SQL Server Database Configuration'
+            Write-Host 'Admin User: $($env:SQL_ADMIN_USER)'
+            try {
+                Write-Host 'Step 1: Installing/Importing SqlServer module...'
+                Install-Module -Name SqlServer -Repository PSGallery -Force -AllowClobber -Scope CurrentUser
+                Import-Module SqlServer -ErrorAction Stop
+                Write-Host '✓ SqlServer module loaded successfully'
+                
+                Write-Host 'Step 2: Creating database VolticaDB...'
+                \$createDbQuery = "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'VolticaDB') BEGIN CREATE DATABASE VolticaDB; SELECT 'Database VolticaDB created successfully' AS Result; END ELSE BEGIN SELECT 'Database VolticaDB already exists' AS Result; END"
+                \$dbResult = Invoke-Sqlcmd -Query \$createDbQuery -ServerInstance 'localhost' -Username "$($env:SQL_ADMIN_USER)" -Password "$($env:SQL_ADMIN_PASS)"
+                Write-Host \$dbResult.Result
+                
+                Write-Host 'Step 3: Creating login voltica_app_user...'
+                \$createLoginQuery = "IF NOT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'voltica_app_user') BEGIN CREATE LOGIN voltica_app_user WITH PASSWORD = '$($env:SQL_APP_PASS)'; SELECT 'Login voltica_app_user created successfully' AS Result; END ELSE BEGIN SELECT 'Login voltica_app_user already exists' AS Result; END"
+                \$loginResult = Invoke-Sqlcmd -Query \$createLoginQuery -ServerInstance 'localhost' -Username "$($env:SQL_ADMIN_USER)" -Password "$($env:SQL_ADMIN_PASS)"
+                Write-Host \$loginResult.Result
+                
+                Write-Host 'Step 4: Creating database user and assigning permissions...'
+                \$createUserQuery = "USE VolticaDB; IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = N'voltica_app_user') BEGIN CREATE USER voltica_app_user FOR LOGIN voltica_app_user; ALTER ROLE db_owner ADD MEMBER voltica_app_user; SELECT 'User voltica_app_user created and added to db_owner role' AS Result; END ELSE BEGIN SELECT 'User voltica_app_user already exists' AS Result; END"
+                \$userResult = Invoke-Sqlcmd -Query \$createUserQuery -ServerInstance 'localhost' -Username "$($env:SQL_ADMIN_USER)" -Password "$($env:SQL_ADMIN_PASS)"
+                Write-Host \$userResult.Result
+                
+                Write-Host '✅ SQL configuration completed successfully!'
+            }
+            catch {
+                Write-Host '❌ SQL CONFIGURATION FAILED'
+                Write-Host "Error Message: `n\$($_.Exception.Message)"
+                Write-Host "Stack Trace: `n\$($_.ScriptStackTrace)"
+                exit 1
+            }
+            "@
+            
+            echo "Sending configuration script to VM..."
+            Invoke-AzVMRunCommand `
+              -ResourceGroupName "${{ inputs.vm_rg_name || github.event.inputs.vm_rg_name }}" `
+              -VMName "${{ inputs.vm_name || github.event.inputs.vm_name }}" `
+              -CommandId 'RunPowerShellScript' `
+              -ScriptString $scriptBlock
+          azPSHostVersion: 2.0.0
+        env:
+          SQL_ADMIN_USER: "Volticatstadmin" # This can be hardcoded
+          SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
+          SQL_APP_PASS: ${{ secrets.APP_SQL_PASSWORD }}

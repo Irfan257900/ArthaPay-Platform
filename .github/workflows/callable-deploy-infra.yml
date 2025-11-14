@@ -1,0 +1,125 @@
+name: "Reusable: Deploy Infrastructure"
+
+# This workflow can be:
+# 1. Called by another workflow (workflow_call)
+# 2. Run manually for testing (workflow_dispatch)
+on:
+  workflow_call:
+    inputs:
+      client_name:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: true
+    
+    # We must define the outputs that the "Master" workflow will need
+    outputs:
+      vm_rg_name:
+        description: "The name of the VM's resource group"
+        value: ${{ jobs.deploy-infra.outputs.VM_RG_NAME }}
+      vm_name:
+        description: "The name of the SQL VM"
+        value: ${{ jobs.deploy-infra.outputs.VM_NAME }}
+      static_web_app_api_key:
+        description: "The deployment token for the Static Web App"
+        value: ${{ jobs.deploy-infra.outputs.SWA_DEPLOY_TOKEN }}
+      static_web_app_url:
+        description: "The URL for the Static Web App"
+        value: ${{ jobs.deploy-infra.outputs.SWA_URL }}
+
+    # We must define the secrets this workflow needs
+    secrets:
+      AZURE_CREDENTIALS:
+        required: true
+      VM_ADMIN_PASSWORD:
+        required: true
+      AUTH0_DOMAIN:
+        required: true
+      MAILGUN_KEY:
+        required: true
+      TWILIO_SID:
+        required: true
+
+  workflow_dispatch:
+    inputs:
+      client_name:
+        description: "Client name (e.g., Voltica)"
+        type: string
+        required: true
+        default: "Voltica"
+      environment:
+        description: "Environment to deploy (e.g., tst, stg, prd)"
+        type: choice
+        options:
+          - tst
+          - stg
+          - prd
+        default: "tst"
+
+jobs:
+  deploy-infra:
+    name: "Deploy Infrastructure"
+    runs-on: ubuntu-latest
+    
+    # This dynamically selects the GitHub Environment
+    environment:
+      name: ${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}
+
+    # Define outputs for this job
+    outputs:
+      VM_RG_NAME: "rg-${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}-vm"
+      VM_NAME: "${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}-sql-vm"
+      SWA_DEPLOY_TOKEN: ${{ steps.apply.outputs.static_web_app_api_key }}
+      SWA_URL: ${{ steps.apply.outputs.static_web_app_url }}
+
+    defaults:
+      run:
+        working-directory: ./infranew/environments/deploy_template
+
+    steps:
+      - name: "1. Check out Infrastructure Code"
+        uses: actions/checkout@v4
+
+      - name: "2. Log in to Azure"
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: "3. Setup Terraform"
+        uses: hashicorp/setup-terraform@v3
+
+      - name: "4. Terraform Init"
+        id: init
+        env:
+          STATE_FILE_KEY: "${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}.terraform.tfstate"
+        run: |
+          echo "Initializing Terraform for state file: $STATE_FILE_KEY"
+          terraform init -backend-config="key=$STATE_FILE_KEY"
+
+      - name: "5. Terraform Plan"
+        id: plan
+        env:
+          TF_VAR_client_name: ${{ inputs.client_name || github.event.inputs.client_name }}
+          TF_VAR_environment_name: ${{ inputs.environment || github.event.inputs.environment }}
+          TF_VAR_vm_admin_password: ${{ secrets.VM_ADMIN_PASSWORD }}
+          TF_VAR_auth0_domain: ${{ secrets.AUTH0_DOMAIN }}
+          TF_VAR_mailgun_key: ${{ secrets.MAILGUN_KEY }}
+          TF_VAR_twilio_sid: ${{ secrets.TWILIO_SID }}
+        run: terraform plan -out=tfplan
+
+      - name: "6. Terraform Apply"
+        id: apply
+        env:
+          TF_VAR_client_name: ${{ inputs.client_name || github.event.inputs.client_name }}
+          TF_VAR_environment_name: ${{ inputs.environment || github.event.inputs.environment }}
+          TF_VAR_vm_admin_password: ${{ secrets.VM_ADMIN_PASSWORD }}
+          TF_VAR_auth0_domain: ${{ secrets.AUTH0_DOMAIN }}
+          TF_VAR_mailgun_key: ${{ secrets.MAILGUN_KEY }}
+          TF_VAR_twilio_sid: ${{ secrets.TWILIO_SID }}
+        run: |
+          terraform apply -auto-approve tfplan
+          
+          # This command saves the output variables for the next jobs
+          echo "static_web_app_api_key=$(terraform output -raw static_web_app_api_key)" >> $GITHUB_OUTPUT
+          echo "static_web_app_url=$(terraform output -raw static_web_app_url)" >> $GITHUB_OUTPUT
