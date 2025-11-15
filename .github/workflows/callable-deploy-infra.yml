@@ -1,9 +1,5 @@
-# Cache-bust: v6
 name: "Reusable: Deploy Infrastructure"
 
-# This workflow can be:
-# 1. Called by another workflow (workflow_call)
-# 2. Run manually for testing (workflow_dispatch)
 on:
   workflow_call:
     inputs:
@@ -14,13 +10,13 @@ on:
         type: string
         required: true
     
-    # We must define the outputs that the "Master" workflow will need
     outputs:
       vm_rg_name:
         description: "The name of the VM's resource group"
         value: ${{ jobs.deploy-infra.outputs.VM_RG_NAME }}
       vm_name:
         description: "The name of the SQL VM"
+        # --- FIX: Changed 'sql-vm' to 'sqlvm' to match the real resource ---
         value: ${{ jobs.deploy-infra.outputs.VM_NAME }}
       static_web_app_api_key:
         description: "The deployment token for the Static Web App"
@@ -29,7 +25,6 @@ on:
         description: "The URL for the Static Web App"
         value: ${{ jobs.deploy-infra.outputs.SWA_URL }}
 
-    # We must define the secrets this workflow needs
     secrets:
       AZURE_CREDENTIALS:
         required: true
@@ -63,14 +58,13 @@ jobs:
     name: "Deploy Infrastructure"
     runs-on: ubuntu-latest
     
-    # This dynamically selects the GitHub Environment
     environment:
       name: ${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}
 
-    # Define outputs for this job
     outputs:
       VM_RG_NAME: "rg-${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}-vm"
-      VM_NAME: "${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}-sql-vm"
+      # --- FIX: Changed 'sql-vm' to 'sqlvm' to match the real resource ---
+      VM_NAME: "${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}-sqlvm"
       SWA_DEPLOY_TOKEN: ${{ steps.apply.outputs.static_web_app_api_key }}
       SWA_URL: ${{ steps.apply.outputs.static_web_app_url }}
 
@@ -121,6 +115,8 @@ jobs:
         run: |
           terraform apply -auto-approve tfplan
           
-          # This command saves the output variables for the next jobs
+          # These commands read the outputs from the output.tf file
           echo "static_web_app_api_key=$(terraform output -raw static_web_app_api_key)" >> $GITHUB_OUTPUT
-          echo "static_web_app_url=$(terraform output -raw static_web_app_url)" >> $GITHUB_OUTPUT# Force cache bust v7
+          echo "static_web_app_url=$(terraform output -raw static_web_app_url)" >> $GITHUB_OUTPUT
+          echo "vm_name=$(terraform output -raw vm_name)" >> $GITHUB_OUTPUT
+          echo "vm_rg_name=$(terraform output -raw vm_rg_name)" >> $GITHUB_OUTPUT
