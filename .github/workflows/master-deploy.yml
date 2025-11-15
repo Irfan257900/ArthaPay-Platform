@@ -31,11 +31,9 @@ jobs:
   deploy-infra:
     name: "Job 1: Deploy Infrastructure"
     uses: ./.github/workflows/callable-deploy-infra.yml
-    # Pass the inputs from the user to the reusable workflow
     with:
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
-    # We must pass the secrets from the environment
     secrets:
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
       VM_ADMIN_PASSWORD: ${{ secrets.VM_ADMIN_PASSWORD }}
@@ -48,29 +46,28 @@ jobs:
   # ===================================================================
   deploy-ui:
     name: "Job 2: Deploy React UI"
-    needs: deploy-infra # This job waits for Job 1 to finish
+    needs: deploy-infra 
     if: github.event.inputs.module == 'ArthapayUI' || github.event.inputs.module == 'all'
     uses: ./.github/workflows/callable-deploy-ui.yml
     with:
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
-      # Pass the *output* from the first job as an *input* to this one
       swa_deploy_token: ${{ needs.deploy-infra.outputs.static_web_app_api_key }}
     secrets:
       AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
-      AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }} # You need to add this secret!
+      AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }} 
 
   # ===================================================================
   # JOB 3: CALL THE SQL CONFIGURATION WORKFLOW
   # ===================================================================
   configure-sql:
     name: "Job 3: Configure SQL Database"
-    needs: deploy-infra # This job also waits for Job 1
+    needs: deploy-infra 
     uses: ./.github/workflows/callable-configure-sql.yml
     with:
+      # --- FIX: Pass the client_name to the script ---
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
-      # Pass the outputs from Job 1
       vm_rg_name: ${{ needs.deploy-infra.outputs.vm_rg_name }}
       vm_name: ${{ needs.deploy-infra.outputs.vm_name }}
     secrets:
@@ -83,7 +80,6 @@ jobs:
   # ===================================================================
   trigger-zapier:
     name: "Job 4: Trigger Zapier Webhook"
-    # This job waits for both the UI deploy and SQL config to finish
     needs: [deploy-ui, configure-sql]
     uses: ./.github/workflows/callable-trigger-zapier.yml
     with:
@@ -91,4 +87,4 @@ jobs:
       environment: ${{ github.event.inputs.environment }}
       app_url: ${{ needs.deploy-infra.outputs.static_web_app_url }}
     secrets:
-      ZAPIER_WEBHOOK_URL: ${{ secrets.ZAPIER_WEBHOOK_URL }} # You must add this secret!
+      ZAPIER_WEBHOOK_URL: ${{ secrets.ZAPIER_WEBHOOK_URL }}

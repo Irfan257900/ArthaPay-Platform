@@ -3,6 +3,7 @@ name: "Reusable: Configure SQL Database"
 on:
   workflow_call:
     inputs:
+      # --- FIX: Added client_name input ---
       client_name:
         type: string
         required: true
@@ -25,11 +26,12 @@ on:
 
   workflow_dispatch:
     inputs:
+      # --- FIX: Added client_name input ---
       client_name:
-        description: "Client name (e.g., Voltica)"
+        description: "Client name (e.g., Artha)"
         type: string
         required: true
-        default: "Voltica"
+        default: "Artha"
       environment:
         description: "Environment to deploy (e.g., tst, stg, prd)"
         type: choice
@@ -42,12 +44,12 @@ on:
         description: "VM Resource Group Name"
         type: string
         required: true
-        default: "rg-Voltica-tst-vm"
+        default: "rg-Artha-tst-vm"
       vm_name:
         description: "VM Name"
         type: string
         required: true
-        default: "Voltica-tst-sql-vm"
+        default: "Artha-tst-sqlvm"
 
 jobs:
   configure-sql:
@@ -62,7 +64,7 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-          enable-AzPSSession: true # Enable PowerShell commands
+          enable-AzPSSession: true 
 
       - name: "2. Run SQL Configuration Script"
         uses: azure/powershell@v1
@@ -72,6 +74,12 @@ jobs:
             Install-Module -Name Az.Compute -Repository PSGallery -Force -AllowClobber -Scope CurrentUser
 
             echo "Starting SQL Server configuration..."
+            
+            # --- FIX: Make DB Name and User dynamic ---
+            $ClientName = "${{ inputs.client_name || github.event.inputs.client_name }}"
+            $DbName = "$($ClientName)DB" # e.g., "ArthaDB"
+            $DbUser = "$($ClientName)_app_user" # e.g., "artha_app_user"
+
             $scriptBlock = @"
             Write-Host '========================================='
             Write-Host 'Starting SQL Server Database Configuration'
@@ -82,27 +90,27 @@ jobs:
                 Import-Module SqlServer -ErrorAction Stop
                 Write-Host '✓ SqlServer module loaded successfully'
                 
-                Write-Host 'Step 2: Creating database VolticaDB...'
-                \$createDbQuery = "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'VolticaDB') BEGIN CREATE DATABASE VolticaDB; SELECT 'Database VolticaDB created successfully' AS Result; END ELSE BEGIN SELECT 'Database VolticaDB already exists' AS Result; END"
-                \$dbResult = Invoke-Sqlcmd -Query \$createDbQuery -ServerInstance 'localhost' -Username "$($env:SQL_ADMIN_USER)" -Password "$($env:SQL_ADMIN_PASS)"
-                Write-Host \$dbResult.Result
+                Write-Host "Step 2: Creating database $DbName..."
+                `$createDbQuery = "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'$DbName') BEGIN CREATE DATABASE $DbName; SELECT 'Database $DbName created successfully' AS Result; END ELSE BEGIN SELECT 'Database $DbName already exists' AS Result; END"
+                `$dbResult = Invoke-Sqlcmd -Query `$createDbQuery -ServerInstance 'localhost' -Username "$($env:SQL_ADMIN_USER)" -Password "$($env:SQL_ADMIN_PASS)"
+                Write-Host `$dbResult.Result
                 
-                Write-Host 'Step 3: Creating login voltica_app_user...'
-                \$createLoginQuery = "IF NOT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'voltica_app_user') BEGIN CREATE LOGIN voltica_app_user WITH PASSWORD = '$($env:SQL_APP_PASS)'; SELECT 'Login voltica_app_user created successfully' AS Result; END ELSE BEGIN SELECT 'Login voltica_app_user already exists' AS Result; END"
-                \$loginResult = Invoke-Sqlcmd -Query \$createLoginQuery -ServerInstance 'localhost' -Username "$($env:SQL_ADMIN_USER)" -Password "$($env:SQL_ADMIN_PASS)"
-                Write-Host \$loginResult.Result
+                Write-Host "Step 3: Creating login $DbUser..."
+                `$createLoginQuery = "IF NOT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'$DbUser') BEGIN CREATE LOGIN $DbUser WITH PASSWORD = '$($env:SQL_APP_PASS)'; SELECT 'Login $DbUser created successfully' AS Result; END ELSE BEGIN SELECT 'Login $DbUser already exists' AS Result; END"
+                `$loginResult = Invoke-Sqlcmd -Query `$createLoginQuery -ServerInstance 'localhost' -Username "$($env:SQL_ADMIN_USER)" -Password "$($env:SQL_ADMIN_PASS)"
+                Write-Host `$loginResult.Result
                 
-                Write-Host 'Step 4: Creating database user and assigning permissions...'
-                \$createUserQuery = "USE VolticaDB; IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = N'voltica_app_user') BEGIN CREATE USER voltica_app_user FOR LOGIN voltica_app_user; ALTER ROLE db_owner ADD MEMBER voltica_app_user; SELECT 'User voltica_app_user created and added to db_owner role' AS Result; END ELSE BEGIN SELECT 'User voltica_app_user already exists' AS Result; END"
-                \$userResult = Invoke-Sqlcmd -Query \$createUserQuery -ServerInstance 'localhost' -Username "$($env:SQL_ADMIN_USER)" -Password "$($env:SQL_ADMIN_PASS)"
-                Write-Host \$userResult.Result
+                Write-Host "Step 4: Creating database user and assigning permissions..."
+                `$createUserQuery = "USE $DbName; IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = N'$DbUser') BEGIN CREATE USER $DbUser FOR LOGIN $DbUser; ALTER ROLE db_owner ADD MEMBER $DbUser; SELECT 'User $DbUser created and added to db_owner role' AS Result; END ELSE BEGIN SELECT 'User $DbUser already exists' AS Result; END"
+                `$userResult = Invoke-Sqlcmd -Query `$createUserQuery -ServerInstance 'localhost' -Username "$($env:SQL_ADMIN_USER)" -Password "$($env:SQL_ADMIN_PASS)"
+                Write-Host `$userResult.Result
                 
                 Write-Host '✅ SQL configuration completed successfully!'
             }
             catch {
                 Write-Host '❌ SQL CONFIGURATION FAILED'
-                Write-Host "Error Message: `n\$($_.Exception.Message)"
-                Write-Host "Stack Trace: `n\$($_.ScriptStackTrace)"
+                Write-Host "Error Message: `n`$($_.Exception.Message)"
+                Write-Host "Stack Trace: `n`$($_.ScriptStackTrace)"
                 exit 1
             }
             "@
@@ -113,8 +121,10 @@ jobs:
               -VMName "${{ inputs.vm_name || github.event.inputs.vm_name }}" `
               -CommandId 'RunPowerShellScript' `
               -ScriptString $scriptBlock
-          azPSHostVersion: 2.0.0
+          
+          # --- FIX: Changed 'azPSHostVersion' to 'azPSVersion' ---
+          azPSVersion: 'latest' 
         env:
-          SQL_ADMIN_USER: "Volticatstadmin" # This can be hardcoded
+          SQL_ADMIN_USER: "Volticatstadmin" 
           SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
           SQL_APP_PASS: ${{ secrets.APP_SQL_PASSWORD }}
