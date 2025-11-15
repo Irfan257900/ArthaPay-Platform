@@ -18,7 +18,7 @@ on:
     secrets:
       AZURE_CREDENTIALS:
         required: true
-      VM_ADMIN_PASSWORD:
+      VM_ADMIN_PASSWORD: # We still need this for the env, but not the script
         required: true
       APP_SQL_PASSWORD:
         required: true
@@ -77,11 +77,10 @@ jobs:
             $DbName = "$($ClientName)DB" # e.g., "ArthaDB"
             $DbUser = "$($ClientName)_app_user" # e.g., "artha_app_user"
 
-            # --- FIX: Script now checks for errors after each step ---
+            # --- FIX: Using -E for Windows Authentication ---
             $scriptBlock = @"
             Write-Host '========================================='
             Write-Host 'Starting SQL Server Database Configuration'
-            Write-Host 'Admin User: $($env:SQL_ADMIN_USER)'
             
             `$ErrorActionPreference = "Stop" # Make the script stop on errors
 
@@ -92,24 +91,27 @@ jobs:
 
             try {
                 Write-Host "Step 1: Creating database $DbName..."
-                sqlcmd.exe -S localhost -U "$($env:SQL_ADMIN_USER)" -P "$($env:SQL_ADMIN_PASS)" -Q "`$createDbQuery" -b
+                # --- FIX: Use -E for Windows (Trusted) Authentication ---
+                sqlcmd.exe -S localhost -E -Q "`$createDbQuery" -b
                 if (`$LASTEXITCODE -ne 0) { throw "sqlcmd failed on step 1." }
                 Write-Host "Database $DbName created or already exists."
 
                 Write-Host "Step 2: Creating login $DbUser..."
-                sqlcmd.exe -S localhost -U "$($env:SQL_ADMIN_USER)" -P "$($env:SQL_ADMIN_PASS)" -Q "`$createLoginQuery" -b
+                # --- FIX: Use -E for Windows (Trusted) Authentication ---
+                sqlcmd.exe -S localhost -E -Q "`$createLoginQuery" -b
                 if (`$LASTEXITCODE -ne 0) { throw "sqlcmd failed on step 2." }
                 Write-Host "Login $DbUser created or already exists."
 
                 Write-Host "Step 3: Creating database user and assigning permissions..."
-                sqlcmd.exe -S localhost -U "$($env:SQL_ADMIN_USER)" -P "$($env:SQL_ADMIN_PASS)" -Q "`$createUserQuery" -b
+                # --- FIX: Use -E for Windows (Trusted) Authentication ---
+                sqlcmd.exe -S localhost -E -Q "`$createUserQuery" -b
                 if (`$LASTEXITCODE -ne 0) { throw "sqlcmd failed on step 3." }
                 Write-Host "User $DbUser configured in $DbName."
 
-                Write-Host '✅ SQL configuration completed successfully!'
+                Write-Host 'SQL configuration completed successfully!'
             }
             catch {
-                Write-Host '❌ SQL CONFIGURATION FAILED'
+                Write-Host 'SQL CONFIGURATION FAILED'
                 Write-Host 'Error Message:'
                 Write-Host $_.Exception.Message
                 Write-Host 'Stack Trace:'
@@ -127,7 +129,5 @@ jobs:
               
           azPSVersion: 'latest' 
         env:
-          SQL_ADMIN_USER: "Volticatstadmin" 
-          SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
-          # --- THIS IS THE FIX ---
+          # --- FIX: We no longer need SQL_ADMIN_USER or SQL_ADMIN_PASS ---
           SQL_APP_PASS: ${{ secrets.APP_SQL_PASSWORD }}
