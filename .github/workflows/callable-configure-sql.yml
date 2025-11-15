@@ -77,7 +77,6 @@ jobs:
             $DbName = "$($ClientName)DB" # e.g., "ArthaDB"
             $DbUser = "$($ClientName)_app_user" # e.g., "artha_app_user"
 
-            # This '$scriptBlock' is a "here-string", denoted by @"..."@
             $scriptBlock = @"
             Write-Host '========================================='
             Write-Host 'Starting SQL Server Database Configuration'
@@ -91,20 +90,22 @@ jobs:
             try {
                 Write-Host "Step 1: Creating database $DbName..."
                 sqlcmd.exe -S localhost -U "$($env:SQL_ADMIN_USER)" -P "$($env:SQL_ADMIN_PASS)" -Q "`$createDbQuery" -b
-                Write-Host "✓ Database $DbName created or already exists."
+                # --- FIX: Removed emoji ---
+                Write-Host "Database $DbName created or already exists."
 
                 Write-Host "Step 2: Creating login $DbUser..."
                 sqlcmd.exe -S localhost -U "$($env:SQL_ADMIN_USER)" -P "$($env:SQL_ADMIN_PASS)" -Q "`$createLoginQuery" -b
-                Write-Host "✓ Login $DbUser created or already exists."
+                # --- FIX: Removed emoji ---
+                Write-Host "Login $DbUser created or already exists."
 
                 Write-Host "Step 3: Creating database user and assigning permissions..."
                 sqlcmd.exe -S localhost -U "$($env:SQL_ADMIN_USER)" -P "$($env:SQL_ADMIN_PASS)" -Q "`$createUserQuery" -b
-                Write-Host "✓ User $DbUser configured in $DbName."
+                # --- FIX: Removed emoji ---
+                Write-Host "User $DbUser configured in $DbName."
 
                 Write-Host '✅ SQL configuration completed successfully!'
             }
             catch {
-                # --- FIX: Simplified catch block to remove all complex quotes ---
                 Write-Host '❌ SQL CONFIGURATION FAILED'
                 Write-Host 'Error Message:'
                 Write-Host $_.Exception.Message
