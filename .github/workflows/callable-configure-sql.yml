@@ -77,8 +77,6 @@ jobs:
             $DbName = "$($ClientName)DB" # e.g., "ArthaDB"
             $DbUser = "$($ClientName)_app_user" # e.g., "artha_app_user"
 
-            # This '$scriptBlock' is a "here-string", denoted by @"..."@
-            # Inside it, we must escape GitHub variables, but not PowerShell variables.
             $scriptBlock = @"
             Write-Host '========================================='
             Write-Host 'Starting SQL Server Database Configuration'
@@ -105,10 +103,12 @@ jobs:
                 Write-Host '✅ SQL configuration completed successfully!'
             }
             catch {
+                # --- FIX: Simplified catch block to remove all complex quotes ---
                 Write-Host '❌ SQL CONFIGURATION FAILED'
-                # --- FIX: We must escape the '$' for PowerShell's here-string ---
-                Write-Host "Error Message: `n``$($_.Exception.Message)"
-                Write-Host "Stack Trace: `n``$($_.ScriptStackTrace)"
+                Write-Host 'Error Message:'
+                Write-Host $_.Exception.Message
+                Write-Host 'Stack Trace:'
+                Write-Host $_.ScriptStackTrace
                 exit 1 # Exit with an error code
             }
             "@
