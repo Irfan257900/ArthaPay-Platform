@@ -77,37 +77,38 @@ jobs:
             $DbName = "$($ClientName)DB" # e.g., "ArthaDB"
             $DbUser = "$($ClientName)_app_user" # e.g., "artha_app_user"
 
-            # --- FIX: Re-written script to use sqlcmd.exe ---
-            # This is much faster and more reliable as it has no dependencies.
+            # This '$scriptBlock' is a "here-string", denoted by @"..."@
+            # Inside it, we must escape GitHub variables, but not PowerShell variables.
             $scriptBlock = @"
             Write-Host '========================================='
             Write-Host 'Starting SQL Server Database Configuration'
             Write-Host 'Admin User: $($env:SQL_ADMIN_USER)'
             
             # Define SQL commands
-            $createDbQuery = "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'$DbName') BEGIN CREATE DATABASE $DbName; END"
-            $createLoginQuery = "IF NOT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'$DbUser') BEGIN CREATE LOGIN $DbUser WITH PASSWORD = '$($env:SQL_APP_PASS)'; END"
-            $createUserQuery = "USE $DbName; IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = N'$DbUser') BEGIN CREATE USER $DbUser FOR LOGIN $DbUser; ALTER ROLE db_owner ADD MEMBER $DbUser; END"
+            `$createDbQuery = "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'$DbName') BEGIN CREATE DATABASE $DbName; END"
+            `$createLoginQuery = "IF NOT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'$DbUser') BEGIN CREATE LOGIN $DbUser WITH PASSWORD = '$($env:SQL_APP_PASS)'; END"
+            `$createUserQuery = "USE $DbName; IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = N'$DbUser') BEGIN CREATE USER $DbUser FOR LOGIN $DbUser; ALTER ROLE db_owner ADD MEMBER $DbUser; END"
 
             try {
                 Write-Host "Step 1: Creating database $DbName..."
-                sqlcmd.exe -S localhost -U "$($env:SQL_ADMIN_USER)" -P "$($env:SQL_ADMIN_PASS)" -Q "$createDbQuery" -b
+                sqlcmd.exe -S localhost -U "$($env:SQL_ADMIN_USER)" -P "$($env:SQL_ADMIN_PASS)" -Q "`$createDbQuery" -b
                 Write-Host "✓ Database $DbName created or already exists."
 
                 Write-Host "Step 2: Creating login $DbUser..."
-                sqlcmd.exe -S localhost -U "$($env:SQL_ADMIN_USER)" -P "$($env:SQL_ADMIN_PASS)" -Q "$createLoginQuery" -b
+                sqlcmd.exe -S localhost -U "$($env:SQL_ADMIN_USER)" -P "$($env:SQL_ADMIN_PASS)" -Q "`$createLoginQuery" -b
                 Write-Host "✓ Login $DbUser created or already exists."
 
                 Write-Host "Step 3: Creating database user and assigning permissions..."
-                sqlcmd.exe -S localhost -U "$($env:SQL_ADMIN_USER)" -P "$($env:SQL_ADMIN_PASS)" -Q "$createUserQuery" -b
+                sqlcmd.exe -S localhost -U "$($env:SQL_ADMIN_USER)" -P "$($env:SQL_ADMIN_PASS)" -Q "`$createUserQuery" -b
                 Write-Host "✓ User $DbUser configured in $DbName."
 
                 Write-Host '✅ SQL configuration completed successfully!'
             }
             catch {
                 Write-Host '❌ SQL CONFIGURATION FAILED'
-                Write-Host "Error Message: `n`$($_.Exception.Message)"
-                Write-Host "Stack Trace: `n`$($_.ScriptStackTrace)"
+                # --- FIX: We must escape the '$' for PowerShell's here-string ---
+                Write-Host "Error Message: `n``$($_.Exception.Message)"
+                Write-Host "Stack Trace: `n``$($_.ScriptStackTrace)"
                 exit 1 # Exit with an error code
             }
             "@
@@ -118,8 +119,7 @@ jobs:
               -VMName "${{ inputs.vm_name || github.event.inputs.vm_name }}" `
               -CommandId 'RunPowerShellScript' `
               -ScriptString $scriptBlock 
-              # Timeout is no longer needed, this script is very fast
-          
+              
           azPSVersion: 'latest' 
         env:
           SQL_ADMIN_USER: "Volticatstadmin" 
