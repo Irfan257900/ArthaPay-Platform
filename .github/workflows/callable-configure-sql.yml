@@ -1,4 +1,4 @@
-name: "Reusable: Deploy Infrastructure"
+name: "Reusable: Configure SQL Database"
 
 on:
   workflow_call:
@@ -9,41 +9,27 @@ on:
       environment:
         type: string
         required: true
-    
-    outputs:
       vm_rg_name:
-        description: "The name of the VM's resource group"
-        value: ${{ jobs.deploy-infra.outputs.VM_RG_NAME }}
+        type: string
+        required: true
       vm_name:
-        description: "The name of the SQL VM"
-        # --- FIX: Changed 'sql-vm' to 'sqlvm' to match the real resource ---
-        value: ${{ jobs.deploy-infra.outputs.VM_NAME }}
-      static_web_app_api_key:
-        description: "The deployment token for the Static Web App"
-        value: ${{ jobs.deploy-infra.outputs.SWA_DEPLOY_TOKEN }}
-      static_web_app_url:
-        description: "The URL for the Static Web App"
-        value: ${{ jobs.deploy-infra.outputs.SWA_URL }}
-
+        type: string
+        required: true
     secrets:
       AZURE_CREDENTIALS:
         required: true
       VM_ADMIN_PASSWORD:
         required: true
-      AUTH0_DOMAIN:
-        required: true
-      MAILGUN_KEY:
-        required: true
-      TWILIO_SID:
+      APP_SQL_PASSWORD:
         required: true
 
   workflow_dispatch:
     inputs:
       client_name:
-        description: "Client name (e.g., Voltica)"
+        description: "Client name (e.g., Artha)"
         type: string
         required: true
-        default: "Voltica"
+        default: "Artha"
       environment:
         description: "Environment to deploy (e.g., tst, stg, prd)"
         type: choice
@@ -52,71 +38,91 @@ on:
           - stg
           - prd
         default: "tst"
+      vm_rg_name:
+        description: "VM Resource Group Name"
+        type: string
+        required: true
+        default: "rg-Artha-tst-vm"
+      vm_name:
+        description: "VM Name"
+        type: string
+        required: true
+        default: "Artha-tst-sqlvm"
 
 jobs:
-  deploy-infra:
-    name: "Deploy Infrastructure"
+  configure-sql:
+    name: "Configure SQL Database"
     runs-on: ubuntu-latest
-    
+
     environment:
       name: ${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}
 
-    outputs:
-      VM_RG_NAME: "rg-${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}-vm"
-      # --- FIX: Changed 'sql-vm' to 'sqlvm' to match the real resource ---
-      VM_NAME: "${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}-sqlvm"
-      SWA_DEPLOY_TOKEN: ${{ steps.apply.outputs.static_web_app_api_key }}
-      SWA_URL: ${{ steps.apply.outputs.static_web_app_url }}
-
-    defaults:
-      run:
-        working-directory: ./infranew/environments/deploy_template
-
     steps:
-      - name: "1. Check out Infrastructure Code"
-        uses: actions/checkout@v4
-
-      - name: "2. Log in to Azure"
+      - name: "1. Log in to Azure"
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+          enable-AzPSSession: true 
 
-      - name: "3. Setup Terraform"
-        uses: hashicorp/setup-terraform@v3
+      - name: "2. Run SQL Configuration Script"
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+            echo "Installing Az.Compute module..."
+            Install-Module -Name Az.Compute -Repository PSGallery -Force -AllowClobber -Scope CurrentUser
 
-      - name: "4. Terraform Init"
-        id: init
+            echo "Starting SQL Server configuration..."
+            
+            $ClientName = "${{ inputs.client_name || github.event.inputs.client_name }}"
+            $DbName = "$($ClientName)DB" # e.g., "ArthaDB"
+            $DbUser = "$($ClientName)_app_user" # e.g., "artha_app_user"
+
+            # This '$scriptBlock' is a "here-string", denoted by @"..."@
+            $scriptBlock = @"
+            Write-Host '========================================='
+            Write-Host 'Starting SQL Server Database Configuration'
+            Write-Host 'Admin User: $($env:SQL_ADMIN_USER)'
+            
+            # Define SQL commands
+            `$createDbQuery = "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'$DbName') BEGIN CREATE DATABASE $DbName; END"
+            `$createLoginQuery = "IF NOT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'$DbUser') BEGIN CREATE LOGIN $DbUser WITH PASSWORD = '$($env:SQL_APP_PASS)'; END"
+            `$createUserQuery = "USE $DbName; IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = N'$DbUser') BEGIN CREATE USER $DbUser FOR LOGIN $DbUser; ALTER ROLE db_owner ADD MEMBER $DbUser; END"
+
+            try {
+                Write-Host "Step 1: Creating database $DbName..."
+                sqlcmd.exe -S localhost -U "$($env:SQL_ADMIN_USER)" -P "$($env:SQL_ADMIN_PASS)" -Q "`$createDbQuery" -b
+                Write-Host "✓ Database $DbName created or already exists."
+
+                Write-Host "Step 2: Creating login $DbUser..."
+                sqlcmd.exe -S localhost -U "$($env:SQL_ADMIN_USER)" -P "$($env:SQL_ADMIN_PASS)" -Q "`$createLoginQuery" -b
+                Write-Host "✓ Login $DbUser created or already exists."
+
+                Write-Host "Step 3: Creating database user and assigning permissions..."
+                sqlcmd.exe -S localhost -U "$($env:SQL_ADMIN_USER)" -P "$($env:SQL_ADMIN_PASS)" -Q "`$createUserQuery" -b
+                Write-Host "✓ User $DbUser configured in $DbName."
+
+                Write-Host '✅ SQL configuration completed successfully!'
+            }
+            catch {
+                # --- FIX: Simplified catch block to remove all complex quotes ---
+                Write-Host '❌ SQL CONFIGURATION FAILED'
+                Write-Host 'Error Message:'
+                Write-Host $_.Exception.Message
+                Write-Host 'Stack Trace:'
+                Write-Host $_.ScriptStackTrace
+                exit 1 # Exit with an error code
+            }
+            "@
+            
+            echo "Sending configuration script to VM..."
+            Invoke-AzVMRunCommand `
+              -ResourceGroupName "${{ inputs.vm_rg_name || github.event.inputs.vm_rg_name }}" `
+              -VMName "${{ inputs.vm_name || github.event.inputs.vm_name }}" `
+              -CommandId 'RunPowerShellScript' `
+              -ScriptString $scriptBlock 
+              
+          azPSVersion: 'latest' 
         env:
-          STATE_FILE_KEY: "${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}.terraform.tfstate"
-        run: |
-          echo "Initializing Terraform for state file: $STATE_FILE_KEY"
-          terraform init -backend-config="key=$STATE_FILE_KEY"
-
-      - name: "5. Terraform Plan"
-        id: plan
-        env:
-          TF_VAR_client_name: ${{ inputs.client_name || github.event.inputs.client_name }}
-          TF_VAR_environment_name: ${{ inputs.environment || github.event.inputs.environment }}
-          TF_VAR_vm_admin_password: ${{ secrets.VM_ADMIN_PASSWORD }}
-          TF_VAR_auth0_domain: ${{ secrets.AUTH0_DOMAIN }}
-          TF_VAR_mailgun_key: ${{ secrets.MAILGUN_KEY }}
-          TF_VAR_twilio_sid: ${{ secrets.TWILIO_SID }}
-        run: terraform plan -out=tfplan
-
-      - name: "6. Terraform Apply"
-        id: apply
-        env:
-          TF_VAR_client_name: ${{ inputs.client_name || github.event.inputs.client_name }}
-          TF_VAR_environment_name: ${{ inputs.environment || github.event.inputs.environment }}
-          TF_VAR_vm_admin_password: ${{ secrets.VM_ADMIN_PASSWORD }}
-          TF_VAR_auth0_domain: ${{ secrets.AUTH0_DOMAIN }}
-          TF_VAR_mailgun_key: ${{ secrets.MAILGUN_KEY }}
-          TF_VAR_twilio_sid: ${{ secrets.TWILIO_SID }}
-        run: |
-          terraform apply -auto-approve tfplan
-          
-          # These commands read the outputs from the output.tf file
-          echo "static_web_app_api_key=$(terraform output -raw static_web_app_api_key)" >> $GITHUB_OUTPUT
-          echo "static_web_app_url=$(terraform output -raw static_web_app_url)" >> $GITHUB_OUTPUT
-          echo "vm_name=$(terraform output -raw vm_name)" >> $GITHUB_OUTPUT
-          echo "vm_rg_name=$(terraform output -raw vm_rg_name)" >> $GITHUB_OUTPUT
+          SQL_ADMIN_USER: "Volticatstadmin" 
+          SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
+          SQL_APP_PASS: ${{ secrets.APP_SQL_PASSWORD }}
