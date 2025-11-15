@@ -1,9 +1,4 @@
-# This file configures the Terraform provider for Azure
-
 terraform {
-  # This block tells Terraform to use a MODERN version
-  # of the Azure provider (version 3.0 or newer),
-  # which is required for Static Web Apps.
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
@@ -13,5 +8,12 @@ terraform {
 }
 
 provider "azurerm" {
-  features {}
+  # --- THE FINAL FIX ---
+  # This block tells Terraform it's OK to delete a resource group
+  # even if it has resources inside it. This fixes the error.
+  features {
+    resource_group {
+      prevent_deletion_if_contains_resources = false
+    }
+  }
 }
