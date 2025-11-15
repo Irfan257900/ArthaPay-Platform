@@ -62,66 +62,69 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-          enable-AzPSSession: true 
+          enable-AzPSSession: true
 
       - name: "2. Run SQL Configuration Script"
         uses: azure/powershell@v1
         with:
           inlineScript: |
-            echo "Installing Az.Compute module..."
+            Write-Host "Installing Az.Compute module..."
             Install-Module -Name Az.Compute -Repository PSGallery -Force -AllowClobber -Scope CurrentUser
 
-            echo "Starting SQL Server configuration..."
-            
+            Write-Host "Preparing SQL Server configuration..."
+
             $ClientName = "${{ inputs.client_name || github.event.inputs.client_name }}"
-            $DbName = "$($ClientName)DB" # e.g., "ArthaDB"
-            $DbUser = "$($ClientName)_app_user" # e.g., "artha_app_user"
+            $DbName = "$($ClientName)DB"
+            $DbUser = "$($ClientName)_app_user"
 
+            Write-Host "Database Name: $DbName"
+            Write-Host "Database User: $DbUser"
+
+            # ------------------ SCRIPT SENT TO VM ------------------
             $scriptBlock = @"
-            Write-Host '========================================='
-            Write-Host 'Starting SQL Server Database Configuration'
-            Write-Host 'Admin User: $($env:SQL_ADMIN_USER)'
-            
-            # Define SQL commands
-            `$createDbQuery = "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'$DbName') BEGIN CREATE DATABASE $DbName; END"
-            `$createLoginQuery = "IF NOT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'$DbUser') BEGIN CREATE LOGIN $DbUser WITH PASSWORD = '$($env:SQL_APP_PASS)'; END"
-            `$createUserQuery = "USE $DbName; IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = N'$DbUser') BEGIN CREATE USER $DbUser FOR LOGIN $DbUser; ALTER ROLE db_owner ADD MEMBER $DbUser; END"
+Write-Host '========================================='
+Write-Host 'Starting SQL Server Database Configuration'
+Write-Host "Admin User: $env:SQL_ADMIN_USER"
 
-            try {
-                Write-Host "Step 1: Creating database $DbName..."
-                sqlcmd.exe -S localhost -U "$($env:SQL_ADMIN_USER)" -P "$($env:SQL_ADMIN_PASS)" -Q "`$createDbQuery" -b
-                Write-Host "✓ Database $DbName created or already exists."
+# SQL Queries
+\$createDbQuery = "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'$DbName') BEGIN CREATE DATABASE [$DbName]; END"
+\$createLoginQuery = "IF NOT EXISTS (SELECT name FROM sys.sql_logins WHERE name = N'$DbUser') BEGIN CREATE LOGIN [$DbUser] WITH PASSWORD = '$($env:SQL_APP_PASS)', CHECK_POLICY = OFF; END"
+\$createUserQuery = "USE [$DbName]; IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = N'$DbUser') BEGIN CREATE USER [$DbUser] FOR LOGIN [$DbUser]; ALTER ROLE db_owner ADD MEMBER [$DbUser]; END"
 
-                Write-Host "Step 2: Creating login $DbUser..."
-                sqlcmd.exe -S localhost -U "$($env:SQL_ADMIN_USER)" -P "$($env:SQL_ADMIN_PASS)" -Q "`$createLoginQuery" -b
-                Write-Host "✓ Login $DbUser created or already exists."
+try {
+    Write-Host "Executing DB creation..."
+    sqlcmd.exe -S localhost -U "$env:SQL_ADMIN_USER" -P "$env:SQL_ADMIN_PASS" -Q "\$createDbQuery" -b
 
-                Write-Host "Step 3: Creating database user and assigning permissions..."
-                sqlcmd.exe -S localhost -U "$($env:SQL_ADMIN_USER)" -P "$($env:SQL_ADMIN_PASS)" -Q "`$createUserQuery" -b
-                Write-Host "✓ User $DbUser configured in $DbName."
+    Write-Host "Executing login creation..."
+    sqlcmd.exe -S localhost -U "$env:SQL_ADMIN_USER" -P "$env:SQL_ADMIN_PASS" -Q "\$createLoginQuery" -b
 
-                Write-Host '✅ SQL configuration completed successfully!'
-            }
-            catch {
-                # --- FIX: Simplified catch block to remove all complex quotes ---
-                Write-Host '❌ SQL CONFIGURATION FAILED'
-                Write-Host 'Error Message:'
-                Write-Host $_.Exception.Message
-                Write-Host 'Stack Trace:'
-                Write-Host $_.ScriptStackTrace
-                exit 1 # Exit with an error code
-            }
-            "@
-            
-            echo "Sending configuration script to VM..."
+    Write-Host "Executing DB user creation..."
+    sqlcmd.exe -S localhost -U "$env:SQL_ADMIN_USER" -P "$env:SQL_ADMIN_PASS" -Q "\$createUserQuery" -b
+
+    Write-Host '========================================='
+    Write-Host '✅ SQL configuration completed successfully!'
+    Write-Host '========================================='
+}
+catch {
+    Write-Host '❌ SQL CONFIGURATION FAILED'
+    Write-Host "Error: $($_.Exception.Message)"
+    exit 1
+}
+"@
+            # ------------------------------------------------------
+
+            Write-Host "Sending configuration script to VM..."
+
             Invoke-AzVMRunCommand `
               -ResourceGroupName "${{ inputs.vm_rg_name || github.event.inputs.vm_rg_name }}" `
               -VMName "${{ inputs.vm_name || github.event.inputs.vm_name }}" `
-              -CommandId 'RunPowerShellScript' `
-              -ScriptString $scriptBlock 
-              
-          azPSVersion: 'latest' 
+              -CommandId "RunPowerShellScript" `
+              -ScriptString $scriptBlock `
+              -ErrorAction Stop
+
+          azPSVersion: "latest"
+
         env:
-          SQL_ADMIN_USER: "Volticatstadmin" 
+          SQL_ADMIN_USER: "Volticatstadmin"
           SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
           SQL_APP_PASS: ${{ secrets.APP_SQL_PASSWORD }}
