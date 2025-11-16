@@ -58,10 +58,4 @@ resource "azurerm_key_vault_secret" "twilio_sid" {
   depends_on   = [azurerm_key_vault.kv]
 }
 
-output "id" {
-  value = azurerm_key_vault.kv.id
-}
-
-output "name" {
-  value = azurerm_key_vault.kv.name
-}
+# --- The "output" blocks have been REMOVED from this file ---
