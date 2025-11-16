@@ -1,5 +1,43 @@
-variable "key_vault_name" { type = string }
-variable "location" { type = string }
-variable "resource_group_name" { type = string }
-variable "tenant_id" { type = string }
-variable "tags" { type = map(string) }
+variable "key_vault_name" {
+  description = "Name of the Key Vault"
+  type        = string
+}
+
+variable "location" {
+  description = "Azure region"
+  type        = string
+}
+
+variable "resource_group_name" {
+  description = "Name of the resource group"
+  type        = string
+}
+
+variable "tenant_id" {
+  description = "Azure Tenant ID"
+  type        = string
+}
+
+variable "tags" {
+  description = "Tags to apply to resources"
+  type        = map(string)
+}
+
+# --- NEW VARIABLES FOR SECRETS ---
+variable "auth0_domain" {
+  description = "Auth0 Domain to store as secret"
+  type        = string
+  sensitive   = true
+}
+
+variable "mailgun_key" {
+  description = "Mailgun API Key to store as secret"
+  type        = string
+  sensitive   = true
+}
+
+variable "twilio_sid" {
+  description = "Twilio SID to store as secret"
+  type        = string
+  sensitive   = true
+}
