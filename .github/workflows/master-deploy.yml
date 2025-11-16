@@ -3,32 +3,48 @@ name: "Master Deploy: ArthaPay Platform"
 on:
   workflow_dispatch:
     inputs:
+      # --- 1. Client & Environment ---
       client_name:
-        description: "Client name (e.g., demo)"
+        description: "Client name (e.g., Artha)"
         type: string
         required: true
+        default: "Artha"
       environment:
-        description: "Environment to deploy (e.g., tst, stg, prd)"
+        description: "Environment (tst, stg, prd)"
         type: choice
         options:
           - tst
           - stg
           - prd
         default: "tst"
-      module:
-        description: "Application module to deploy (UI or 'all')"
-        type: choice
-        options:
-          - ArthapayUI
-          - all
-        default: "all"
-      # --- NEW INPUTS ---
+      
+      # --- 2. Module Selection ---
+      backend_modules_to_deploy:
+        description: "Backend modules (e.g., core,banks,cards)"
+        type: string
+        default: "core,banks,cards"
+        
+      # --- 3. Passwords (Entered at Runtime) ---
+      vm_admin_password:
+        description: "VM Admin Password (for Volticatstadmin)"
+        type: string
+        required: true
+      app_sql_password:
+        description: "SQL App User Password"
+        type: string
+        required: true
+        
+      # --- 4. Third-Party Config ---
       auth0_domain:
-        description: "Auth0 Domain (e.g., demo-tst.us.auth0.com)"
+        description: "Auth0 Domain"
         type: string
         required: true
       auth0_client_id:
         description: "Auth0 Client ID"
+        type: string
+        required: true
+      mailgun_key:
+        description: "Mailgun API Key"
         type: string
         required: true
       twilio_sid:
@@ -42,7 +58,7 @@ on:
 
 jobs:
   # ===================================================================
-  # JOB 1: CALL THE INFRASTRUCTURE WORKFLOW
+  # JOB 1: INFRASTRUCTURE
   # ===================================================================
   deploy-infra:
     name: "Job 1: Deploy Infrastructure"
@@ -50,34 +66,32 @@ jobs:
     with:
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
+      # Pass inputs to the reusable workflow
+      vm_admin_password: ${{ github.event.inputs.vm_admin_password }}
+      auth0_domain: ${{ github.event.inputs.auth0_domain }}
+      mailgun_key: ${{ github.event.inputs.mailgun_key }}
+      twilio_sid: ${{ github.event.inputs.twilio_sid }}
     secrets:
-      # --- Secrets from Environment ---
+      # The ONLY secret that must be in the Environment Settings
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-      VM_ADMIN_PASSWORD: ${{ secrets.VM_ADMIN_PASSWORD }}
-      MAILGUN_KEY: ${{ secrets.MAILGUN_KEY }}
-      # --- Secrets from Inputs ---
-      AUTH0_DOMAIN: ${{ github.event.inputs.auth0_domain }}
-      TWILIO_SID: ${{ github.event.inputs.twilio_sid }}
 
   # ===================================================================
-  # JOB 2: CALL THE REACT UI DEPLOY WORKFLOW
+  # JOB 2: REACT UI
   # ===================================================================
   deploy-ui:
     name: "Job 2: Deploy React UI"
     needs: deploy-infra 
-    if: github.event.inputs.module == 'ArthapayUI' || github.event.inputs.module == 'all'
     uses: ./.github/workflows/callable-deploy-ui.yml
     with:
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
       swa_deploy_token: ${{ needs.deploy-infra.outputs.static_web_app_api_key }}
-    secrets:
-      # --- Secrets from Inputs ---
-      AUTH0_DOMAIN: ${{ github.event.inputs.auth0_domain }}
-      AUTH0_CLIENT_ID: ${{ github.event.inputs.auth0_client_id }}
+      # Pass config for the .env file generation
+      auth0_domain: ${{ github.event.inputs.auth0_domain }}
+      auth0_client_id: ${{ github.event.inputs.auth0_client_id }}
 
   # ===================================================================
-  # JOB 3: CALL THE SQL CONFIGURATION WORKFLOW
+  # JOB 3: SQL DATABASE (We will fix the file for this later)
   # ===================================================================
   configure-sql:
     name: "Job 3: Configure SQL Database"
@@ -89,13 +103,13 @@ jobs:
       vm_rg_name: ${{ needs.deploy-infra.outputs.vm_rg_name }}
       vm_name: ${{ needs.deploy-infra.outputs.vm_name }}
     secrets:
-      # --- Secrets from Environment ---
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-      VM_ADMIN_PASSWORD: ${{ secrets.VM_ADMIN_PASSWORD }}
-      APP_SQL_PASSWORD: ${{ secrets.APP_SQL_PASSWORD }}
+      # Pass passwords from inputs
+      VM_ADMIN_PASSWORD: ${{ github.event.inputs.vm_admin_password }}
+      APP_SQL_PASSWORD: ${{ github.event.inputs.app_sql_password }}
 
   # ===================================================================
-  # JOB 4: CALL THE ZAPIER TRIGGER WORKFLOW
+  # JOB 4: ZAPIER
   # ===================================================================
   trigger-zapier:
     name: "Job 4: Trigger Zapier Webhook"
@@ -106,5 +120,4 @@ jobs:
       environment: ${{ github.event.inputs.environment }}
       app_url: ${{ needs.deploy-infra.outputs.static_web_app_url }}
     secrets:
-      # --- Secrets from Inputs ---
       ZAPIER_WEBHOOK_URL: ${{ github.event.inputs.zapier_webhook_url }}

@@ -12,29 +12,11 @@ on:
       swa_deploy_token:
         type: string
         required: true
-    secrets:
-      AUTH0_DOMAIN:
-        required: true
-      AUTH0_CLIENT_ID:
-        required: true
-
-  workflow_dispatch:
-    inputs:
-      client_name:
-        description: "Client name (e.g., Voltica)"
+      # New inputs passed from Master
+      auth0_domain:
         type: string
         required: true
-        default: "Voltica"
-      environment:
-        description: "Environment to deploy (e.g., tst, stg, prd)"
-        type: choice
-        options:
-          - tst
-          - stg
-          - prd
-        default: "tst"
-      swa_deploy_token:
-        description: "The SWA Deployment Token (Get from 'Deploy Infra' run)"
+      auth0_client_id:
         type: string
         required: true
 
@@ -43,12 +25,9 @@ jobs:
     name: "Deploy React UI"
     runs-on: ubuntu-latest
 
-    environment:
-      name: ${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}
-
     defaults:
       run:
-        working-directory: ./ArthapayUI # Set default directory to your React app
+        working-directory: ./ArthapayUI 
 
     steps:
       - name: "1. Check out Application Code"
@@ -62,43 +41,82 @@ jobs:
       - name: "3. Install NPM Dependencies"
         run: npm install --force
 
-      - name: "4. Set Dynamic Build Names"
-        id: set_names
+      - name: "4. Set Dynamic Names"
+        id: vars
+        shell: bash
         run: |
-          CLIENT_NAME_LOWER=$(echo "${{ inputs.client_name || github.event.inputs.client_name }}" | tr '[:upper:]' '[:lower:]')
-          echo "BUILD_CLIENT=$CLIENT_NAME_LOWER" >> $GITHUB_OUTPUT
+          # Convert inputs to lowercase (e.g., Artha -> artha)
+          CLIENT_LOWER=$(echo "${{ inputs.client_name }}" | tr '[:upper:]' '[:lower:]')
+          ENV_LOWER=$(echo "${{ inputs.environment }}" | tr '[:upper:]' '[:lower:]')
           
-          ENV_NAME="${{ inputs.environment || github.event.inputs.environment }}"
-          if [ "$ENV_NAME" == "tst" ]; then
-            echo "BUILD_ENV=testing" >> $GITHUB_OUTPUT
-          elif [ "$ENV_NAME" == "stg" ]; then
-            echo "BUILD_ENV=staging" >> $GITHUB_OUTPUT
-          elif [ "$ENV_NAME" == "prd" ]; then
-            echo "BUILD_ENV=production" >> $GITHUB_OUTPUT
+          # Map env inputs to build script names (tst -> testing)
+          if [ "$ENV_LOWER" == "tst" ]; then
+            BUILD_ENV="testing"
+          elif [ "$ENV_LOWER" == "stg" ]; then
+            BUILD_ENV="staging"
+          elif [ "$ENV_LOWER" == "prd" ]; then
+            BUILD_ENV="production"
           else
-            echo "BUILD_ENV=$ENV_NAME" >> $GITHUB_OUTPUT
+            BUILD_ENV="$ENV_LOWER"
           fi
-          
-      - name: "5. Build React App"
-        run: |
-          SCRIPT_NAME="build:${{ steps.set_names.outputs.BUILD_CLIENT }}:${{ steps.set_names.outputs.BUILD_ENV }}"
-          echo "Client: ${{ steps.set_names.outputs.BUILD_CLIENT }}"
-          echo "Environment: ${{ steps.set_names.outputs.BUILD_ENV }}"
-          echo "Attempting to run script: $SCRIPT_NAME"
-          
-          npm run $SCRIPT_NAME
-        env:
-          VITE_API_URL: "https://api.${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}.com" # Example
-          VITE_AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
-          VITE_AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
 
-      - name: "6. Deploy to Static Web App"
+          echo "CLIENT_LOWER=$CLIENT_LOWER" >> $GITHUB_OUTPUT
+          echo "ENV_LOWER=$ENV_LOWER" >> $GITHUB_OUTPUT
+          echo "BUILD_ENV=$BUILD_ENV" >> $GITHUB_OUTPUT
+          echo "BUILD_SCRIPT=build:${CLIENT_LOWER}:${BUILD_ENV}" >> $GITHUB_OUTPUT
+
+      - name: "5. Generate Dynamic .env File"
+        shell: bash
+        run: |
+          # This step creates the .env file based on your sample
+          CLIENT="${{ steps.vars.outputs.CLIENT_LOWER }}"
+          ENV="${{ steps.vars.outputs.ENV_LOWER }}"
+          
+          # Construct URLs dynamically. 
+          # Example: https://arthatstpayments.artha.work
+          APP_URL="https://${CLIENT}payments.${CLIENT}.work"
+          CORE_API="https://${CLIENT}${ENV}core.${CLIENT}.work"
+          
+          echo "Creating .env file..."
+          
+          # Write to .env
+          cat <<EOF > .env
+          VITE_CLIENT=$CLIENT
+          VITE_REDIRECT_URI=$APP_URL/callback
+          VITE_CLIENT_ID=${{ inputs.auth0_client_id }}
+          VITE_AUTHORITY=${{ inputs.auth0_domain }}
+          VITE_AUDIENCE=https://$(echo ${{ inputs.auth0_domain }} | cut -d'.' -f1)Api.net
+          VITE_SILENT_REDIRECT_URI=$APP_URL/silent_redirect
+          
+          VITE_CORE_API_END_POINT=$CORE_API
+          VITE_APP_URL=$APP_URL
+          VITE_ADMIN_URL=https://${CLIENT}payadmin.${CLIENT}.work
+          
+          VITE_API_END_POINT=https://${CLIENT}payapi.${CLIENT}.work/api/v1
+          VITE_API_PAYMENTS_END_POINT=https://${CLIENT}${ENV}payments.${CLIENT}.work
+          VITE_API_NOTIFICATIONS_END_POINT=$CORE_API
+          VITE_API_EXCHANGE_END_POINT=https://${CLIENT}${ENV}exchange.${CLIENT}.work
+          VITE_API_BANKS_END_POINT=https://${CLIENT}${ENV}banks.${CLIENT}.work
+          VITE_API_CARDS_END_POINT=https://${CLIENT}${ENV}cards.${CLIENT}.work
+          
+          VITE_NODE_ENV=production
+          EOF
+          
+          # Print file for debugging (hide secrets manually if needed, but safe in logs for now)
+          cat .env
+
+      - name: "6. Build React App"
+        run: |
+          SCRIPT="${{ steps.vars.outputs.BUILD_SCRIPT }}"
+          echo "Running build script: npm run $SCRIPT"
+          npm run $SCRIPT
+
+      - name: "7. Deploy to Static Web App"
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ inputs.swa_deploy_token || github.event.inputs.swa_deploy_token }}
+          azure_static_web_apps_api_token: ${{ inputs.swa_deploy_token }}
           app_location: "ArthapayUI/dist" 
           skip_app_build: true
           skip_api_build: true
           api_location: ""
-          # --- THIS IS THE FIX ---
           action: "upload"
