@@ -4,10 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       client_name:
-        description: "Client name (e.g., Voltica)"
+        description: "Client name (e.g., demo)"
         type: string
         required: true
-        default: "Voltica"
       environment:
         description: "Environment to deploy (e.g., tst, stg, prd)"
         type: choice
@@ -22,7 +21,24 @@ on:
         options:
           - ArthapayUI
           - all
-        default: "ArthapayUI"
+        default: "all"
+      # --- NEW INPUTS ---
+      auth0_domain:
+        description: "Auth0 Domain (e.g., demo-tst.us.auth0.com)"
+        type: string
+        required: true
+      auth0_client_id:
+        description: "Auth0 Client ID"
+        type: string
+        required: true
+      twilio_sid:
+        description: "Twilio Account SID"
+        type: string
+        required: true
+      zapier_webhook_url:
+        description: "Zapier Webhook URL"
+        type: string
+        required: true
 
 jobs:
   # ===================================================================
@@ -35,11 +51,13 @@ jobs:
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
     secrets:
+      # --- Secrets from Environment ---
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
       VM_ADMIN_PASSWORD: ${{ secrets.VM_ADMIN_PASSWORD }}
-      AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
       MAILGUN_KEY: ${{ secrets.MAILGUN_KEY }}
-      TWILIO_SID: ${{ secrets.TWILIO_SID }}
+      # --- Secrets from Inputs ---
+      AUTH0_DOMAIN: ${{ github.event.inputs.auth0_domain }}
+      TWILIO_SID: ${{ github.event.inputs.twilio_sid }}
 
   # ===================================================================
   # JOB 2: CALL THE REACT UI DEPLOY WORKFLOW
@@ -54,8 +72,9 @@ jobs:
       environment: ${{ github.event.inputs.environment }}
       swa_deploy_token: ${{ needs.deploy-infra.outputs.static_web_app_api_key }}
     secrets:
-      AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
-      AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }} 
+      # --- Secrets from Inputs ---
+      AUTH0_DOMAIN: ${{ github.event.inputs.auth0_domain }}
+      AUTH0_CLIENT_ID: ${{ github.event.inputs.auth0_client_id }}
 
   # ===================================================================
   # JOB 3: CALL THE SQL CONFIGURATION WORKFLOW
@@ -65,12 +84,12 @@ jobs:
     needs: deploy-infra 
     uses: ./.github/workflows/callable-configure-sql.yml
     with:
-      # --- FIX: Pass the client_name to the script ---
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
       vm_rg_name: ${{ needs.deploy-infra.outputs.vm_rg_name }}
       vm_name: ${{ needs.deploy-infra.outputs.vm_name }}
     secrets:
+      # --- Secrets from Environment ---
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
       VM_ADMIN_PASSWORD: ${{ secrets.VM_ADMIN_PASSWORD }}
       APP_SQL_PASSWORD: ${{ secrets.APP_SQL_PASSWORD }}
@@ -87,4 +106,5 @@ jobs:
       environment: ${{ github.event.inputs.environment }}
       app_url: ${{ needs.deploy-infra.outputs.static_web_app_url }}
     secrets:
-      ZAPIER_WEBHOOK_URL: ${{ secrets.ZAPIER_WEBHOOK_URL }}
+      # --- Secrets from Inputs ---
+      ZAPIER_WEBHOOK_URL: ${{ github.event.inputs.zapier_webhook_url }}
