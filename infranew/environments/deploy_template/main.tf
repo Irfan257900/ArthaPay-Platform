@@ -23,7 +23,7 @@ resource "azurerm_resource_group" "rg_infra" {
 
 # --- Infrastructure Resources (in rg_infra) ---
 module "networking" {
-  source              = "../../modules/networking" # Use the generic module
+  source              = "../../modules/networking"
   vnet_name           = local.vnet_name
   location            = azurerm_resource_group.rg_infra.location
   resource_group_name = azurerm_resource_group.rg_infra.name
@@ -32,13 +32,12 @@ module "networking" {
   vnet_address_space          = local.vnet_address_space
   subnets                     = local.subnets
   private_endpoints_subnet_name = local.private_endpoints_subnet_name
-
-  # --- FIX: Add dependency to ensure correct delete order ---
+  
   depends_on = [azurerm_resource_group.rg_infra]
 }
 
 module "windows_vm_sql" {
-  source              = "../../modules/windows_vm_sql" # Use the generic module
+  source              = "../../modules/windows_vm_sql"
   vm_name             = local.vm_name
   location            = azurerm_resource_group.rg_infra.location
   resource_group_name = azurerm_resource_group.rg_infra.name
@@ -47,7 +46,6 @@ module "windows_vm_sql" {
   admin_password      = var.vm_admin_password
   tags                = local.common_tags
   
-  # Ensure networking is created before the VM
   depends_on = [module.networking] 
 }
 
@@ -76,6 +74,7 @@ module "service_bus" {
   sku                        = "Standard"
   tags                       = local.common_tags
 }
+
 module "key_vault" {
   source              = "../../modules/key_vault"
   key_vault_name      = local.key_vault_name
@@ -83,7 +82,14 @@ module "key_vault" {
   resource_group_name = azurerm_resource_group.rg_apps.name
   tenant_id           = data.azurerm_client_config.current.tenant_id
   tags                = local.common_tags
+
+  # --- THIS IS THE FIX ---
+  # Pass the secret variables from the root into this module
+  auth0_domain = var.auth0_domain
+  mailgun_key  = var.mailgun_key
+  twilio_sid   = var.twilio_sid
 }
+
 resource "azurerm_role_assignment" "kv_admin_rbac" {
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Administrator"
@@ -99,17 +105,15 @@ module "function_apps" {
   function_app_name              = "${local._name_prefix}-${each.key}-func" # Dynamic name
   dotnet_version                 = var.dotnet_version
   app_service_plan_id            = module.app_service_plan.id
-  app_insights_instrumentation_key = "dummy-key" # We should fix this later
+  app_insights_instrumentation_key = "dummy-key"
   storage_account_name           = module.storage_account.name
   storage_account_access_key     = module.storage_account.primary_access_key
 }
 
-# --- NEW MODULE FOR YOUR REACT UI ---
 module "static_web_app" {
   source                = "../../modules/static_web_app"
   name                  = local.static_web_app_name
-  # --- FIX: Changed location to an approved region ---
-  location              = "eastasia"
+  location              = "eastasia" # Use approved region
   resource_group_name   = azurerm_resource_group.rg_apps.name
   tags                  = local.common_tags
 }
