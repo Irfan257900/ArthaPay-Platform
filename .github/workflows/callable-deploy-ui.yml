@@ -45,39 +45,49 @@ jobs:
         id: vars
         shell: bash
         run: |
-          # Convert inputs to lowercase (e.g., Artha -> artha)
+          # 1. Get client and env, convert to lowercase
           CLIENT_LOWER=$(echo "${{ inputs.client_name }}" | tr '[:upper:]' '[:lower:]')
           ENV_LOWER=$(echo "${{ inputs.environment }}" | tr '[:upper:]' '[:lower:]')
           
-          # Map env inputs to build script names (tst -> testing)
+          # 2. Map env inputs to build script names (tst -> testing)
           if [ "$ENV_LOWER" == "tst" ]; then
             BUILD_ENV="testing"
           elif [ "$ENV_LOWER" == "stg" ]; then
             BUILD_ENV="staging"
           elif [ "$ENV_LOWER" == "prd" ]; then
-            BUILD_ENV="production"
+            # We must map 'prd' to a real script.
+            # Your package.json has 'build:artha:production' - let's assume 'prd' maps to 'production'
+            BUILD_ENV="production" 
           else
-            BUILD_ENV="$ENV_LOWER"
+            BUILD_ENV=$ENV_LOWER
           fi
+          
+          # --- THE FIX ---
+          # The "Brand" of the UI (which determines the build script) is always 'artha'.
+          # The client_name (demo) is for infrastructure URLs, 
+          # but the build script is for the 'artha' brand.
+          BUILD_BRAND="artha"
 
+          # 3. Construct the script name (e.g., "build:artha:testing")
+          BUILD_SCRIPT="build:${BUILD_BRAND}:${BUILD_ENV}"
+          
+          echo "BUILD_SCRIPT=$BUILD_SCRIPT" >> $GITHUB_OUTPUT
           echo "CLIENT_LOWER=$CLIENT_LOWER" >> $GITHUB_OUTPUT
           echo "ENV_LOWER=$ENV_LOWER" >> $GITHUB_OUTPUT
-          echo "BUILD_ENV=$BUILD_ENV" >> $GITHUB_OUTPUT
-          echo "BUILD_SCRIPT=build:${CLIENT_LOWER}:${BUILD_ENV}" >> $GITHUB_OUTPUT
 
       - name: "5. Generate Dynamic .env File"
         shell: bash
         run: |
           # This step creates the .env file based on your sample
+          # It correctly uses CLIENT_LOWER (e.g., 'demo')
           CLIENT="${{ steps.vars.outputs.CLIENT_LOWER }}"
           ENV="${{ steps.vars.outputs.ENV_LOWER }}"
           
-          # Construct URLs dynamically. 
-          # Example: https://arthatstpayments.artha.work
+          # Construct URLs dynamically
           APP_URL="https://${CLIENT}payments.${CLIENT}.work"
           CORE_API="https://${CLIENT}${ENV}core.${CLIENT}.work"
           
-          echo "Creating .env file..."
+          echo "Creating .env file for client: $CLIENT"
           
           # Write to .env
           cat <<EOF > .env
@@ -102,11 +112,13 @@ jobs:
           VITE_NODE_ENV=production
           EOF
           
-          # Print file for debugging (hide secrets manually if needed, but safe in logs for now)
+          echo "--- .env file created ---"
           cat .env
+          echo "-------------------------"
 
       - name: "6. Build React App"
         run: |
+          # This will now run "npm run build:artha:testing"
           SCRIPT="${{ steps.vars.outputs.BUILD_SCRIPT }}"
           echo "Running build script: npm run $SCRIPT"
           npm run $SCRIPT
