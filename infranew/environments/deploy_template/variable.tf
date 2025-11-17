@@ -12,7 +12,6 @@ variable "environment_name" {
 variable "location" {
   description = "The Azure region for the deployment."
   type        = string
-  # --- FIX: Changed default location ---
   default     = "southeastasia"
 }
 
@@ -20,7 +19,7 @@ variable "location" {
 variable "vm_admin_username" {
   description = "Administrator username for the SQL VM."
   type        = string
-  default     = "Volticatstadmin"
+  # --- FIX: Default removed. Value now comes from workflow. ---
 }
 
 variable "vm_admin_password" {
