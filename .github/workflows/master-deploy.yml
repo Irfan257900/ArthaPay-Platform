@@ -17,13 +17,13 @@ on:
           - stg
           - prd
         default: "tst"
-      
+
       # --- 2. Module Selection ---
       backend_modules_to_deploy:
         description: "Backend modules (e.g., core,banks,cards)"
         type: string
         default: "core,banks,cards"
-        
+
       # --- 3. Passwords (Entered at Runtime) ---
       vm_admin_username:
         description: "VM Administrator Username (1-15 chars, no special chars)"
@@ -38,7 +38,7 @@ on:
         description: "SQL Application User Password"
         type: string
         required: true
-        
+
       # --- 4. Third-Party Config ---
       auth0_domain:
         description: "Auth0 Domain"
