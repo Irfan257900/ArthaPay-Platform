@@ -43,12 +43,17 @@ jobs:
           enable-AzPSSession: true 
 
       # =========================================================================
-      # NEW STEP: Install SQL Server on the VM
+      # STEP 2: Install SQL Server on the VM
       # =========================================================================
       - name: "2. Install SQL Server Express 2022"
         uses: azure/powershell@v1
         with:
           inlineScript: |
+            # === FIX: Force-load the correct module ===
+            Write-Host "Forcing import of Az.Compute module..."
+            Import-Module -Name Az.Compute -Force
+            # ==========================================
+            
             Write-Host "Starting SQL Server Express 2022 installation on VM..."
 
             $installSqlScript = @"
@@ -71,14 +76,6 @@ jobs:
             Write-Host "Download complete."
             
             # 4. Run the silent installer
-            # /Q - Silent mode
-            # /IACCEPTSQLSERVERLICENSETERMS - Accept license
-            # /ACTION=Install - Action to perform
-            # /FEATURES=SQLEngine - Only install the database engine
-            # /INSTANCENAME=SQLEXPRESS - Name of the instance
-            # /TCPENABLED=1 - Enable TCP/IP (good for remote connections)
-            # /SQLSVCACCOUNT=`"NT AUTHORITY\SYSTEM`" - Run service as SYSTEM
-            # /SQLSYSADMINACCOUNTS=`"BUILTIN\Administrators`" - Make all VM admins SQL admins
             Write-Host "Starting silent installation... This will take several minutes."
             Start-Process -FilePath `$installerPath -ArgumentList `
               "/Q", `
@@ -127,12 +124,17 @@ jobs:
           SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
 
       # =========================================================================
-      # YOUR ORIGINAL SCRIPT, NOW FIXED
+      # STEP 3: Run SQL Configuration Script
       # =========================================================================
       - name: "3. Run SQL Configuration Script"
         uses: azure/powershell@v1
         with:
           inlineScript: |
+            # === FIX: Force-load the correct module ===
+            Write-Host "Forcing import of Az.Compute module..."
+            Import-Module -Name Az.Compute -Force
+            # ==========================================
+
             Write-Host "Starting SQL Server configuration..."
             
             $ClientName = "${{ inputs.client_name }}"
