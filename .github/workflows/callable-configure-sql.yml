@@ -29,7 +29,7 @@ on:
 
 jobs:
   configure-sql:
-    name: "Configure SQL Database"
+    name: "Install and Configure SQL Database"
     runs-on: ubuntu-latest
 
     environment:
@@ -42,77 +42,155 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
           enable-AzPSSession: true 
 
-      - name: "2. Run SQL Configuration Script"
-        # --- FIX 1: This entire step MUST run in PowerShell ---
-        shell: pwsh
-        run: |
-          # --- FIX 2: Install AND IMPORT the required Az module ---
-          echo "Installing Az.Compute module..."
-          Install-Module -Name Az.Compute -Repository PSGallery -Force -AllowClobber -Scope CurrentUser
+      # =========================================================================
+      # NEW STEP: Install SQL Server on the VM
+      # =========================================================================
+      - name: "2. Install SQL Server Express 2022"
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+            Write-Host "Starting SQL Server Express 2022 installation on VM..."
 
-          # =================== THIS IS THE FIX ===================
-          echo "Importing newly installed module to fix -RunAsUserName error..."
-          Import-Module -Name Az.Compute -Force
-          # =======================================================
-
-          echo "Starting SQL Server configuration..."
-          
-          $ClientName = "${{ inputs.client_name }}"
-          $DbName = "$($ClientName)DB" # e.g., "demoDB"
-          $DbUser = "$($ClientName)_app_user" # e.g., "demo_app_user"
-
-          # This script will be run *as* the VM Administrator
-          $scriptBlock = @"
-          Write-Host '========================================='
-          Write-Host 'Starting SQL Server Database Configuration'
-          Write-Host "Running as user: $(whoami)" # This will now show the admin user
-          
-          `$ErrorActionPreference = "Stop" # Make the script stop on errors
-
-          # Define SQL commands
-          `$createDbQuery = "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'$DbName') BEGIN CREATE DATABASE $DbName; END"
-          `$createLoginQuery = "IF NOT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'$DbUser') BEGIN CREATE LOGIN $DbUser WITH PASSWORD = '$($env:SQL_APP_PASS)'; END"
-          `$createUserQuery = "USE $DbName; IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = N'$DbUser') BEGIN CREATE USER $DbUser FOR LOGIN $DbUser; ALTER ROLE db_owner ADD MEMBER $DbUser; END"
-
-          try {
-              Write-Host "Step 1: Creating database $DbName..."
-              # Use -E for Windows (Trusted) Authentication
-              sqlcmd.exe -S localhost -E -Q "`$createDbQuery" -b
-              if (`$LASTEXITCODE -ne 0) { throw "sqlcmd failed on step 1." }
-              Write-Host "Database $DbName created or already exists."
-
-              Write-Host "Step 2: Creating login $DbUser..."
-              sqlcmd.exe -S localhost -E -Q "`$createLoginQuery" -b
-              if (`$LASTEXITCODE -ne 0) { throw "sqlcmd failed on step 2." }
-              Write-Host "Login $DbUser created or already exists."
-
-              Write-Host "Step 3: Creating database user and assigning permissions..."
-              sqlcmd.exe -S localhost -E -Q "`$createUserQuery" -b
-              if (`$LASTEXITCODE -ne 0) { throw "sqlcmd failed on step 3." }
-              Write-Host "User $DbUser configured in $DbName."
-
-              Write-Host '✅ SQL configuration completed successfully!'
-          }
-          catch {
-              Write-Host '❌ SQL CONFIGURATION FAILED'
-              Write-Host "Error: $($_.Exception.Message)"
-              exit 1 # Exit with an error code
-          }
-          "@
-          
-          echo "Sending configuration script to VM..."
-          
-          # --- FIX 3: Convert password to SecureString for -RunAsPassword ---
-          $RunAsPassword = $env:SQL_ADMIN_PASS | ConvertTo-SecureString -AsPlainText -Force
-          
-          Invoke-AzVMRunCommand `
-            -ResourceGroupName "${{ inputs.vm_rg_name }}" `
-            -VMName "${{ inputs.vm_name }}" `
-            -CommandId 'RunPowerShellScript' `
-            -ScriptString $scriptBlock `
-            -RunAsUserName "$($env:SQL_ADMIN_USER)" `
-            -RunAsPassword $RunAsPassword
+            $installSqlScript = @"
+            `$ErrorActionPreference = "Stop"
+            Write-Host "Running as user: $(whoami)"
             
+            # 1. Define paths
+            `$tempDir = "C:\Temp"
+            `$installerPath = "`$tempDir\SQLEXPR_x64_ENU.exe"
+            
+            # 2. Create temp directory
+            if (-not (Test-Path `$tempDir)) {
+                New-Item -Path `$tempDir -ItemType Directory
+            }
+            
+            # 3. Download SQL Server Express 2022
+            Write-Host "Downloading SQL Server Express..."
+            `$downloader = New-Object System.Net.WebClient
+            `$downloader.DownloadFile("https://go.microsoft.com/fwlink/?linkid=2216035", `$installerPath)
+            Write-Host "Download complete."
+            
+            # 4. Run the silent installer
+            # /Q - Silent mode
+            # /IACCEPTSQLSERVERLICENSETERMS - Accept license
+            # /ACTION=Install - Action to perform
+            # /FEATURES=SQLEngine - Only install the database engine
+            # /INSTANCENAME=SQLEXPRESS - Name of the instance
+            # /TCPENABLED=1 - Enable TCP/IP (good for remote connections)
+            # /SQLSVCACCOUNT=`"NT AUTHORITY\SYSTEM`" - Run service as SYSTEM
+            # /SQLSYSADMINACCOUNTS=`"BUILTIN\Administrators`" - Make all VM admins SQL admins
+            Write-Host "Starting silent installation... This will take several minutes."
+            Start-Process -FilePath `$installerPath -ArgumentList `
+              "/Q", `
+              "/IACCEPTSQLSERVERLICENSETERMS", `
+              "/ACTION=Install", `
+              "/FEATURES=SQLEngine", `
+              "/INSTANCENAME=SQLEXPRESS", `
+_             "/TCPENABLED=1", `
+              "/SQLSVCACCOUNT=`"NT AUTHORITY\SYSTEM`"", `
+              "/SQLSYSADMINACCOUNTS=`"BUILTIN\Administrators`"" -Wait
+            
+            Write-Host "✅ SQL Server installation process finished."
+            
+            # 5. Wait for the SQL service to be ready
+            Write-Host "Waiting for SQL Server service (MSSQL\$SQLEXPRESS) to start..."
+            `$service = Get-Service -Name "MSSQL`$SQLEXPRESS" -ErrorAction SilentlyContinue
+            `$timeout = 300 # 5 minutes
+            `$watch = [System.Diagnostics.Stopwatch]::StartNew()
+
+            while (`$service.Status -ne 'Running') {
+                if (`$watch.Elapsed.TotalSeconds -gt `$timeout) {
+                    throw "Timeout: SQL Server service did not start."
+                }
+                Write-Host "Service status: `$($service.Status)... waiting 5s."
+                Start-Sleep -Seconds 5
+                `$service.Refresh()
+            }
+            Write-Host "✅ SQL Server service is running."
+            "@
+            
+            # Convert password to SecureString
+            $RunAsPassword = $env:SQL_ADMIN_PASS | ConvertTo-SecureString -AsPlainText -Force
+            
+            # Run the installation script on the VM
+            Invoke-AzVMRunCommand `
+              -ResourceGroupName "${{ inputs.vm_rg_name }}" `
+              -VMName "${{ inputs.vm_name }}" `
+              -CommandId 'RunPowerShellScript' `
+              -ScriptString $installSqlScript `
+              -RunAsUserName "$($env:SQL_ADMIN_USER)" `
+              -RunAsPassword $RunAsPassword
+          
+          azPSVersion: "latest" # This ensures we have the latest modules
+        env:
+          SQL_ADMIN_USER: ${{ inputs.vm_admin_username }}
+          SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
+
+      # =========================================================================
+      # YOUR ORIGINAL SCRIPT, NOW FIXED AND MODIFIED
+      # =========================================================================
+      - name: "3. Run SQL Configuration Script"
+        uses: azure/powershell@v1 # <-- FIX 1: Use this action
+        with:
+          inlineScript: |
+            Write-Host "Starting SQL Server configuration..."
+            
+            $ClientName = "${{ inputs.client_name }}"
+            $DbName = "$($ClientName)DB" # e.g., "demoDB"
+            $DbUser = "$($ClientName)_app_user" # e.g., "demo_app_user"
+
+            # This script will be run *as* the VM Administrator
+            $scriptBlock = @"
+            Write-Host '========================================='
+            Write-Host 'Starting SQL Server Database Configuration'
+            Write-Host "Running as user: $(whoami)"
+            
+            `$ErrorActionPreference = "Stop"
+
+            # Define SQL commands
+            `$createDbQuery = "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'$DbName') BEGIN CREATE DATABASE $DbName; END"
+            `$createLoginQuery = "IF NOTT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'$DbUser') BEGIN CREATE LOGIN $DbUser WITH PASSWORD = '$($env:SQL_APP_PASS)'; END"
+            `$createUserQuery = "USE $DbName; IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = N'$DbUser') BEGIN CREATE USER $DbUser FOR LOGIN $DbUser; ALTER ROLE db_owner ADD MEMBER $DbUser; END"
+
+            try {
+                Write-Host "Step 1: Creating database $DbName..."
+                # NOTE: We must now specify the instance name: localhost\SQLEXPRESS
+                sqlcmd.exe -S localhost\SQLEXPRESS -E -Q "`$createDbQuery" -b
+                if (`$LASTEXITCODE -ne 0) { throw "sqlcmd failed on step 1." }
+                Write-Host "Database $DbName created or already exists."
+
+                Write-Host "Step 2: Creating login $DbUser..."
+                sqlcmd.exe -S localhost\SQLEXPRESS -E -Q "`$createLoginQuery" -b
+                if (`$LASTEXITCODE -ne 0) { throw "sqlcmd failed on step 2." }
+                Write-Host "Login $DbUser created or already exists."
+
+                Write-Host "Step 3: Creating database user and assigning permissions..."
+                sqlcmd.exe -S localhost\SQLEXPRESS -E -Q "`$createUserQuery" -b
+                if (`$LASTEXITCODE -ne 0) { throw "sqlcmd failed on step 3." }
+                Write-Host "User $DbUser configured in $DbName."
+
+                Write-Host '✅ SQL configuration completed successfully!'
+            }
+            catch {
+                Write-Host '❌ SQL CONFIGURATION FAILED'
+                Write-Host "Error: $($_.Exception.Message)"
+                exit 1 # Exit with an error code
+            }
+            "@
+            
+            echo "Sending configuration script to VM..."
+            
+            $RunAsPassword = $env:SQL_ADMIN_PASS | ConvertTo-SecureString -AsPlainText -Force
+            
+            Invoke-AzVMRunCommand `
+              -ResourceGroupName "${{ inputs.vm_rg_name }}" `
+              -VMName "${{ inputs.vm_name }}" `
+              -CommandId 'RunPowerShellScript' `
+              -ScriptString $scriptBlock `
+              -RunAsUserName "$($env:SQL_ADMIN_USER)" `
+              -RunAsPassword $RunAsPassword
+          
+          azPSVersion: "latest" # <-- FIX 1: This forces the latest Az modules
         env:
           SQL_ADMIN_USER: ${{ inputs.vm_admin_username }}
           SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
