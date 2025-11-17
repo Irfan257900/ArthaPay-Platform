@@ -22,22 +22,3 @@ variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)
 }
-
-# --- NEW VARIABLES FOR SECRETS ---
-variable "auth0_domain" {
-  description = "Auth0 Domain to store as secret"
-  type        = string
-  sensitive   = true
-}
-
-variable "mailgun_key" {
-  description = "Mailgun API Key to store as secret"
-  type        = string
-  sensitive   = true
-}
-
-variable "twilio_sid" {
-  description = "Twilio SID to store as secret"
-  type        = string
-  sensitive   = true
-}

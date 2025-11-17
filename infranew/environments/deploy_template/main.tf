@@ -28,14 +28,11 @@ module "networking" {
   location            = azurerm_resource_group.rg_infra.location
   resource_group_name = azurerm_resource_group.rg_infra.name
   tags                = local.common_tags
-
   vnet_address_space          = local.vnet_address_space
   subnets                     = local.subnets
   private_endpoints_subnet_name = local.private_endpoints_subnet_name
-  
   depends_on = [azurerm_resource_group.rg_infra]
 }
-
 module "windows_vm_sql" {
   source              = "../../modules/windows_vm_sql"
   vm_name             = local.vm_name
@@ -45,7 +42,6 @@ module "windows_vm_sql" {
   admin_username      = var.vm_admin_username
   admin_password      = var.vm_admin_password
   tags                = local.common_tags
-  
   depends_on = [module.networking] 
 }
 
@@ -75,6 +71,8 @@ module "service_bus" {
   tags                       = local.common_tags
 }
 
+# --- KEY VAULT FIX: Secrets are now created HERE ---
+
 module "key_vault" {
   source              = "../../modules/key_vault"
   key_vault_name      = local.key_vault_name
@@ -82,12 +80,7 @@ module "key_vault" {
   resource_group_name = azurerm_resource_group.rg_apps.name
   tenant_id           = data.azurerm_client_config.current.tenant_id
   tags                = local.common_tags
-
-  # --- THIS IS THE FIX ---
-  # Pass the secret variables from the root into this module
-  auth0_domain = var.auth0_domain
-  mailgun_key  = var.mailgun_key
-  twilio_sid   = var.twilio_sid
+  # Note: The secret variables are no longer passed *into* the module
 }
 
 resource "azurerm_role_assignment" "kv_admin_rbac" {
@@ -95,10 +88,40 @@ resource "azurerm_role_assignment" "kv_admin_rbac" {
   role_definition_name = "Key Vault Administrator"
   principal_id         = data.azurerm_client_config.current.object_id
 }
+
+# --- Create secrets *after* the role assignment is complete ---
+resource "azurerm_key_vault_secret" "auth0_domain" {
+  name         = "Auth0-Domain"
+  value        = var.auth0_domain
+  key_vault_id = module.key_vault.id
+  
+  # FIX: This forces Terraform to wait for the permission to be active
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+resource "azurerm_key_vault_secret" "mailgun_key" {
+  name         = "Mailgun-ApiKey"
+  value        = var.mailgun_key
+  key_vault_id = module.key_vault.id
+  
+  # FIX: This forces Terraform to wait for the permission to be active
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+resource "azurerm_key_vault_secret" "twilio_sid" {
+  name         = "Twilio-SID"
+  value        = var.twilio_sid
+  key_vault_id = module.key_vault.id
+  
+  # FIX: This forces Terraform to wait for the permission to be active
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+# --- END OF KEY VAULT FIX ---
+
 module "function_apps" {
   for_each = toset(var.function_app_names)
   source   = "../../modules/function_app"
-
   location                       = azurerm_resource_group.rg_apps.location
   resource_group_name            = azurerm_resource_group.rg_apps.name
   tags                           = local.common_tags
