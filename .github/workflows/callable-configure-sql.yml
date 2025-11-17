@@ -46,14 +46,9 @@ jobs:
       # STEP 2: Install SQL Server on the VM
       # =========================================================================
       - name: "2. Install SQL Server Express 2022"
-        uses: azure/powershell@v1
+        uses: azure/powershell@v2 # <-- THE FIX: Use v2
         with:
           inlineScript: |
-            # === FIX: Force-load the correct module ===
-            Write-Host "Forcing import of Az.Compute module..."
-            Import-Module -Name Az.Compute -Force
-            # ==========================================
-            
             Write-Host "Starting SQL Server Express 2022 installation on VM..."
 
             $installSqlScript = @"
@@ -118,7 +113,7 @@ jobs:
               -RunAsUserName "$($env:SQL_ADMIN_USER)" `
               -RunAsPassword $RunAsPassword
           
-          azPSVersion: "latest" # This ensures we have the latest modules
+          azPSVersion: "latest" # This will now work correctly with v2
         env:
           SQL_ADMIN_USER: ${{ inputs.vm_admin_username }}
           SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
@@ -127,14 +122,9 @@ jobs:
       # STEP 3: Run SQL Configuration Script
       # =========================================================================
       - name: "3. Run SQL Configuration Script"
-        uses: azure/powershell@v1
+        uses: azure/powershell@v2 # <-- THE FIX: Use v2
         with:
           inlineScript: |
-            # === FIX: Force-load the correct module ===
-            Write-Host "Forcing import of Az.Compute module..."
-            Import-Module -Name Az.Compute -Force
-            # ==========================================
-
             Write-Host "Starting SQL Server configuration..."
             
             $ClientName = "${{ inputs.client_name }}"
@@ -156,7 +146,6 @@ jobs:
 
             try {
                 Write-Host "Step 1: Creating database $DbName..."
-                # NOTE: We must now specify the instance name: localhost\SQLEXPRESS
                 sqlcmd.exe -S localhost\SQLEXPRESS -E -Q "`$createDbQuery" -b
                 if (`$LASTEXITCODE -ne 0) { throw "sqlcmd failed on step 1." }
                 Write-Host "Database $DbName created or already exists."
@@ -192,7 +181,7 @@ jobs:
               -RunAsUserName "$($env:SQL_ADMIN_USER)" `
               -RunAsPassword $RunAsPassword
           
-          azPSVersion: "latest" # This forces the latest Az modules
+          azPSVersion: "latest" # This will now work correctly with v2
         env:
           SQL_ADMIN_USER: ${{ inputs.vm_admin_username }}
           SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
