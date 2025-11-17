@@ -31,18 +31,20 @@ jobs:
   configure-sql:
     name: "Install and Configure SQL Database"
     
-    # =================== THIS IS THE FIX ===================
-    # Use the stable ubuntu-22.04 runner, not the 'latest' (24.04)
-    # which has a polluted Az module cache.
+    # =================== FIX #1 ===================
+    # Use the stable ubuntu-22.04 runner, not 'latest'
     runs-on: ubuntu-22.04
-    # =======================================================
+    # ==============================================
 
     environment:
       name: ${{ inputs.client_name }}-${{ inputs.environment }}
 
     steps:
       - name: "1. Log in to Azure"
-        uses: azure/login@v1
+        # =================== FIX #2 ===================
+        # Use v2 of the login action
+        uses: azure/login@v2
+        # ==============================================
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
           enable-AzPSSession: true 
