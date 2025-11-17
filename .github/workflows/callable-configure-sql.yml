@@ -30,7 +30,12 @@ on:
 jobs:
   configure-sql:
     name: "Install and Configure SQL Database"
-    runs-on: ubuntu-latest
+    
+    # =================== THIS IS THE FIX ===================
+    # Use the stable ubuntu-22.04 runner, not the 'latest' (24.04)
+    # which has a polluted Az module cache.
+    runs-on: ubuntu-22.04
+    # =======================================================
 
     environment:
       name: ${{ inputs.client_name }}-${{ inputs.environment }}
@@ -46,7 +51,7 @@ jobs:
       # STEP 2: Install SQL Server on the VM
       # =========================================================================
       - name: "2. Install SQL Server Express 2022"
-        uses: azure/powershell@v2 # <-- THE FIX: Use v2
+        uses: azure/powershell@v2
         with:
           inlineScript: |
             Write-Host "Starting SQL Server Express 2022 installation on VM..."
@@ -113,7 +118,7 @@ jobs:
               -RunAsUserName "$($env:SQL_ADMIN_USER)" `
               -RunAsPassword $RunAsPassword
           
-          azPSVersion: "latest" # This will now work correctly with v2
+          azPSVersion: "latest"
         env:
           SQL_ADMIN_USER: ${{ inputs.vm_admin_username }}
           SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
@@ -122,7 +127,7 @@ jobs:
       # STEP 3: Run SQL Configuration Script
       # =========================================================================
       - name: "3. Run SQL Configuration Script"
-        uses: azure/powershell@v2 # <-- THE FIX: Use v2
+        uses: azure/powershell@v2
         with:
           inlineScript: |
             Write-Host "Starting SQL Server configuration..."
@@ -181,7 +186,7 @@ jobs:
               -RunAsUserName "$($env:SQL_ADMIN_USER)" `
               -RunAsPassword $RunAsPassword
           
-          azPSVersion: "latest" # This will now work correctly with v2
+          azPSVersion: "latest"
         env:
           SQL_ADMIN_USER: ${{ inputs.vm_admin_username }}
           SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
