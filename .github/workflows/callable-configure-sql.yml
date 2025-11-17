@@ -32,7 +32,7 @@ jobs:
     name: "Install and Configure SQL Database"
     
     # =================== FIX #1 ===================
-    # Use the stable ubuntu-22.04 runner, not 'latest'
+    # Use the stable ubuntu-22.04 runner
     runs-on: ubuntu-22.04
     # ==============================================
 
@@ -40,19 +40,27 @@ jobs:
       name: ${{ inputs.client_name }}-${{ inputs.environment }}
 
     steps:
-      - name: "1. Log in to Azure"
-        # =================== FIX #2 ===================
-        # Use v2 of the login action
+      # =================== FIX #2 ===================
+      # NEW STEP: Manually purge the bad, cached module
+      - name: "1. Purge Old Az Modules"
+        shell: pwsh
+        run: |
+          Write-Host "Force-removing cached Az modules from /usr/share/..."
+          Remove-Module -Name Az -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path /usr/share/az_* -Recurse -Force -ErrorAction SilentlyContinue
+          Write-Host "Old modules purged."
+      # ==============================================
+
+      - name: "2. Log in to Azure"
         uses: azure/login@v2
-        # ==============================================
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
           enable-AzPSSession: true 
 
       # =========================================================================
-      # STEP 2: Install SQL Server on the VM
+      # STEP 3: Install SQL Server on the VM
       # =========================================================================
-      - name: "2. Install SQL Server Express 2022"
+      - name: "3. Install SQL Server Express 2022"
         uses: azure/powershell@v2
         with:
           inlineScript: |
@@ -126,9 +134,9 @@ jobs:
           SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
 
       # =========================================================================
-      # STEP 3: Run SQL Configuration Script
+      # STEP 4: Run SQL Configuration Script
       # =========================================================================
-      - name: "3. Run SQL Configuration Script"
+      - name: "4. Run SQL Configuration Script"
         uses: azure/powershell@v2
         with:
           inlineScript: |
