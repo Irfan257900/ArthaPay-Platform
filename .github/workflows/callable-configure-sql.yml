@@ -15,47 +15,24 @@ on:
       vm_name:
         type: string
         required: true
+    
     secrets:
       AZURE_CREDENTIALS:
         required: true
-      VM_ADMIN_PASSWORD: # No longer used by this script, but good to keep for consistency
+      # --- FIX: We now get all passwords from the master workflow ---
+      VM_ADMIN_PASSWORD:
         required: true
       APP_SQL_PASSWORD:
         required: true
-
-  workflow_dispatch:
-    inputs:
-      client_name:
-        description: "Client name (e.g., Artha)"
-        type: string
-        required: true
-        default: "Artha"
-      environment:
-        description: "Environment to deploy (e.g., tst, stg, prd)"
-        type: choice
-        options:
-          - tst
-          - stg
-          - prd
-        default: "tst"
-      vm_rg_name:
-        description: "VM Resource Group Name"
-        type: string
-        required: true
-        default: "rg-Artha-tst-vm"
-      vm_name:
-        description: "VM Name"
-        type: string
-        required: true
-        default: "Artha-tst-sqlvm"
 
 jobs:
   configure-sql:
     name: "Configure SQL Database"
     runs-on: ubuntu-latest
 
+    # This job only needs an environment for AZURE_CREDENTIALS
     environment:
-      name: ${{ inputs.client_name || github.event.inputs.client_name }}-${{ inputs.environment || github.event.inputs.environment }}
+      name: ${{ inputs.client_name }}-${{ inputs.environment }}
 
     steps:
       - name: "1. Log in to Azure"
@@ -73,49 +50,45 @@ jobs:
 
             echo "Starting SQL Server configuration..."
             
-            $ClientName = "${{ inputs.client_name || github.event.inputs.client_name }}"
-            $DbName = "$($ClientName)DB" # e.g., "ArthaDB"
-            $DbUser = "$($ClientName)_app_user" # e.g., "artha_app_user"
+            $ClientName = "${{ inputs.client_name }}"
+            $DbName = "$($ClientName)DB" # e.g., "demoDB"
+            $DbUser = "$($ClientName)_app_user" # e.g., "demo_app_user"
 
-            # --- FIX: Using -E (Windows Auth) and elevating SYSTEM user permissions ---
+            # This script will be run *as* the VM Administrator
             $scriptBlock = @"
             Write-Host '========================================='
             Write-Host 'Starting SQL Server Database Configuration'
+            Write-Host "Running as user: $(whoami)" # This will now show 'Volticatstadmin'
             
             `$ErrorActionPreference = "Stop" # Make the script stop on errors
 
             # Define SQL commands
-            `$grantAdminQuery = "IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = 'NT AUTHORITY\SYSTEM') BEGIN CREATE LOGIN [NT AUTHORITY\SYSTEM] FROM WINDOWS; END; ALTER SERVER ROLE sysadmin ADD MEMBER [NT AUTHORITY\SYSTEM];"
             `$createDbQuery = "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'$DbName') BEGIN CREATE DATABASE $DbName; END"
             `$createLoginQuery = "IF NOT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'$DbUser') BEGIN CREATE LOGIN $DbUser WITH PASSWORD = '$($env:SQL_APP_PASS)'; END"
             `$createUserQuery = "USE $DbName; IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = N'$DbUser') BEGIN CREATE USER $DbUser FOR LOGIN $DbUser; ALTER ROLE db_owner ADD MEMBER $DbUser; END"
 
             try {
-                Write-Host "Step 1: Granting sysadmin rights to SYSTEM user..."
-                # Use -E for Windows (Trusted) Authentication. This runs as 'NT AUTHORITY\SYSTEM'
-                sqlcmd.exe -S localhost -E -Q "`$grantAdminQuery" -b
-                if (`$LASTEXITCODE -ne 0) { throw "sqlcmd failed on step 1 (Grant Admin)." }
-                Write-Host "SYSTEM user is now sysadmin."
-
-                Write-Host "Step 2: Creating database $DbName..."
+                Write-Host "Step 1: Creating database $DbName..."
+                # Use -E for Windows (Trusted) Authentication
+                # This works because we are running the script AS 'Volticatstadmin'
                 sqlcmd.exe -S localhost -E -Q "`$createDbQuery" -b
-                if (`$LASTEXITCODE -ne 0) { throw "sqlcmd failed on step 2 (Create DB)." }
+                if (`$LASTEXITCODE -ne 0) { throw "sqlcmd failed on step 1." }
                 Write-Host "Database $DbName created or already exists."
 
-                Write-Host "Step 3: Creating login $DbUser..."
+                Write-Host "Step 2: Creating login $DbUser..."
                 sqlcmd.exe -S localhost -E -Q "`$createLoginQuery" -b
-                if (`$LASTEXITCODE -ne 0) { throw "sqlcmd failed on step 3 (Create Login)." }
+                if (`$LASTEXITCODE -ne 0) { throw "sqlcmd failed on step 2." }
                 Write-Host "Login $DbUser created or already exists."
 
-                Write-Host "Step 4: Creating database user and assigning permissions..."
+                Write-Host "Step 3: Creating database user and assigning permissions..."
                 sqlcmd.exe -S localhost -E -Q "`$createUserQuery" -b
-                if (`$LASTEXITCODE -ne 0) { throw "sqlcmd failed on step 4 (Create User)." }
+                if (`$LASTEXITCODE -ne 0) { throw "sqlcmd failed on step 3." }
                 Write-Host "User $DbUser configured in $DbName."
 
-                Write-Host 'SQL configuration completed successfully!'
+                Write-Host '✅ SQL configuration completed successfully!'
             }
             catch {
-                Write-Host 'SQL CONFIGURATION FAILED'
+                Write-Host '❌ SQL CONFIGURATION FAILED'
                 Write-Host 'Error Message:'
                 Write-Host $_.Exception.Message
                 Write-Host 'Stack Trace:'
@@ -125,13 +98,20 @@ jobs:
             "@
             
             echo "Sending configuration script to VM..."
+            
+            # --- THE FINAL FIX: Run the *entire command* as the VM Admin ---
             Invoke-AzVMRunCommand `
-              -ResourceGroupName "${{ inputs.vm_rg_name || github.event.inputs.vm_rg_name }}" `
-              -VMName "${{ inputs.vm_name || github.event.inputs.vm_name }}" `
+              -ResourceGroupName "${{ inputs.vm_rg_name }}" `
+              -VMName "${{ inputs.vm_name }}" `
               -CommandId 'RunPowerShellScript' `
-              -ScriptString $scriptBlock 
+              -ScriptString $scriptBlock `
+              -RunAsUserName "$($env:SQL_ADMIN_USER)" `
+              -RunAsPassword "$($env:SQL_ADMIN_PASS)"
               
           azPSVersion: 'latest' 
         env:
-          # We only need the APP_PASS now, since the admin user is 'SYSTEM'
+          # Pass the admin credentials to the -RunAs parameters
+          SQL_ADMIN_USER: "Volticatstadmin" 
+          SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
+          # Pass the app password for the script to use
           SQL_APP_PASS: ${{ secrets.APP_SQL_PASSWORD }}
