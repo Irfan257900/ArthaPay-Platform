@@ -9,10 +9,8 @@ on:
       environment:
         type: string
         required: true
+      # --- FIX: Get username as input, password as secret ---
       vm_admin_username:
-        type: string
-        required: true
-      vm_admin_password:
         type: string
         required: true
       auth0_domain:
@@ -37,6 +35,9 @@ on:
 
     secrets:
       AZURE_CREDENTIALS:
+        required: true
+      # --- FIX: Get password from secrets ---
+      VM_ADMIN_PASSWORD:
         required: true
 
 jobs:
@@ -82,8 +83,9 @@ jobs:
         env:
           TF_VAR_client_name: ${{ inputs.client_name }}
           TF_VAR_environment_name: ${{ inputs.environment }}
+          # --- FIX: Use input for username, secret for password ---
           TF_VAR_vm_admin_username: ${{ inputs.vm_admin_username }}
-          TF_VAR_vm_admin_password: ${{ inputs.vm_admin_password }}
+          TF_VAR_vm_admin_password: ${{ secrets.VM_ADMIN_PASSWORD }}
           TF_VAR_auth0_domain: ${{ inputs.auth0_domain }}
           TF_VAR_mailgun_key: ${{ inputs.mailgun_key }}
           TF_VAR_twilio_sid: ${{ inputs.twilio_sid }}
@@ -95,7 +97,7 @@ jobs:
           TF_VAR_client_name: ${{ inputs.client_name }}
           TF_VAR_environment_name: ${{ inputs.environment }}
           TF_VAR_vm_admin_username: ${{ inputs.vm_admin_username }}
-          TF_VAR_vm_admin_password: ${{ inputs.vm_admin_password }}
+          TF_VAR_vm_admin_password: ${{ secrets.VM_ADMIN_PASSWORD }}
           TF_VAR_auth0_domain: ${{ inputs.auth0_domain }}
           TF_VAR_mailgun_key: ${{ inputs.mailgun_key }}
           TF_VAR_twilio_sid: ${{ inputs.twilio_sid }}
