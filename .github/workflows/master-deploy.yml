@@ -87,11 +87,15 @@ jobs:
     needs: deploy-infra 
     uses: ./.github/workflows/callable-deploy-ui.yml
     with:
+      # --- THESE ARE THE INPUTS ---
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
       swa_deploy_token: ${{ needs.deploy-infra.outputs.static_web_app_api_key }}
-      auth0_domain: ${{ github.event.inputs.auth0_domain }}
-      auth0_client_id: ${{ github.event.inputs.auth0_client_id }}
+    secrets:
+      # --- THIS IS THE FIX ---
+      # Auth0 variables must be passed as SECRETS
+      AUTH0_DOMAIN: ${{ github.event.inputs.auth0_domain }}
+      AUTH0_CLIENT_ID: ${{ github.event.inputs.auth0_client_id }}
 
   # ===================================================================
   # JOB 3: SQL DATABASE
