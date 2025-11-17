@@ -19,7 +19,6 @@ on:
         default: "tst"
       
       # --- 2. Module Selection (1 input) ---
-      # --- FIX: Changed to 'type: string' to allow multiple ---
       backend_modules_to_deploy:
         description: "Modules to deploy (e.g., 'all', 'core', 'core,banks')"
         type: string
@@ -82,29 +81,30 @@ jobs:
     secrets: {}
 
   # ===================================================================
-  # JOB 3: SQL DATABASE
+  # JOB 3: SQL DATABASE (Temporarily Disabled)
   # ===================================================================
-  configure-sql:
-    name: "Job 3: Configure SQL Database"
-    needs: deploy-infra 
-    uses: ./.github/workflows/callable-configure-sql.yml
-    with:
-      client_name: ${{ github.event.inputs.client_name }}
-      environment: ${{ github.event.inputs.environment }}
-      vm_rg_name: ${{ needs.deploy-infra.outputs.vm_rg_name }}
-      vm_name: ${{ needs.deploy-infra.outputs.vm_name }}
-      vm_admin_username: "${{ github.event.inputs.client_name }}${{ github.event.inputs.environment }}admin"
-    secrets:
-      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-      VM_ADMIN_PASSWORD: ${{ secrets.VM_ADMIN_PASSWORD }}
-      APP_SQL_PASSWORD: ${{ secrets.APP_SQL_PASSWORD }}
+  # configure-sql:
+  #   name: "Job 3: Configure SQL Database"
+  #   needs: deploy-infra 
+  #   uses: ./.github/workflows/callable-configure-sql.yml
+  #   with:
+  #     client_name: ${{ github.event.inputs.client_name }}
+  #     environment: ${{ github.event.inputs.environment }}
+  #     vm_rg_name: ${{ needs.deploy-infra.outputs.vm_rg_name }}
+  #     vm_name: ${{ needs.deploy-infra.outputs.vm_name }}
+  #     vm_admin_username: "${{ github.event.inputs.client_name }}${{ github.event.inputs.environment }}admin"
+  #   secrets:
+  #     AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+  #     VM_ADMIN_PASSWORD: ${{ secrets.VM_ADMIN_PASSWORD }}
+  #     APP_SQL_PASSWORD: ${{ secrets.APP_SQL_PASSWORD }}
 
   # ===================================================================
-  # JOB 4: DEPLOY BACKEND APIs (NEW)
+  # JOB 4: DEPLOY BACKEND APIs
   # ===================================================================
   deploy-backend:
     name: "Job 4: Deploy .NET Backend"
-    needs: [deploy-infra, configure-sql]
+    # --- FIX: Removed 'configure-sql' from the 'needs' list ---
+    needs: [deploy-infra]
     uses: ./.github/workflows/callable-deploy-backend.yml
     with:
       client_name: ${{ github.event.inputs.client_name }}
@@ -114,10 +114,11 @@ jobs:
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
 
   # ===================================================================
-  # JOB 5: ZAPIER (Renumbered)
+  # JOB 5: ZAPIER
   # ===================================================================
   trigger-zapier:
     name: "Job 5: Trigger Zapier Webhook"
+    # --- FIX: Removed 'configure-sql' (it's part of deploy-backend's chain) ---
     needs: [deploy-ui, deploy-backend] 
     uses: ./.github/workflows/callable-trigger-zapier.yml
     with:
