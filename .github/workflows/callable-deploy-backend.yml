@@ -21,6 +21,12 @@ jobs:
     name: "Build & Deploy .NET Modules"
     runs-on: ubuntu-latest
     
+    # --- THIS IS THE FIX ---
+    # This job must be assigned to an environment
+    # to read the AZURE_CREDENTIALS secret.
+    environment:
+      name: ${{ inputs.client_name }}-${{ inputs.environment }}
+    
     steps:
       - name: "1. Log in to Azure"
         uses: azure/login@v1
@@ -38,10 +44,7 @@ jobs:
       - name: "4. Run Deployment Logic"
         shell: bash
         run: |
-          MODULE_LIST="all" # --- THIS IS A PLACEHOLDER ---
-          # --- We will replace the line above with the line below once the input is fixed
-          # MODULE_LIST="${{ inputs.modules_to_deploy }}"
-          
+          MODULE_LIST="${{ inputs.modules_to_deploy }}"
           CLIENT="${{ inputs.client_name }}"
           ENV="${{ inputs.environment }}"
 
