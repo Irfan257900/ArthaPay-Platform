@@ -15,7 +15,6 @@ on:
       vm_name:
         type: string
         required: true
-      # --- FIX: Added vm_admin_username ---
       vm_admin_username:
         type: string
         required: true
@@ -41,12 +40,12 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-          enable-AzPSSession: true 
+          enable-AzPSSession: true # This line installs all Az modules for us
 
       - name: "2. Run SQL Configuration Script"
-        # --- FIX: This step now runs in PowerShell ---
         shell: pwsh
         run: |
+          # --- FIX: Removed the redundant 'Install-Module' line ---
           echo "Starting SQL Server configuration..."
           
           $ClientName = "${{ inputs.client_name }}"
@@ -63,7 +62,7 @@ jobs:
 
           # Define SQL commands
           `$createDbQuery = "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'$DbName') BEGIN CREATE DATABASE $DbName; END"
-          `$createLoginQuery = "IF NOTT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'$DbUser') BEGIN CREATE LOGIN $DbUser WITH PASSWORD = '$($env:SQL_APP_PASS)'; END"
+          `$createLoginQuery = "IF NOT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'$DbUser') BEGIN CREATE LOGIN $DbUser WITH PASSWORD = '$($env:SQL_APP_PASS)'; END"
           `$createUserQuery = "USE $DbName; IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = N'$DbUser') BEGIN CREATE USER $DbUser FOR LOGIN $DbUser; ALTER ROLE db_owner ADD MEMBER $DbUser; END"
 
           try {
@@ -106,7 +105,6 @@ jobs:
             -RunAsPassword $RunAsPassword
             
         env:
-          # --- FIX: Get admin user from input, passwords from secrets ---
           SQL_ADMIN_USER: ${{ inputs.vm_admin_username }}
           SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
           SQL_APP_PASS: ${{ secrets.APP_SQL_PASSWORD }}
