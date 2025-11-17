@@ -1,0 +1,84 @@
+name: "Reusable: Deploy .NET Backend"
+
+on:
+  workflow_call:
+    inputs:
+      client_name:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: true
+      modules_to_deploy:
+        type: string # This will be 'all' or 'core,banks', etc.
+        required: true
+    secrets:
+      AZURE_CREDENTIALS:
+        required: true
+
+jobs:
+  build-and-deploy:
+    name: "Build & Deploy .NET Modules"
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: "1. Log in to Azure"
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          
+      - name: "2. Check out code"
+        uses: actions/checkout@v4
+        
+      - name: "3. Setup .NET SDK"
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x' # Update this if you use a different .NET version
+
+      - name: "4. Run Deployment Logic"
+        shell: bash
+        run: |
+          MODULE_LIST="all" # --- THIS IS A PLACEHOLDER ---
+          # --- We will replace the line above with the line below once the input is fixed
+          # MODULE_LIST="${{ inputs.modules_to_deploy }}"
+          
+          CLIENT="${{ inputs.client_name }}"
+          ENV="${{ inputs.environment }}"
+
+          echo "Client: $CLIENT, Environment: $ENV"
+          echo "Modules selected for deployment: $MODULE_LIST"
+
+          # This logic uses wildcards (*) to check if your list
+          # contains the module name.
+          
+          if [[ "$MODULE_LIST" == "all" || "$MODULE_LIST" == *"core"* ]]; then
+            echo "Deploying 'core' module to function app: ${CLIENT}-${ENV}-core-func"
+            # dotnet publish ./src/core.sln -c Release
+            # az functionapp deploy ... -n "${CLIENT}-${ENV}-core-func"
+          fi
+          
+          if [[ "$MODULE_LIST" == "all" || "$MODULE_LIST" == *"banks"* ]]; then
+            echo "Deploying 'banks' module to function app: ${CLIENT}-${ENV}-banks-func"
+          fi
+          
+          if [[ "$MODULE_LIST" == "all" || "$MODULE_LIST" == *"cards"* ]]; then
+            echo "Deploying 'cards' module to function app: ${CLIENT}-${ENV}-cards-func"
+          fi
+          
+          if [[ "$MODULE_LIST" == "all" || "$MODULE_LIST" == *"exchange"* ]]; then
+            echo "Deploying 'exchange' module to function app: ${CLIENT}-${ENV}-exchange-func"
+          fi
+          
+          if [[ "$MODULE_LIST" == "all" || "$MODULE_LIST" == *"payees"* ]]; then
+            echo "Deploying 'payees' module to function app: ${CLIENT}-${ENV}-payees-func"
+          fi
+          
+          if [[ "$MODULE_LIST" == "all" || "$MODULE_LIST" == *"payments"* ]]; then
+            echo "Deploying 'payments' module to function app: ${CLIENT}-${ENV}-payments-func"
+          fi
+          
+          if [[ "$MODULE_LIST" == "all" || "$MODULE_LIST" == *"wallets"* ]]; then
+            echo "Deploying 'wallets' module to function app: ${CLIENT}-${ENV}-wallets-func"
+          fi
+          
+          echo "✅ Backend deployment logic complete."

@@ -19,10 +19,11 @@ on:
         default: "tst"
       
       # --- 2. Module Selection (1 input) ---
+      # --- FIX: Changed to 'type: string' to allow multiple ---
       backend_modules_to_deploy:
-        description: "Backend modules (e.g., core,banks,cards)"
+        description: "Modules to deploy (e.g., 'all', 'core', 'core,banks')"
         type: string
-        default: "core,banks,cards"
+        default: "all"
         
       # --- 3. Third-Party Config (5 inputs) ---
       auth0_domain:
@@ -45,7 +46,7 @@ on:
         description: "Zapier Webhook URL"
         type: string
         required: true
-      # --- TOTAL: 8 INPUTS (Max is 10) ---
+      # --- TOTAL: 8 INPUTS ---
 
 jobs:
   # ===================================================================
@@ -57,14 +58,11 @@ jobs:
     with:
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
-      # --- FIX: Dynamically generate the admin username ---
       vm_admin_username: "${{ github.event.inputs.client_name }}${{ github.event.inputs.environment }}admin"
-      # Pass inputs to the reusable workflow
       auth0_domain: ${{ github.event.inputs.auth0_domain }}
       mailgun_key: ${{ github.event.inputs.mailgun_key }}
       twilio_sid: ${{ github.event.inputs.twilio_sid }}
     secrets:
-      # --- FIX: Pass passwords from Environment Secrets ---
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
       VM_ADMIN_PASSWORD: ${{ secrets.VM_ADMIN_PASSWORD }}
 
@@ -81,7 +79,7 @@ jobs:
       swa_deploy_token: ${{ needs.deploy-infra.outputs.static_web_app_api_key }}
       auth0_domain: ${{ github.event.inputs.auth0_domain }}
       auth0_client_id: ${{ github.event.inputs.auth0_client_id }}
-    secrets: {} # No secrets needed
+    secrets: {}
 
   # ===================================================================
   # JOB 3: SQL DATABASE
@@ -95,20 +93,32 @@ jobs:
       environment: ${{ github.event.inputs.environment }}
       vm_rg_name: ${{ needs.deploy-infra.outputs.vm_rg_name }}
       vm_name: ${{ needs.deploy-infra.outputs.vm_name }}
-      # --- FIX: Pass the same dynamic admin username ---
       vm_admin_username: "${{ github.event.inputs.client_name }}${{ github.event.inputs.environment }}admin"
     secrets:
-      # --- FIX: Pass passwords from Environment Secrets ---
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
       VM_ADMIN_PASSWORD: ${{ secrets.VM_ADMIN_PASSWORD }}
       APP_SQL_PASSWORD: ${{ secrets.APP_SQL_PASSWORD }}
 
   # ===================================================================
-  # JOB 4: ZAPIER
+  # JOB 4: DEPLOY BACKEND APIs (NEW)
+  # ===================================================================
+  deploy-backend:
+    name: "Job 4: Deploy .NET Backend"
+    needs: [deploy-infra, configure-sql]
+    uses: ./.github/workflows/callable-deploy-backend.yml
+    with:
+      client_name: ${{ github.event.inputs.client_name }}
+      environment: ${{ github.event.inputs.environment }}
+      modules_to_deploy: ${{ github.event.inputs.backend_modules_to_deploy }}
+    secrets:
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+
+  # ===================================================================
+  # JOB 5: ZAPIER (Renumbered)
   # ===================================================================
   trigger-zapier:
-    name: "Job 4: Trigger Zapier Webhook"
-    needs: [deploy-ui, configure-sql]
+    name: "Job 5: Trigger Zapier Webhook"
+    needs: [deploy-ui, deploy-backend] 
     uses: ./.github/workflows/callable-trigger-zapier.yml
     with:
       client_name: ${{ github.event.inputs.client_name }}

@@ -40,12 +40,12 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-          enable-AzPSSession: true # This line installs all Az modules for us
+          enable-AzPSSession: true 
 
       - name: "2. Run SQL Configuration Script"
+        # --- FIX: This step now runs in PowerShell ---
         shell: pwsh
         run: |
-          # --- FIX: Removed the redundant 'Install-Module' line ---
           echo "Starting SQL Server configuration..."
           
           $ClientName = "${{ inputs.client_name }}"
