@@ -43,9 +43,13 @@ jobs:
           enable-AzPSSession: true 
 
       - name: "2. Run SQL Configuration Script"
-        # --- FIX: This step now runs in PowerShell ---
+        # --- FIX 1: This entire step MUST run in PowerShell ---
         shell: pwsh
         run: |
+          # --- FIX 2: Install the required Az module first ---
+          echo "Installing Az.Compute module..."
+          Install-Module -Name Az.Compute -Repository PSGallery -Force -AllowClobber -Scope CurrentUser
+
           echo "Starting SQL Server configuration..."
           
           $ClientName = "${{ inputs.client_name }}"
@@ -93,7 +97,7 @@ jobs:
           
           echo "Sending configuration script to VM..."
           
-          # --- FIX: Convert password to SecureString for -RunAsPassword ---
+          # --- FIX 3: Convert password to SecureString for -RunAsPassword ---
           $RunAsPassword = $env:SQL_ADMIN_PASS | ConvertTo-SecureString -AsPlainText -Force
           
           Invoke-AzVMRunCommand `
