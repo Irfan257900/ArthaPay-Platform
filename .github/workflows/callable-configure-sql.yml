@@ -86,7 +86,7 @@ jobs:
               "/ACTION=Install", `
               "/FEATURES=SQLEngine", `
               "/INSTANCENAME=SQLEXPRESS", `
-_             "/TCPENABLED=1", `
+              "/TCPENABLED=1", `
               "/SQLSVCACCOUNT=`"NT AUTHORITY\SYSTEM`"", `
               "/SQLSYSADMINACCOUNTS=`"BUILTIN\Administrators`"" -Wait
             
@@ -127,10 +127,10 @@ _             "/TCPENABLED=1", `
           SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
 
       # =========================================================================
-      # YOUR ORIGINAL SCRIPT, NOW FIXED AND MODIFIED
+      # YOUR ORIGINAL SCRIPT, NOW FIXED
       # =========================================================================
       - name: "3. Run SQL Configuration Script"
-        uses: azure/powershell@v1 # <-- FIX 1: Use this action
+        uses: azure/powershell@v1
         with:
           inlineScript: |
             Write-Host "Starting SQL Server configuration..."
@@ -149,7 +149,7 @@ _             "/TCPENABLED=1", `
 
             # Define SQL commands
             `$createDbQuery = "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'$DbName') BEGIN CREATE DATABASE $DbName; END"
-            `$createLoginQuery = "IF NOTT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'$DbUser') BEGIN CREATE LOGIN $DbUser WITH PASSWORD = '$($env:SQL_APP_PASS)'; END"
+            `$createLoginQuery = "IF NOT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'$DbUser') BEGIN CREATE LOGIN $DbUser WITH PASSWORD = '$($env:SQL_APP_PASS)'; END"
             `$createUserQuery = "USE $DbName; IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = N'$DbUser') BEGIN CREATE USER $DbUser FOR LOGIN $DbUser; ALTER ROLE db_owner ADD MEMBER $DbUser; END"
 
             try {
@@ -190,7 +190,7 @@ _             "/TCPENABLED=1", `
               -RunAsUserName "$($env:SQL_ADMIN_USER)" `
               -RunAsPassword $RunAsPassword
           
-          azPSVersion: "latest" # <-- FIX 1: This forces the latest Az modules
+          azPSVersion: "latest" # This forces the latest Az modules
         env:
           SQL_ADMIN_USER: ${{ inputs.vm_admin_username }}
           SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
