@@ -47,9 +47,10 @@ variable "twilio_sid" {
 
 # --- Application Settings ---
 variable "function_app_names" {
-  description = "A list of function app names to deploy (e.g., 'core', 'bank')."
+  description = "A list of function app names to deploy."
   type        = list(string)
-  default     = ["core", "bank", "cards"]
+  # --- THIS IS THE FIX: Added all your modules ---
+  default     = ["core", "banks", "cards", "exchange", "payees", "payments", "wallets"]
 }
 
 variable "dotnet_version" {
