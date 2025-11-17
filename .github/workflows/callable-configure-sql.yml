@@ -19,7 +19,6 @@ on:
     secrets:
       AZURE_CREDENTIALS:
         required: true
-      # --- FIX: We now get all passwords from the master workflow ---
       VM_ADMIN_PASSWORD:
         required: true
       APP_SQL_PASSWORD:
@@ -30,7 +29,6 @@ jobs:
     name: "Configure SQL Database"
     runs-on: ubuntu-latest
 
-    # This job only needs an environment for AZURE_CREDENTIALS
     environment:
       name: ${{ inputs.client_name }}-${{ inputs.environment }}
 
@@ -54,7 +52,6 @@ jobs:
             $DbName = "$($ClientName)DB" # e.g., "demoDB"
             $DbUser = "$($ClientName)_app_user" # e.g., "demo_app_user"
 
-            # This script will be run *as* the VM Administrator
             $scriptBlock = @"
             Write-Host '========================================='
             Write-Host 'Starting SQL Server Database Configuration'
@@ -70,7 +67,6 @@ jobs:
             try {
                 Write-Host "Step 1: Creating database $DbName..."
                 # Use -E for Windows (Trusted) Authentication
-                # This works because we are running the script AS 'Volticatstadmin'
                 sqlcmd.exe -S localhost -E -Q "`$createDbQuery" -b
                 if (`$LASTEXITCODE -ne 0) { throw "sqlcmd failed on step 1." }
                 Write-Host "Database $DbName created or already exists."
@@ -99,19 +95,19 @@ jobs:
             
             echo "Sending configuration script to VM..."
             
-            # --- THE FINAL FIX: Run the *entire command* as the VM Admin ---
+            # --- THE FINAL FIX: Convert password to SecureString ---
+            $RunAsPassword = $env:SQL_ADMIN_PASS | ConvertTo-SecureString -AsPlainText -Force
+            
             Invoke-AzVMRunCommand `
               -ResourceGroupName "${{ inputs.vm_rg_name }}" `
               -VMName "${{ inputs.vm_name }}" `
               -CommandId 'RunPowerShellScript' `
               -ScriptString $scriptBlock `
               -RunAsUserName "$($env:SQL_ADMIN_USER)" `
-              -RunAsPassword "$($env:SQL_ADMIN_PASS)"
+              -RunAsPassword $RunAsPassword
               
           azPSVersion: 'latest' 
         env:
-          # Pass the admin credentials to the -RunAs parameters
           SQL_ADMIN_USER: "Volticatstadmin" 
           SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
-          # Pass the app password for the script to use
           SQL_APP_PASS: ${{ secrets.APP_SQL_PASSWORD }}
