@@ -46,9 +46,14 @@ jobs:
         # --- FIX 1: This entire step MUST run in PowerShell ---
         shell: pwsh
         run: |
-          # --- FIX 2: Install the required Az module first ---
+          # --- FIX 2: Install AND IMPORT the required Az module ---
           echo "Installing Az.Compute module..."
           Install-Module -Name Az.Compute -Repository PSGallery -Force -AllowClobber -Scope CurrentUser
+
+          # =================== THIS IS THE FIX ===================
+          echo "Importing newly installed module to fix -RunAsUserName error..."
+          Import-Module -Name Az.Compute -Force
+          # =======================================================
 
           echo "Starting SQL Server configuration..."
           
@@ -111,4 +116,4 @@ jobs:
         env:
           SQL_ADMIN_USER: ${{ inputs.vm_admin_username }}
           SQL_ADMIN_PASS: ${{ secrets.VM_ADMIN_PASSWORD }}
-          SQL_APP_PASS: ${{ secrets.APP_SQL_PASSWORD }}
+          APP_SQL_PASSWORD: ${{ secrets.APP_SQL_PASSWORD }}
