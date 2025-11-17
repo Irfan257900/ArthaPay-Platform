@@ -49,7 +49,7 @@ variable "twilio_sid" {
 variable "function_app_names" {
   description = "A list of function app names to deploy."
   type        = list(string)
-  # --- THIS IS THE FIX: Added all your modules ---
+  # --- THIS IS THE FIX: Added all your modules ----
   default     = ["core", "banks", "cards", "exchange", "payees", "payments", "wallets"]
 }
 
