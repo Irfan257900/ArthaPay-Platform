@@ -63,7 +63,7 @@ jobs:
 
           # Define SQL commands
           `$createDbQuery = "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'$DbName') BEGIN CREATE DATABASE $DbName; END"
-          `$createLoginQuery = "IF NOT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'$DbUser') BEGIN CREATE LOGIN $DbUser WITH PASSWORD = '$($env:SQL_APP_PASS)'; END"
+          `$createLoginQuery = "IF NOTT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'$DbUser') BEGIN CREATE LOGIN $DbUser WITH PASSWORD = '$($env:SQL_APP_PASS)'; END"
           `$createUserQuery = "USE $DbName; IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = N'$DbUser') BEGIN CREATE USER $DbUser FOR LOGIN $DbUser; ALTER ROLE db_owner ADD MEMBER $DbUser; END"
 
           try {

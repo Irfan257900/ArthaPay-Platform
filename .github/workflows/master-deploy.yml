@@ -24,22 +24,7 @@ on:
         type: string
         default: "core,banks,cards"
         
-      # --- 3. Passwords (Entered at Runtime) ---
-      vm_admin_username:
-        description: "VM Administrator Username (1-15 chars, no special chars)"
-        type: string
-        required: true
-        default: "arthatstadmin"
-      vm_admin_password:
-        description: "VM Administrator Password"
-        type: string
-        required: true
-      app_sql_password:
-        description: "SQL Application User Password"
-        type: string
-        required: true
-        
-      # --- 4. Third-Party Config (5 inputs) ---
+      # --- 3. Third-Party Config (5 inputs) ---
       auth0_domain:
         description: "Auth0 Domain"
         type: string
@@ -60,7 +45,7 @@ on:
         description: "Zapier Webhook URL"
         type: string
         required: true
-      # --- TOTAL: 10 INPUTS (The maximum) ---
+      # --- TOTAL: 8 INPUTS (Max is 10) ---
 
 jobs:
   # ===================================================================
@@ -72,13 +57,16 @@ jobs:
     with:
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
-      vm_admin_username: ${{ github.event.inputs.vm_admin_username }}
-      vm_admin_password: ${{ github.event.inputs.vm_admin_password }}
+      # --- FIX: Dynamically generate the admin username ---
+      vm_admin_username: "${{ github.event.inputs.client_name }}${{ github.event.inputs.environment }}admin"
+      # Pass inputs to the reusable workflow
       auth0_domain: ${{ github.event.inputs.auth0_domain }}
       mailgun_key: ${{ github.event.inputs.mailgun_key }}
       twilio_sid: ${{ github.event.inputs.twilio_sid }}
     secrets:
+      # --- FIX: Pass passwords from Environment Secrets ---
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+      VM_ADMIN_PASSWORD: ${{ secrets.VM_ADMIN_PASSWORD }}
 
   # ===================================================================
   # JOB 2: REACT UI
@@ -88,15 +76,12 @@ jobs:
     needs: deploy-infra 
     uses: ./.github/workflows/callable-deploy-ui.yml
     with:
-      # --- THESE ARE THE INPUTS ---
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
       swa_deploy_token: ${{ needs.deploy-infra.outputs.static_web_app_api_key }}
-      # --- THIS IS THE FIX ---
-      # Auth0 variables are INPUTS, not secrets
       auth0_domain: ${{ github.event.inputs.auth0_domain }}
       auth0_client_id: ${{ github.event.inputs.auth0_client_id }}
-    secrets: {} # This job no longer takes secrets
+    secrets: {} # No secrets needed
 
   # ===================================================================
   # JOB 3: SQL DATABASE
@@ -110,8 +95,10 @@ jobs:
       environment: ${{ github.event.inputs.environment }}
       vm_rg_name: ${{ needs.deploy-infra.outputs.vm_rg_name }}
       vm_name: ${{ needs.deploy-infra.outputs.vm_name }}
-      vm_admin_username: ${{ github.event.inputs.vm_admin_username }}
+      # --- FIX: Pass the same dynamic admin username ---
+      vm_admin_username: "${{ github.event.inputs.client_name }}${{ github.event.inputs.environment }}admin"
     secrets:
+      # --- FIX: Pass passwords from Environment Secrets ---
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
       VM_ADMIN_PASSWORD: ${{ secrets.VM_ADMIN_PASSWORD }}
       APP_SQL_PASSWORD: ${{ secrets.APP_SQL_PASSWORD }}
