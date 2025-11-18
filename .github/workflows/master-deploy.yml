@@ -46,10 +46,7 @@ on:
         description: "Twilio Account SID"
         type: string
         required: true
-      zapier_webhook_url:
-        description: "Zapier Webhook URL"
-        type: string
-        required: true
+      
       # --- TOTAL: 10 INPUTS (Limit is 10) ---
 
 jobs:
@@ -111,16 +108,3 @@ jobs:
     secrets:
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
 
-  # ===================================================================
-  # JOB 5: ZAPIER
-  # ===================================================================
-  trigger-zapier:
-    name: "Job 5: Trigger Zapier Webhook"
-    needs: [deploy-ui, deploy-backend] 
-    uses: ./.github/workflows/callable-trigger-zapier.yml
-    with:
-      client_name: ${{ github.event.inputs.client_name }}
-      environment: ${{ github.event.inputs.environment }}
-      app_url: ${{ needs.deploy-infra.outputs.static_web_app_url }}
-    secrets:
-      ZAPIER_WEBHOOK_URL: ${{ secrets.ZAPIER_WEBHOOK_URL }}
