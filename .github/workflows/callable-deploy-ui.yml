@@ -185,22 +185,4 @@ jobs:
               "VITE_WEB3_API_BANKS_END_POINT=${{ steps.vars.outputs.BANKS_API }}" \
               "VITE_NODE_ENV=production" \
               "VITE_IPSTACK_API=https://api.ipstack.com" \
-              "VITE_IPSTACK_ACCESS_KEY=" \
-              "VITE_WALLET_TYPE=" \
-              "VITE_ARCANA_CLIENT_ID=" \
-              "VITE_ARCANA_ID=" \
-              "VITE_OWNER_ACCOUNT_WALLET_ADDRESS=" \
-              "VITE_NAME=" \
-              "VITE_SEND_VERIFICATION_HIDE=" \
-              "VITE_APP_KYC_KYB_PROVIDER=" \
-              "VITE_APP_SUMSUB_KYB_FLOW=" \
-              "VITE_APP_SUMSUB_KYC_FLOW=" \
-              "VITE_APP_PAYEE_ON_THE_GO_MODE=" \
-              "VITE_APP_EXCHANGE_ON_THE_GO_MODE=" \
-              "VITE_APP_SMALL_DECIMALS_ENABLED=" \
-              "VITE_APP_IS_SHOW_PAYIN_FIAT=" \
-              "VITE_APP_IS_QUICKLICKS_ENABLED=" \
-              "VITE_WEB3_WALLET_ID=" \
-              "VITE_TREZOR_EMAIL=" \
-              "VITE_WEB3_API_END_POINT=" \
-              "VITE_API_LOYALITY_END_POINT="
+              
