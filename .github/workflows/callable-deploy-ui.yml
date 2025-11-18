@@ -9,9 +9,6 @@ on:
       environment:
         type: string
         required: true
-      client_domain_extension:
-        type: string
-        required: true
       swa_deploy_token:
         type: string
         required: true
@@ -21,7 +18,7 @@ on:
       auth0_client_id:
         type: string
         required: true
-    secrets: {}
+    secrets: {} # Secrets are passed via inputs
 
 jobs:
   deploy-ui:
@@ -44,84 +41,54 @@ jobs:
       - name: "3. Install NPM Dependencies"
         run: npm install --force
 
-      - name: "4. Set Dynamic Variables"
+      - name: "4. Set Dynamic Names"
         id: vars
         shell: bash
         run: |
-          # 1. Normalize inputs
-          CLIENT=$(echo "${{ inputs.client_name }}" | tr '[:upper:]' '[:lower:]')
-          ENV=$(echo "${{ inputs.environment }}" | tr '[:upper:]' '[:lower:]')
-          EXT=$(echo "${{ inputs.client_domain_extension }}" | tr '[:upper:]' '[:lower:]')
+          CLIENT_LOWER=$(echo "${{ inputs.client_name }}" | tr '[:upper:]' '[:lower:]')
+          ENV_LOWER=$(echo "${{ inputs.environment }}" | tr '[:upper:]' '[:lower:]')
           
-          # 2. Define the Base Domain
-          # Example: demo.work
-          BASE_DOMAIN="${CLIENT}.${EXT}"
-          
-          # 3. Construct URLs using a Single, Standard Pattern
-          # Pattern: https://[client][env][module].[base_domain]
-          # Note: This enforces a standard for ALL new clients.
-          
-          # Frontends
-          APP_URL="https://${CLIENT}${ENV}payments.${BASE_DOMAIN}"
-          ADMIN_URL="https://${CLIENT}${ENV}admin.${BASE_DOMAIN}"
-          
-          # Backends
-          # Adjust this pattern if your backend naming convention is different
-          # e.g. is it 'demotstcore' or 'demotstcoreapi'?
-          # Based on your Artha example, it seems to be [client][env][module]
-          
-          CORE_API_URL="https://${CLIENT}${ENV}core.${BASE_DOMAIN}"
-          PAYMENTS_API="https://${CLIENT}${ENV}payments.${BASE_DOMAIN}"
-          EXCHANGE_API="https://${CLIENT}${ENV}exchange.${BASE_DOMAIN}"
-          BANKS_API="https://${CLIENT}${ENV}banks.${BASE_DOMAIN}"
-          CARDS_API="https://${CLIENT}${ENV}cards.${BASE_DOMAIN}"
-          NOTIFICATIONS_API="https://${CLIENT}${ENV}core.${BASE_DOMAIN}"
-          
-          # 4. Build Script Logic
-          # This handles the npm script mapping (tst -> testing)
-          if [ "$ENV" == "tst" ]; then
+          if [ "$ENV_LOWER" == "tst" ]; then
             BUILD_ENV="testing"
-          elif [ "$ENV" == "stg" ]; then
+          elif [ "$ENV_LOWER" == "stg" ]; then
             BUILD_ENV="staging"
-          elif [ "$ENV" == "prd" ]; then
+          elif [ "$ENV_LOWER" == "prd" ]; then
             BUILD_ENV="production" 
           else
-            BUILD_ENV=$ENV
+            BUILD_ENV=$ENV_LOWER
           fi
           
-          # IMPORTANT: Always use 'artha' brand for build scripts unless
-          # you actually have different package.json scripts for every client.
-          BUILD_SCRIPT="build:artha:${BUILD_ENV}"
+          BUILD_BRAND="artha"
+          BUILD_SCRIPT="build:${BUILD_BRAND}:${BUILD_ENV}"
           
-          # 5. Auth0 Audience
+          # --- THIS IS THE FIX (Part 1) ---
+          # Pre-calculate the dynamic Audience value
           AUTH0_DOMAIN="${{ inputs.auth0_domain }}"
           AUDIENCE="https://$(echo $AUTH0_DOMAIN | cut -d'.' -f1)Api.net"
-
-          # 6. Output everything
-          echo "CLIENT=$CLIENT" >> $GITHUB_OUTPUT
-          echo "ENV=$ENV" >> $GITHUB_OUTPUT
-          echo "BUILD_SCRIPT=$BUILD_SCRIPT" >> $GITHUB_OUTPUT
           
-          echo "APP_URL=$APP_URL" >> $GITHUB_OUTPUT
-          echo "ADMIN_URL=$ADMIN_URL" >> $GITHUB_OUTPUT
-          echo "CORE_API_URL=$CORE_API_URL" >> $GITHUB_OUTPUT
-          echo "PAYMENTS_API=$PAYMENTS_API" >> $GITHUB_OUTPUT
-          echo "EXCHANGE_API=$EXCHANGE_API" >> $GITHUB_OUTPUT
-          echo "BANKS_API=$BANKS_API" >> $GITHUB_OUTPUT
-          echo "CARDS_API=$CARDS_API" >> $GITHUB_OUTPUT
-          echo "NOTIFICATIONS_API=$NOTIFICATIONS_API" >> $GITHUB_OUTPUT
-          echo "VITE_AUDIENCE=$AUDIENCE" >> $GITHUB_OUTPUT
+          echo "BUILD_SCRIPT=$BUILD_SCRIPT" >> $GITHUB_OUTPUT
+          echo "CLIENT_LOWER=$CLIENT_LOWER" >> $GITHUB_OUTPUT
+          echo "ENV_LOWER=$ENV_LOWER" >> $GITHUB_OUTPUT
+          echo "VITE_AUDIENCE=$AUDIENCE" >> $GITHUB_OUTPUT # Save it as an output
 
-      - name: "5. Generate .env File (Build-Time)"
+      - name: "5. Generate .env File (for Build-Time)"
         shell: bash
         run: |
-          echo "Creating minimal build-time .env..."
+          # This .env file is ONLY for variables used during the build
+          # (like in your index.html)
+          echo "Creating minimal .env file for build..."
+          
           cat <<EOF > .env
-          VITE_CLIENT=${{ steps.vars.outputs.CLIENT }}
+          VITE_CLIENT=${{ steps.vars.outputs.CLIENT_LOWER }}
           VITE_NODE_ENV=production
-          VITE_CLIENT_NAME="${{ inputs.client_name }}" 
+          VITE_CLIENT_NAME="Artha Pay"
+          VITE_CLIENT_FAVICON="https://devtstarthaone.blob.core.windows.net/arthaimages/artha_fav.svg"
+          VITE_CLIENT_META_DESCRIPTION="ArthaPay Platform"
           EOF
+          
+          echo "--- .env file created ---"
           cat .env
+          echo "-------------------------"
 
       - name: "6. Build React App"
         run: |
@@ -129,7 +96,7 @@ jobs:
           echo "Running build script: npm run $SCRIPT"
           npm run $SCRIPT
 
-      - name: "7. Deploy to SWA (Set Run-Time Env Vars)"
+      - name: "7. Deploy to SWA (and Set Run-Time Env Vars)"
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ inputs.swa_deploy_token }}
@@ -138,35 +105,30 @@ jobs:
           skip_api_build: true
           api_location: ""
           action: "upload"
-        
-        # --- THIS IS THE DYNAMIC INJECTION ---
-        env:
-          # Core Identifiers
-          CLIENT: "${{ steps.vars.outputs.CLIENT }}"
-          ENV: "${{ steps.vars.outputs.ENV }}"
           
-          # Auth Configuration
+        # --- THIS IS THE FIX (Part 2) ---
+        # This 'env:' block is now 100% clean, simple text
+        # and will be correctly added to your Azure "Environment variables"
+        env:
+          # --- Set the Application Environment Variables ---
+          VITE_CLIENT: "${{ steps.vars.outputs.CLIENT_LOWER }}"
+          VITE_REDIRECT_URI: "https://photos.google.com/"
           VITE_CLIENT_ID: "${{ inputs.auth0_client_id }}"
           VITE_AUTHORITY: "${{ inputs.auth0_domain }}"
-          VITE_AUDIENCE: "${{ steps.vars.outputs.VITE_AUDIENCE }}"
-          
-          # Dynamic App Links
-          VITE_APP_URL: "${{ steps.vars.outputs.APP_URL }}"
-          VITE_ADMIN_URL: "${{ steps.vars.outputs.ADMIN_URL }}"
-          VITE_REDIRECT_URI: "${{ steps.vars.outputs.APP_URL }}/callback"
-          VITE_SILENT_REDIRECT_URI: "${{ steps.vars.outputs.APP_URL }}/silent_redirect"
-          
-          # Dynamic API Endpoints
-          VITE_CORE_API_END_POINT: "${{ steps.vars.outputs.CORE_API_URL }}"
-          VITE_API_END_POINT: "${{ steps.vars.outputs.CORE_API_URL }}/api/v1"
-          VITE_UPLOAD_API_END_POINT: "${{ steps.vars.outputs.CORE_API_URL }}/"
-          
-          VITE_API_PAYMENTS_END_POINT: "${{ steps.vars.outputs.PAYMENTS_API }}"
-          VITE_API_NOTIFICATIONS_END_POINT: "${{ steps.vars.outputs.NOTIFICATIONS_API }}"
-          VITE_API_EXCHANGE_END_POINT: "${{ steps.vars.outputs.EXCHANGE_API }}"
-          VITE_API_BANKS_END_POINT: "${{ steps.vars.outputs.BANKS_API }}"
-          VITE_API_CARDS_END_POINT: "${{ steps.vars.outputs.CARDS_API }}"
-          
-          # Static Values
+          VITE_AUDIENCE: "${{ steps.vars.outputs.VITE_AUDIENCE }}" # Use the clean output
+          VITE_SILENT_REDIRECT_URI: "https://photos.google.com/"
+          VITE_CORE_API_END_POINT: "https://${{ steps.vars.outputs.CLIENT_LOWER }}${{ steps.vars.outputs.ENV_LOWER }}core.${{ steps.vars.outputs.CLIENT_LOWER }}.work"
+          VITE_APP_URL: "https://photos.google.com/"
+          VITE_ADMIN_URL: "https://${{ steps.vars.outputs.CLIENT_LOWER }}payadmin.${{ steps.vars.outputs.CLIENT_LOWER }}.work"
+          VITE_API_END_POINT: "https://photos.google.com/"
+          VITE_API_PAYMENTS_END_POINT: "https://${{ steps.vars.outputs.CLIENT_LOWER }}${{ steps.vars.outputs.ENV_LOWER }}payments.${{ steps.vars.outputs.CLIENT_LOWER }}.work"
+          VITE_API_NOTIFICATIONS_END_POINT: "https://${{ steps.vars.outputs.CLIENT_LOWER }}${{ steps.vars.outputs.ENV_LOWER }}core.${{ steps.vars.outputs.CLIENT_LOWER }}.work"
+          VITE_API_EXCHANGE_END_POINT: "https://photos.google.com/"
+          VITE_API_BANKS_END_POINT: "https://${{ steps.vars.outputs.CLIENT_LOWER }}${{ steps.vars.outputs.ENV_LOWER }}banks.${{ steps.vars.outputs.CLIENT_LOWER }}.work"
+          VITE_API_CARDS_END_POINT: "https://photos.google.com/"
           VITE_NODE_ENV: "production"
-          VITE_IPSTACK_API: "https://api.ipstack.com"
+          
+          # --- Add the build-time variables too, just in case ---
+          VITE_CLIENT_NAME: "Artha Pay"
+          VITE_CLIENT_FAVICON: "https://devtstarthaone.blob.core.windows.net/arthaimages/artha_fav.svg"
+          VITE_CLIENT_META_DESCRIPTION: "ArthaPay Platform"
