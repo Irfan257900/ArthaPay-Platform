@@ -9,7 +9,6 @@ on:
       environment:
         type: string
         required: true
-      # This input is required for the dynamic domain (com, ch, work)
       client_domain_extension:
         type: string
         required: true
@@ -49,30 +48,37 @@ jobs:
         id: vars
         shell: bash
         run: |
-          # 1. Normalize inputs to lowercase
+          # 1. Normalize inputs
           CLIENT=$(echo "${{ inputs.client_name }}" | tr '[:upper:]' '[:lower:]')
           ENV=$(echo "${{ inputs.environment }}" | tr '[:upper:]' '[:lower:]')
           EXT=$(echo "${{ inputs.client_domain_extension }}" | tr '[:upper:]' '[:lower:]')
           
-          # 2. Construct the Base Domain (e.g., fast-xe.com)
+          # 2. Define the Base Domain
+          # Example: demo.work
           BASE_DOMAIN="${CLIENT}.${EXT}"
           
-          # 3. Dynamically Construct URLs based on your pattern:
-          # Pattern: https://[env][module]api.[client].[ext]
-          # Example: https://tstcoreapi.paybase.ch
+          # 3. Construct URLs using a Single, Standard Pattern
+          # Pattern: https://[client][env][module].[base_domain]
+          # Note: This enforces a standard for ALL new clients.
           
-          APP_URL="https://${ENV}.${BASE_DOMAIN}"
-          ADMIN_URL="https://${ENV}admin.${BASE_DOMAIN}"
+          # Frontends
+          APP_URL="https://${CLIENT}${ENV}payments.${BASE_DOMAIN}"
+          ADMIN_URL="https://${CLIENT}${ENV}admin.${BASE_DOMAIN}"
           
-          CORE_API_URL="https://${ENV}coreapi.${BASE_DOMAIN}"
-          PAYMENTS_API="https://${ENV}paymentsapi.${BASE_DOMAIN}"
-          EXCHANGE_API="https://${ENV}exchangeapi.${BASE_DOMAIN}"
-          BANKS_API="https://${ENV}banksapi.${BASE_DOMAIN}" # using 'banks' to match module name
-          CARDS_API="https://${ENV}cardsapi.${BASE_DOMAIN}"
-          NOTIFICATIONS_API="https://${ENV}coreapi.${BASE_DOMAIN}" # Usually same as core
+          # Backends
+          # Adjust this pattern if your backend naming convention is different
+          # e.g. is it 'demotstcore' or 'demotstcoreapi'?
+          # Based on your Artha example, it seems to be [client][env][module]
           
-          # 4. Calculate Build Script Name
-          # (Assumes your package.json has scripts like "build:paybase:testing")
+          CORE_API_URL="https://${CLIENT}${ENV}core.${BASE_DOMAIN}"
+          PAYMENTS_API="https://${CLIENT}${ENV}payments.${BASE_DOMAIN}"
+          EXCHANGE_API="https://${CLIENT}${ENV}exchange.${BASE_DOMAIN}"
+          BANKS_API="https://${CLIENT}${ENV}banks.${BASE_DOMAIN}"
+          CARDS_API="https://${CLIENT}${ENV}cards.${BASE_DOMAIN}"
+          NOTIFICATIONS_API="https://${CLIENT}${ENV}core.${BASE_DOMAIN}"
+          
+          # 4. Build Script Logic
+          # This handles the npm script mapping (tst -> testing)
           if [ "$ENV" == "tst" ]; then
             BUILD_ENV="testing"
           elif [ "$ENV" == "stg" ]; then
@@ -83,13 +89,15 @@ jobs:
             BUILD_ENV=$ENV
           fi
           
-          BUILD_SCRIPT="build:${CLIENT}:${BUILD_ENV}"
+          # IMPORTANT: Always use 'artha' brand for build scripts unless
+          # you actually have different package.json scripts for every client.
+          BUILD_SCRIPT="build:artha:${BUILD_ENV}"
           
-          # 5. Calculate Auth0 Audience
+          # 5. Auth0 Audience
           AUTH0_DOMAIN="${{ inputs.auth0_domain }}"
           AUDIENCE="https://$(echo $AUTH0_DOMAIN | cut -d'.' -f1)Api.net"
 
-          # 6. Output everything so Step 7 can use it
+          # 6. Output everything
           echo "CLIENT=$CLIENT" >> $GITHUB_OUTPUT
           echo "ENV=$ENV" >> $GITHUB_OUTPUT
           echo "BUILD_SCRIPT=$BUILD_SCRIPT" >> $GITHUB_OUTPUT
@@ -111,11 +119,8 @@ jobs:
           cat <<EOF > .env
           VITE_CLIENT=${{ steps.vars.outputs.CLIENT }}
           VITE_NODE_ENV=production
-          # You can make these dynamic inputs too if you want later
           VITE_CLIENT_NAME="${{ inputs.client_name }}" 
           EOF
-          
-          # Print for debugging
           cat .env
 
       - name: "6. Build React App"
@@ -134,7 +139,7 @@ jobs:
           api_location: ""
           action: "upload"
         
-        # --- THIS INJECTS VARIABLES INTO AZURE PORTAL ---
+        # --- THIS IS THE DYNAMIC INJECTION ---
         env:
           # Core Identifiers
           CLIENT: "${{ steps.vars.outputs.CLIENT }}"
@@ -151,7 +156,7 @@ jobs:
           VITE_REDIRECT_URI: "${{ steps.vars.outputs.APP_URL }}/callback"
           VITE_SILENT_REDIRECT_URI: "${{ steps.vars.outputs.APP_URL }}/silent_redirect"
           
-          # Dynamic API Endpoints (Injected from Step 4 calculations)
+          # Dynamic API Endpoints
           VITE_CORE_API_END_POINT: "${{ steps.vars.outputs.CORE_API_URL }}"
           VITE_API_END_POINT: "${{ steps.vars.outputs.CORE_API_URL }}/api/v1"
           VITE_UPLOAD_API_END_POINT: "${{ steps.vars.outputs.CORE_API_URL }}/"
@@ -162,7 +167,6 @@ jobs:
           VITE_API_BANKS_END_POINT: "${{ steps.vars.outputs.BANKS_API }}"
           VITE_API_CARDS_END_POINT: "${{ steps.vars.outputs.CARDS_API }}"
           
-          # Static / Fixed Values
+          # Static Values
           VITE_NODE_ENV: "production"
           VITE_IPSTACK_API: "https://api.ipstack.com"
-          # Add VITE_IPSTACK_ACCESS_KEY here as a secret if needed
