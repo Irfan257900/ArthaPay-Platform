@@ -3,12 +3,18 @@ name: "Master Deploy: ArthaPay Platform"
 on:
   workflow_dispatch:
     inputs:
-      # --- 1. Client & Environment (2 inputs) ---
+      # --- 1. Client & Environment (3 inputs) ---
       client_name:
         description: "Client name (e.g., Artha, demo)"
         type: string
         required: true
         default: "Artha"
+      # --- THIS IS THE NEW INPUT ---
+      client_domain_extension:
+        description: "Domain Extension (e.g., work, com, ch)"
+        type: string
+        required: true
+        default: "work"
       environment:
         description: "Environment (tst, stg, prd)"
         type: choice
@@ -45,7 +51,7 @@ on:
         description: "Zapier Webhook URL"
         type: string
         required: true
-      # --- TOTAL: 8 INPUTS ---
+      # --- TOTAL: 9 INPUTS (Limit is 10) ---
 
 jobs:
   # ===================================================================
@@ -75,6 +81,8 @@ jobs:
     with:
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
+      # --- THIS IS THE FIX: Pass the domain extension ---
+      client_domain_extension: ${{ github.event.inputs.client_domain_extension }}
       swa_deploy_token: ${{ needs.deploy-infra.outputs.static_web_app_api_key }}
       auth0_domain: ${{ github.event.inputs.auth0_domain }}
       auth0_client_id: ${{ github.event.inputs.auth0_client_id }}
@@ -103,7 +111,7 @@ jobs:
   # ===================================================================
   deploy-backend:
     name: "Job 4: Deploy .NET Backend"
-    # --- FIX: Removed 'configure-sql' from the 'needs' list ---
+    # Removed 'configure-sql' from needs since it is disabled
     needs: [deploy-infra]
     uses: ./.github/workflows/callable-deploy-backend.yml
     with:
@@ -118,7 +126,6 @@ jobs:
   # ===================================================================
   trigger-zapier:
     name: "Job 5: Trigger Zapier Webhook"
-    # --- FIX: Removed 'configure-sql' (it's part of deploy-backend's chain) ---
     needs: [deploy-ui, deploy-backend] 
     uses: ./.github/workflows/callable-trigger-zapier.yml
     with:
@@ -126,4 +133,4 @@ jobs:
       environment: ${{ github.event.inputs.environment }}
       app_url: ${{ needs.deploy-infra.outputs.static_web_app_url }}
     secrets:
-      ZAPIER_WEBHOOK_URL: ${{ github.event.inputs.zapier_webhook_url }}
+      ZAPIER_WEBHOOK_URL: ${{ secrets.ZAPIER_WEBHOOK_URL }}
