@@ -21,7 +21,10 @@ on:
       auth0_client_id:
         type: string
         required: true
-    secrets: {}
+    secrets:
+      # --- FIX: Accept credentials ---
+      AZURE_CREDENTIALS:
+        required: true
 
 jobs:
   deploy-ui:
@@ -53,22 +56,12 @@ jobs:
           ENV=$(echo "${{ inputs.environment }}" | tr '[:upper:]' '[:lower:]')
           EXT=$(echo "${{ inputs.client_domain_extension }}" | tr '[:upper:]' '[:lower:]')
           
-          # 2. Define the Base Domain
-          # Example: demo.work
+          # 2. Define Base Domain
           BASE_DOMAIN="${CLIENT}.${EXT}"
           
-          # 3. Construct URLs using a Single, Standard Pattern
-          # Pattern: https://[client][env][module].[base_domain]
-          # Note: This enforces a standard for ALL new clients.
-          
-          # Frontends
+          # 3. Construct URLs
           APP_URL="https://${CLIENT}${ENV}payments.${BASE_DOMAIN}"
           ADMIN_URL="https://${CLIENT}${ENV}admin.${BASE_DOMAIN}"
-          
-          # Backends
-          # Adjust this pattern if your backend naming convention is different
-          # e.g. is it 'demotstcore' or 'demotstcoreapi'?
-          # Based on your Artha example, it seems to be [client][env][module]
           
           CORE_API_URL="https://${CLIENT}${ENV}core.${BASE_DOMAIN}"
           PAYMENTS_API="https://${CLIENT}${ENV}payments.${BASE_DOMAIN}"
@@ -77,8 +70,7 @@ jobs:
           CARDS_API="https://${CLIENT}${ENV}cards.${BASE_DOMAIN}"
           NOTIFICATIONS_API="https://${CLIENT}${ENV}core.${BASE_DOMAIN}"
           
-          # 4. Build Script Logic
-          # This handles the npm script mapping (tst -> testing)
+          # 4. Build Script
           if [ "$ENV" == "tst" ]; then
             BUILD_ENV="testing"
           elif [ "$ENV" == "stg" ]; then
@@ -89,8 +81,6 @@ jobs:
             BUILD_ENV=$ENV
           fi
           
-          # IMPORTANT: Always use 'artha' brand for build scripts unless
-          # you actually have different package.json scripts for every client.
           BUILD_SCRIPT="build:artha:${BUILD_ENV}"
           
           # 5. Auth0 Audience
@@ -101,7 +91,6 @@ jobs:
           echo "CLIENT=$CLIENT" >> $GITHUB_OUTPUT
           echo "ENV=$ENV" >> $GITHUB_OUTPUT
           echo "BUILD_SCRIPT=$BUILD_SCRIPT" >> $GITHUB_OUTPUT
-          
           echo "APP_URL=$APP_URL" >> $GITHUB_OUTPUT
           echo "ADMIN_URL=$ADMIN_URL" >> $GITHUB_OUTPUT
           echo "CORE_API_URL=$CORE_API_URL" >> $GITHUB_OUTPUT
@@ -111,6 +100,10 @@ jobs:
           echo "CARDS_API=$CARDS_API" >> $GITHUB_OUTPUT
           echo "NOTIFICATIONS_API=$NOTIFICATIONS_API" >> $GITHUB_OUTPUT
           echo "VITE_AUDIENCE=$AUDIENCE" >> $GITHUB_OUTPUT
+          
+          # Resource Names (needed for CLI)
+          echo "SWA_NAME=${CLIENT}-${ENV}-ui" >> $GITHUB_OUTPUT
+          echo "RG_NAME=rg-${CLIENT}-${ENV}-apps" >> $GITHUB_OUTPUT
 
       - name: "5. Generate .env File (Build-Time)"
         shell: bash
@@ -128,8 +121,15 @@ jobs:
           SCRIPT="${{ steps.vars.outputs.BUILD_SCRIPT }}"
           echo "Running build script: npm run $SCRIPT"
           npm run $SCRIPT
+      
+      # --- FIX START: Log in to Azure to enable CLI commands ---
+      - name: "7. Log in to Azure"
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      # --- FIX END ---
 
-      - name: "7. Deploy to SWA (Set Run-Time Env Vars)"
+      - name: "8. Deploy to SWA"
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ inputs.swa_deploy_token }}
@@ -138,35 +138,34 @@ jobs:
           skip_api_build: true
           api_location: ""
           action: "upload"
-        
-        # --- THIS IS THE DYNAMIC INJECTION ---
-        env:
-          # Core Identifiers
-          CLIENT: "${{ steps.vars.outputs.CLIENT }}"
-          ENV: "${{ steps.vars.outputs.ENV }}"
           
-          # Auth Configuration
-          VITE_CLIENT_ID: "${{ inputs.auth0_client_id }}"
-          VITE_AUTHORITY: "${{ inputs.auth0_domain }}"
-          VITE_AUDIENCE: "${{ steps.vars.outputs.VITE_AUDIENCE }}"
+      # --- FIX START: Explicitly set Environment Variables in Portal ---
+      - name: "9. Push Env Vars to Azure Portal"
+        shell: bash
+        run: |
+          echo "Pushing environment variables to Static Web App Configuration..."
           
-          # Dynamic App Links
-          VITE_APP_URL: "${{ steps.vars.outputs.APP_URL }}"
-          VITE_ADMIN_URL: "${{ steps.vars.outputs.ADMIN_URL }}"
-          VITE_REDIRECT_URI: "${{ steps.vars.outputs.APP_URL }}/callback"
-          VITE_SILENT_REDIRECT_URI: "${{ steps.vars.outputs.APP_URL }}/silent_redirect"
-          
-          # Dynamic API Endpoints
-          VITE_CORE_API_END_POINT: "${{ steps.vars.outputs.CORE_API_URL }}"
-          VITE_API_END_POINT: "${{ steps.vars.outputs.CORE_API_URL }}/api/v1"
-          VITE_UPLOAD_API_END_POINT: "${{ steps.vars.outputs.CORE_API_URL }}/"
-          
-          VITE_API_PAYMENTS_END_POINT: "${{ steps.vars.outputs.PAYMENTS_API }}"
-          VITE_API_NOTIFICATIONS_END_POINT: "${{ steps.vars.outputs.NOTIFICATIONS_API }}"
-          VITE_API_EXCHANGE_END_POINT: "${{ steps.vars.outputs.EXCHANGE_API }}"
-          VITE_API_BANKS_END_POINT: "${{ steps.vars.outputs.BANKS_API }}"
-          VITE_API_CARDS_END_POINT: "${{ steps.vars.outputs.CARDS_API }}"
-          
-          # Static Values
-          VITE_NODE_ENV: "production"
-          VITE_IPSTACK_API: "https://api.ipstack.com"
+          az staticwebapp appsettings set \
+            --name "${{ steps.vars.outputs.SWA_NAME }}" \
+            --resource-group "${{ steps.vars.outputs.RG_NAME }}" \
+            --setting-names \
+              "CLIENT=${{ steps.vars.outputs.CLIENT }}" \
+              "ENV=${{ steps.vars.outputs.ENV }}" \
+              "VITE_CLIENT=${{ steps.vars.outputs.CLIENT }}" \
+              "VITE_REDIRECT_URI=${{ steps.vars.outputs.APP_URL }}/callback" \
+              "VITE_CLIENT_ID=${{ inputs.auth0_client_id }}" \
+              "VITE_AUTHORITY=${{ inputs.auth0_domain }}" \
+              "VITE_AUDIENCE=${{ steps.vars.outputs.VITE_AUDIENCE }}" \
+              "VITE_SILENT_REDIRECT_URI=${{ steps.vars.outputs.APP_URL }}/silent_redirect" \
+              "VITE_CORE_API_END_POINT=${{ steps.vars.outputs.CORE_API_URL }}" \
+              "VITE_APP_URL=${{ steps.vars.outputs.APP_URL }}" \
+              "VITE_ADMIN_URL=${{ steps.vars.outputs.ADMIN_URL }}" \
+              "VITE_API_END_POINT=${{ steps.vars.outputs.CORE_API_URL }}/api/v1" \
+              "VITE_API_PAYMENTS_END_POINT=${{ steps.vars.outputs.PAYMENTS_API }}" \
+              "VITE_API_NOTIFICATIONS_END_POINT=${{ steps.vars.outputs.NOTIFICATIONS_API }}" \
+              "VITE_API_EXCHANGE_END_POINT=${{ steps.vars.outputs.EXCHANGE_API }}" \
+              "VITE_API_BANKS_END_POINT=${{ steps.vars.outputs.BANKS_API }}" \
+              "VITE_API_CARDS_END_POINT=${{ steps.vars.outputs.CARDS_API }}" \
+              "VITE_NODE_ENV=production" \
+              "VITE_IPSTACK_API=https://api.ipstack.com"
+      # --- FIX END ---
