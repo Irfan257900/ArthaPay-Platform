@@ -154,7 +154,10 @@ jobs:
         run: |
           echo "Pushing environment variables to Static Web App Configuration..."
           
-          # Using Azure CLI to forcefully set all variables in the Portal
+          # Using Azure CLI to set variables. 
+          # Dynamic values are filled in. 
+          # Client-specific secrets are set to empty strings ("") as placeholders.
+          
           az staticwebapp appsettings set \
             --name "${{ steps.vars.outputs.SWA_NAME }}" \
             --resource-group "${{ steps.vars.outputs.RG_NAME }}" \
@@ -178,26 +181,26 @@ jobs:
               "VITE_API_BANKS_END_POINT=${{ steps.vars.outputs.BANKS_API }}" \
               "VITE_API_CARDS_END_POINT=${{ steps.vars.outputs.CARDS_API }}" \
               "VITE_NOTIFICATION_HUB=${{ steps.vars.outputs.SIGNALR_URL }}" \
+              "VITE_WEB3_API_EXCHANGE_END_POINT=${{ steps.vars.outputs.EXCHANGE_API }}" \
+              "VITE_WEB3_API_BANKS_END_POINT=${{ steps.vars.outputs.BANKS_API }}" \
               "VITE_NODE_ENV=production" \
               "VITE_IPSTACK_API=https://api.ipstack.com" \
-              "VITE_IPSTACK_ACCESS_KEY=1664b5918560fc3bc16846334c71d7ba" \
-              "VITE_WALLET_TYPE=custodial" \
-              "VITE_ARCANA_CLIENT_ID=xar_test_d92395afb352d5f4c18e030745d06f18af1d1949" \
-              "VITE_ARCANA_ID=d92395afb352d5f4c18e030745d06f18af1d1949" \
-              "VITE_OWNER_ACCOUNT_WALLET_ADDRESS=0xC18E2bdDdc68e4d06978a917A516AC82261E8991" \
-              "VITE_NAME=Payments" \
-              "VITE_SEND_VERIFICATION_HIDE=false" \
-              "VITE_APP_KYC_KYB_PROVIDER=manual" \
-              "VITE_APP_SUMSUB_KYB_FLOW=basic-kyb" \
-              "VITE_APP_SUMSUB_KYC_FLOW=basic-kyc-level" \
-              "VITE_APP_PAYEE_ON_THE_GO_MODE=true" \
-              "VITE_APP_EXCHANGE_ON_THE_GO_MODE=false" \
-              "VITE_APP_SMALL_DECIMALS_ENABLED=false" \
-              "VITE_APP_IS_SHOW_PAYIN_FIAT=true" \
-              "VITE_APP_IS_QUICKLICKS_ENABLED=true" \
-              "VITE_WEB3_WALLET_ID=3aae3194ee3005064ef403de8887d1aa" \
-              "VITE_TREZOR_EMAIL=arthapaySupport@gmail.com" \
-              "VITE_WEB3_API_END_POINT=https://digitalweb3payments.azurewebsites.net/api/v1/" \
-              "VITE_WEB3_API_EXCHANGE_END_POINT=https://arthatstexchanga.artha.work" \
-              "VITE_WEB3_API_BANKS_END_POINT=${{ steps.vars.outputs.BANKS_API }}" \
-              "VITE_API_LOYALITY_END_POINT=https://loyalityapitst.azurewebsites.net"
+              "VITE_IPSTACK_ACCESS_KEY=" \
+              "VITE_WALLET_TYPE=" \
+              "VITE_ARCANA_CLIENT_ID=" \
+              "VITE_ARCANA_ID=" \
+              "VITE_OWNER_ACCOUNT_WALLET_ADDRESS=" \
+              "VITE_NAME=" \
+              "VITE_SEND_VERIFICATION_HIDE=" \
+              "VITE_APP_KYC_KYB_PROVIDER=" \
+              "VITE_APP_SUMSUB_KYB_FLOW=" \
+              "VITE_APP_SUMSUB_KYC_FLOW=" \
+              "VITE_APP_PAYEE_ON_THE_GO_MODE=" \
+              "VITE_APP_EXCHANGE_ON_THE_GO_MODE=" \
+              "VITE_APP_SMALL_DECIMALS_ENABLED=" \
+              "VITE_APP_IS_SHOW_PAYIN_FIAT=" \
+              "VITE_APP_IS_QUICKLICKS_ENABLED=" \
+              "VITE_WEB3_WALLET_ID=" \
+              "VITE_TREZOR_EMAIL=" \
+              "VITE_WEB3_API_END_POINT=" \
+              "VITE_API_LOYALITY_END_POINT="
