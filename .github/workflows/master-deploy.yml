@@ -29,7 +29,7 @@ on:
         type: string
         default: "all"
         
-      # --- 3. Third-Party Config (5 inputs) ---
+      # --- 3. Third-Party Config (4 inputs) ---
       auth0_domain:
         description: "Auth0 Domain"
         type: string
@@ -47,7 +47,7 @@ on:
         type: string
         required: true
       
-      # --- TOTAL: 10 INPUTS (Limit is 10) ---
+      # --- TOTAL: 8 INPUTS ---
 
 jobs:
   # ===================================================================
@@ -66,6 +66,7 @@ jobs:
     secrets:
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
       VM_ADMIN_PASSWORD: ${{ secrets.VM_ADMIN_PASSWORD }}
+      APP_SQL_PASSWORD: ${{ secrets.APP_SQL_PASSWORD }}
 
   # ===================================================================
   # JOB 2: REACT UI
@@ -82,7 +83,6 @@ jobs:
       auth0_domain: ${{ github.event.inputs.auth0_domain }}
       auth0_client_id: ${{ github.event.inputs.auth0_client_id }}
     secrets:
-      # --- FIX: Pass credentials so we can update Azure Portal settings ---
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
 
   # ===================================================================
@@ -107,4 +107,3 @@ jobs:
       modules_to_deploy: ${{ github.event.inputs.backend_modules_to_deploy }}
     secrets:
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-

@@ -58,3 +58,9 @@ variable "dotnet_version" {
   type        = string
   default     = "v6.0"
 }
+
+variable "app_sql_password" {
+  description = "Password for the application SQL user"
+  type        = string
+  sensitive   = true
+}
