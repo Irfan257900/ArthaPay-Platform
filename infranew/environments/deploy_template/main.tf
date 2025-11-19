@@ -15,18 +15,26 @@ locals {
   vm_rg_name               = "rg-${local._name_prefix}-vm"
   vnet_name                = "${local._name_prefix}-vnet"
   vm_name                  = "${local._name_prefix}-sqlvm"
-  key_vault_name           = "${local._name_prefix}-kv-${substr(md5(timestamp()), 0, 5)}" # Unique random suffix
+  key_vault_name           = "${local._name_prefix}-kv-${substr(md5(timestamp()), 0, 5)}"
   storage_account_name     = "st${lower(var.client_name)}${lower(var.environment_name)}${substr(md5(timestamp()), 0, 3)}"
   app_service_plan_name    = "${local._name_prefix}-asp"
-  service_bus_namespace    = "${local._name_prefix}-sb-namespace"
+  # --- FIX 1: Corrected variable name here ---
+  service_bus_namespace_name = "${local._name_prefix}-sb-namespace"
   static_web_app_name      = "${local._name_prefix}-ui"
 
   # Network Config
-  vnet_address_space            = ["10.0.0.0/16"]
-  subnets                       = {
-    "vm-subnet"  = "10.0.1.0/24"
-    "pep-subnet" = "10.0.2.0/24"
+  vnet_address_space       = ["10.0.0.0/16"]
+  
+  # --- FIX 2: Corrected Subnet Structure (Object, not String) ---
+  subnets = {
+    "vm-subnet" = {
+      address_prefixes = ["10.0.1.0/24"]
+    }
+    "pep-subnet" = {
+      address_prefixes = ["10.0.2.0/24"]
+    }
   }
+  
   private_endpoints_subnet_name = "pep-subnet"
 }
 
@@ -143,7 +151,7 @@ resource "azurerm_virtual_machine_data_disk_attachment" "attachment_2" {
   caching            = "ReadWrite"
 }
 
-# --- SQL IaaS Extension (Registers VM as SQL Server) ---
+# --- SQL IaaS Extension ---
 resource "azurerm_mssql_virtual_machine" "sqlvm" {
   virtual_machine_id               = azurerm_windows_virtual_machine.vm.id
   sql_license_type                 = "PAYG"
@@ -161,7 +169,6 @@ resource "azurerm_mssql_virtual_machine" "sqlvm" {
 }
 
 # --- Custom Script Extension (Creates DB and User) ---
-# This replaces the need for Job 3 in GitHub Actions
 resource "azurerm_virtual_machine_extension" "sql_db_setup" {
   name                 = "sql-db-setup"
   virtual_machine_id   = azurerm_windows_virtual_machine.vm.id
@@ -169,7 +176,6 @@ resource "azurerm_virtual_machine_extension" "sql_db_setup" {
   type                 = "CustomScriptExtension"
   type_handler_version = "1.10"
 
-  # NOTE: We use protected_settings for the command because it contains a password
   protected_settings = <<SETTINGS
     {
         "commandToExecute": "powershell.exe -ExecutionPolicy Unrestricted -Command \"$password = '${var.app_sql_password}'; $dbName = '${var.client_name}DB'; $dbUser = '${var.client_name}_app_user'; sqlcmd -S localhost -E -Q \\\"IF NOT EXISTS(SELECT * FROM sys.databases WHERE name='$dbName') BEGIN CREATE DATABASE [$dbName]; END; IF NOT EXISTS(SELECT * FROM sys.server_principals WHERE name='$dbUser') BEGIN CREATE LOGIN [$dbUser] WITH PASSWORD='$password'; END; USE [$dbName]; IF NOT EXISTS(SELECT * FROM sys.database_principals WHERE name='$dbUser') BEGIN CREATE USER [$dbUser] FOR LOGIN [$dbUser]; ALTER ROLE db_owner ADD MEMBER [$dbUser]; END;\\\"\""
@@ -200,6 +206,7 @@ module "app_service_plan" {
 
 module "service_bus" {
   source                     = "../../modules/service_bus"
+  # --- FIX 1: Corrected variable usage ---
   service_bus_namespace_name = local.service_bus_namespace_name
   location                   = azurerm_resource_group.rg_apps.location
   resource_group_name        = azurerm_resource_group.rg_apps.name
@@ -222,7 +229,7 @@ resource "azurerm_role_assignment" "kv_admin_rbac" {
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
-# --- Secrets Creation (Depends on Role Assignment) ---
+# --- Secrets Creation ---
 resource "azurerm_key_vault_secret" "auth0_domain" {
   name         = "Auth0-Domain"
   value        = var.auth0_domain
