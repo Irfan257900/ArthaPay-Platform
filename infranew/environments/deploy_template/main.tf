@@ -149,7 +149,7 @@ resource "azurerm_virtual_machine_data_disk_attachment" "attachment_2" {
   caching            = "ReadWrite"
 }
 
-# --- NEW: SQL IaaS Extension (Registers VM as SQL Server) ---
+# --- SQL IaaS Extension (Registers VM as SQL Server) ---
 resource "azurerm_mssql_virtual_machine" "sqlvm" {
   virtual_machine_id               = azurerm_windows_virtual_machine.vm.id
   sql_license_type                 = "PAYG"
@@ -166,8 +166,8 @@ resource "azurerm_mssql_virtual_machine" "sqlvm" {
   }
 }
 
-# --- NEW: Custom Script Extension (Creates DB and User) ---
-# This runs inside the VM to perform the SQL steps dynamically
+# --- Custom Script Extension (Creates DB and User AUTOMATICALLY) ---
+# This runs inside the VM to perform the SQL steps dynamically without manual intervention
 resource "azurerm_virtual_machine_extension" "sql_db_setup" {
   name                 = "sql-db-setup"
   virtual_machine_id   = azurerm_windows_virtual_machine.vm.id
@@ -175,9 +175,10 @@ resource "azurerm_virtual_machine_extension" "sql_db_setup" {
   type                 = "CustomScriptExtension"
   type_handler_version = "1.10"
 
+  # This script creates the DB, Login, and User. It runs as Local System on the VM.
   protected_settings = <<SETTINGS
     {
-        "commandToExecute": "powershell.exe -ExecutionPolicy Unrestricted -Command \"$password = '${var.app_sql_password}'; $dbName = '${var.client_name}DB'; $dbUser = '${var.client_name}_app_user'; sqlcmd -S localhost -E -Q \\\"IF NOT EXISTS(SELECT * FROM sys.databases WHERE name='$dbName') BEGIN CREATE DATABASE [$dbName]; END; IF NOT EXISTS(SELECT * FROM sys.server_principals WHERE name='$dbUser') BEGIN CREATE LOGIN [$dbUser] WITH PASSWORD='$password'; END; USE [$dbName]; IF NOT EXISTS(SELECT * FROM sys.database_principals WHERE name='$dbUser') BEGIN CREATE USER [$dbUser] FOR LOGIN [$dbUser]; ALTER ROLE db_owner ADD MEMBER [$dbUser]; END;\\\"\""
+        "commandToExecute": "powershell.exe -ExecutionPolicy Unrestricted -Command \"$ErrorActionPreference = 'Stop'; $password = '${var.app_sql_password}'; $dbName = '${var.client_name}DB'; $dbUser = '${var.client_name}_app_user'; sqlcmd -S localhost -E -Q \\\"IF NOT EXISTS(SELECT * FROM sys.databases WHERE name='$dbName') BEGIN CREATE DATABASE [$dbName]; END; IF NOT EXISTS(SELECT * FROM sys.server_principals WHERE name='$dbUser') BEGIN CREATE LOGIN [$dbUser] WITH PASSWORD='$password'; END; USE [$dbName]; IF NOT EXISTS(SELECT * FROM sys.database_principals WHERE name='$dbUser') BEGIN CREATE USER [$dbUser] FOR LOGIN [$dbUser]; ALTER ROLE db_owner ADD MEMBER [$dbUser]; END;\\\"\""
     }
 SETTINGS
 
