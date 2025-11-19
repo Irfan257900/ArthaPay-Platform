@@ -18,14 +18,12 @@ locals {
   key_vault_name           = "${local._name_prefix}-kv-${substr(md5(timestamp()), 0, 5)}"
   storage_account_name     = "st${lower(var.client_name)}${lower(var.environment_name)}${substr(md5(timestamp()), 0, 3)}"
   app_service_plan_name    = "${local._name_prefix}-asp"
-  # --- FIX 1: Corrected variable name here ---
   service_bus_namespace_name = "${local._name_prefix}-sb-namespace"
   static_web_app_name      = "${local._name_prefix}-ui"
 
   # Network Config
   vnet_address_space       = ["10.0.0.0/16"]
   
-  # --- FIX 2: Corrected Subnet Structure (Object, not String) ---
   subnets = {
     "vm-subnet" = {
       address_prefixes = ["10.0.1.0/24"]
@@ -151,7 +149,7 @@ resource "azurerm_virtual_machine_data_disk_attachment" "attachment_2" {
   caching            = "ReadWrite"
 }
 
-# --- SQL IaaS Extension ---
+# --- NEW: SQL IaaS Extension (Registers VM as SQL Server) ---
 resource "azurerm_mssql_virtual_machine" "sqlvm" {
   virtual_machine_id               = azurerm_windows_virtual_machine.vm.id
   sql_license_type                 = "PAYG"
@@ -168,7 +166,8 @@ resource "azurerm_mssql_virtual_machine" "sqlvm" {
   }
 }
 
-# --- Custom Script Extension (Creates DB and User) ---
+# --- NEW: Custom Script Extension (Creates DB and User) ---
+# This runs inside the VM to perform the SQL steps dynamically
 resource "azurerm_virtual_machine_extension" "sql_db_setup" {
   name                 = "sql-db-setup"
   virtual_machine_id   = azurerm_windows_virtual_machine.vm.id
@@ -206,7 +205,6 @@ module "app_service_plan" {
 
 module "service_bus" {
   source                     = "../../modules/service_bus"
-  # --- FIX 1: Corrected variable usage ---
   service_bus_namespace_name = local.service_bus_namespace_name
   location                   = azurerm_resource_group.rg_apps.location
   resource_group_name        = azurerm_resource_group.rg_apps.name
