@@ -149,7 +149,7 @@ resource "azurerm_virtual_machine_data_disk_attachment" "attachment_2" {
   caching            = "ReadWrite"
 }
 
-# --- SQL IaaS Extension (Registers VM as SQL Server) ---
+# --- SQL IaaS Extension ---
 resource "azurerm_mssql_virtual_machine" "sqlvm" {
   virtual_machine_id               = azurerm_windows_virtual_machine.vm.id
   sql_license_type                 = "PAYG"
@@ -167,6 +167,7 @@ resource "azurerm_mssql_virtual_machine" "sqlvm" {
 }
 
 # --- Custom Script Extension (Creates DB and User) ---
+# FIX: We now pass Admin Credentials to ensure we have permission to create users
 resource "azurerm_virtual_machine_extension" "sql_db_setup" {
   name                 = "sql-db-setup"
   virtual_machine_id   = azurerm_windows_virtual_machine.vm.id
@@ -174,11 +175,9 @@ resource "azurerm_virtual_machine_extension" "sql_db_setup" {
   type                 = "CustomScriptExtension"
   type_handler_version = "1.10"
 
-  # FIX: Uses SQL Authentication (-U and -P) because SYSTEM user (running the extension) is not a SQL Admin.
-  # We pass the Admin Username and Password explicitly to sqlcmd.
   protected_settings = <<SETTINGS
     {
-        "commandToExecute": "powershell.exe -ExecutionPolicy Unrestricted -Command \"$adminUser = '${var.vm_admin_username}'; $adminPass = '${var.vm_admin_password}'; $appPass = '${var.app_sql_password}'; $dbName = '${var.client_name}DB'; $dbUser = '${var.client_name}_app_user'; sqlcmd -S localhost -U $adminUser -P $adminPass -Q \\\"IF NOT EXISTS(SELECT * FROM sys.databases WHERE name='$dbName') BEGIN CREATE DATABASE [$dbName]; END\\\"; sqlcmd -S localhost -U $adminUser -P $adminPass -Q \\\"IF NOT EXISTS(SELECT * FROM sys.server_principals WHERE name='$dbUser') BEGIN CREATE LOGIN [$dbUser] WITH PASSWORD='$appPass'\\\"; sqlcmd -S localhost -U $adminUser -P $adminPass -Q \\\"USE [$dbName]; IF NOT EXISTS(SELECT * FROM sys.database_principals WHERE name='$dbUser') BEGIN CREATE USER [$dbUser] FOR LOGIN [$dbUser]; ALTER ROLE db_owner ADD MEMBER [$dbUser]\\\";\""
+        "commandToExecute": "powershell.exe -ExecutionPolicy Unrestricted -Command \"$ErrorActionPreference = 'Stop'; $adminUser = '${var.vm_admin_username}'; $adminPass = '${var.vm_admin_password}'; $password = '${var.app_sql_password}'; $dbName = '${var.client_name}DB'; $dbUser = '${var.client_name}_app_user'; sqlcmd -S localhost -U $adminUser -P $adminPass -Q \\\"IF NOT EXISTS(SELECT * FROM sys.databases WHERE name='$dbName') BEGIN CREATE DATABASE [$dbName]; END\\\"; sqlcmd -S localhost -U $adminUser -P $adminPass -Q \\\"IF NOT EXISTS(SELECT * FROM sys.server_principals WHERE name='$dbUser') BEGIN CREATE LOGIN [$dbUser] WITH PASSWORD='$password'; END\\\"; sqlcmd -S localhost -U $adminUser -P $adminPass -Q \\\"USE [$dbName]; IF NOT EXISTS(SELECT * FROM sys.database_principals WHERE name='$dbUser') BEGIN CREATE USER [$dbUser] FOR LOGIN [$dbUser]; ALTER ROLE db_owner ADD MEMBER [$dbUser]; END;\\\"\""
     }
 SETTINGS
 
