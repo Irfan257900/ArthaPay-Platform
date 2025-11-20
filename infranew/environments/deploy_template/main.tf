@@ -19,6 +19,7 @@ locals {
   storage_account_name     = "st${lower(var.client_name)}${lower(var.environment_name)}${substr(md5(timestamp()), 0, 3)}"
   app_service_plan_name    = "${local._name_prefix}-asp"
   service_bus_namespace_name = "${local._name_prefix}-sb-namespace"
+  static_web_app_name      = "${local._name_prefix}-ui"
   
   # NEW: Container Resources
   acr_name                 = "acr${lower(var.client_name)}${lower(var.environment_name)}${substr(md5(timestamp()), 0, 3)}"
@@ -26,10 +27,16 @@ locals {
 
   # Network Config
   vnet_address_space       = ["10.0.0.0/16"]
+  
   subnets = {
-    "vm-subnet" = { address_prefixes = ["10.0.1.0/24"] }
-    "pep-subnet" = { address_prefixes = ["10.0.2.0/24"] }
+    "vm-subnet" = {
+      address_prefixes = ["10.0.1.0/24"]
+    }
+    "pep-subnet" = {
+      address_prefixes = ["10.0.2.0/24"]
+    }
   }
+  
   private_endpoints_subnet_name = "pep-subnet"
 }
 
@@ -146,7 +153,7 @@ resource "azurerm_virtual_machine_data_disk_attachment" "attachment_2" {
   caching            = "ReadWrite"
 }
 
-# --- SQL IaaS Extension ---
+# --- SQL IaaS Extension (Registers VM as SQL Server) ---
 resource "azurerm_mssql_virtual_machine" "sqlvm" {
   virtual_machine_id               = azurerm_windows_virtual_machine.vm.id
   sql_license_type                 = "PAYG"
@@ -214,8 +221,6 @@ resource "azurerm_linux_web_app" "ui_webapp" {
   }
 
   site_config {
-    # Points to a default image initially. 
-    # Job 2 will update this to your real image.
     application_stack {
       docker_image_name = "mcr.microsoft.com/appsvc/staticsite:latest"
       docker_registry_url = "https://mcr.microsoft.com"
@@ -237,7 +242,7 @@ resource "azurerm_role_assignment" "webapp_acr_pull" {
   principal_id         = azurerm_linux_web_app.ui_webapp.identity[0].principal_id
 }
 
-# --- Storage Account ---
+# --- Application Resources (in rg_apps) ---
 module "storage_account" {
   source               = "../../modules/storage_account"
   storage_account_name = local.storage_account_name
@@ -246,7 +251,16 @@ module "storage_account" {
   tags                 = local.common_tags
 }
 
-# --- Service Bus ---
+module "app_service_plan" {
+  source                = "../../modules/app_service_plan"
+  app_service_plan_name = local.app_service_plan_name
+  location              = azurerm_resource_group.rg_apps.location
+  resource_group_name   = azurerm_resource_group.rg_apps.name
+  sku_name              = "B1"
+  os_type               = "Windows"
+  tags                  = local.common_tags
+}
+
 module "service_bus" {
   source                     = "../../modules/service_bus"
   service_bus_namespace_name = local.service_bus_namespace_name
@@ -256,7 +270,6 @@ module "service_bus" {
   tags                       = local.common_tags
 }
 
-# --- Key Vault ---
 module "key_vault" {
   source              = "../../modules/key_vault"
   key_vault_name      = local.key_vault_name
@@ -305,7 +318,7 @@ module "function_apps" {
   function_app_name              = "${local._name_prefix}-${each.key}-func"
   dotnet_version                 = var.dotnet_version
   
-  # --- FIX: Point to the Windows Plan, NOT the Linux UI Plan ---
+  # --- FIX: Point to the Windows Plan (for .NET Backend) ---
   app_service_plan_id            = module.app_service_plan.id 
   
   app_insights_instrumentation_key = "dummy-key"
@@ -313,32 +326,4 @@ module "function_apps" {
   storage_account_access_key     = module.storage_account.primary_access_key
 }
 
-# --- Restore Windows Plan for Functions (if needed) ---
-module "app_service_plan" {
-  source                = "../../modules/app_service_plan"
-  app_service_plan_name = local.app_service_plan_name
-  location              = azurerm_resource_group.rg_apps.location
-  resource_group_name   = azurerm_resource_group.rg_apps.name
-  sku_name              = "B1"
-  os_type               = "Windows"
-  tags                  = local.common_tags
-}
-
-# --- OUTPUTS ---
-output "webapp_name" {
-  value = azurerm_linux_web_app.ui_webapp.name
-}
-output "webapp_rg_name" {
-  value = azurerm_resource_group.rg_apps.name
-}
-output "acr_login_server" {
-  value = azurerm_container_registry.acr.login_server
-}
-output "acr_admin_username" {
-  value = azurerm_container_registry.acr.admin_username
-  sensitive = true
-}
-output "acr_admin_password" {
-  value = azurerm_container_registry.acr.admin_password
-  sensitive = true
-}
+# --- NO OUTPUTS HERE (They are in output.tf) ---
