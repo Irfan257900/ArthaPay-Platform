@@ -46,8 +46,9 @@ jobs:
       webapp_name: ${{ steps.apply.outputs.webapp_name }}
       webapp_rg_name: ${{ steps.apply.outputs.webapp_rg_name }}
       acr_login_server: ${{ steps.apply.outputs.acr_login_server }}
-      acr_username: ${{ steps.apply.outputs.acr_username }}
-      acr_password: ${{ steps.apply.outputs.acr_password }}
+      acr_username: ${{ steps.apply.outputs.acr_admin_username }}
+      acr_password: ${{ steps.apply.outputs.acr_admin_password }}
+
 
     defaults:
       run:
