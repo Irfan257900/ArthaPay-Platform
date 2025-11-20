@@ -1,9 +1,6 @@
 output "webapp_name" {
   value = azurerm_linux_web_app.ui_webapp.name
 }
-output "webapp_rg_name" {
-  value = azurerm_resource_group.rg_apps.name
-}
 output "acr_login_server" {
   value = azurerm_container_registry.acr.login_server
 }
