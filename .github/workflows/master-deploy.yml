@@ -75,8 +75,8 @@ jobs:
       docker_tag: "latest"
       azure_repo_url: ${{ github.event.inputs.azure_devops_repo_url }}
       
-      # --- DATA MAPPING (LOWERCASE) ---
-      # This pulls the data from Job 1 and pushes it to Job 2
+      # --- CRITICAL FIX: Passing Data from Job 1 to Job 2 ---
+      # We use 'needs.deploy-infra.outputs' to grab the keys you saw in the portal
       webapp_name: ${{ needs.deploy-infra.outputs.webapp_name }}
       webapp_rg_name: ${{ needs.deploy-infra.outputs.webapp_rg_name }}
       acr_login_server: ${{ needs.deploy-infra.outputs.acr_login_server }}

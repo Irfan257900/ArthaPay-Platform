@@ -95,7 +95,13 @@ jobs:
           TF_VAR_app_sql_password: ${{ secrets.APP_SQL_PASSWORD }}
         run: |
           terraform apply -auto-approve tfplan
+          # 2. REFRESH STATE (Crucial: Reads current Azure values into Terraform)
+          echo "🔄 Refreshing Terraform State..."
+          terraform refresh
           
+          # 3. DEBUG: Show us the values in the logs
+          echo "🔍 DEBUG: Checking Terraform Outputs..."
+          terraform output
           # --- CAPTURE OUTPUTS (LOWERCASE KEYS) ---
           echo "vm_name=$(terraform output -raw vm_name)" >> $GITHUB_OUTPUT
           echo "vm_rg_name=$(terraform output -raw vm_rg_name)" >> $GITHUB_OUTPUT
