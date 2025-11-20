@@ -24,20 +24,20 @@ on:
     
     outputs:
       vm_rg_name:
-        value: ${{ jobs.deploy-infra.outputs.VM_RG_NAME }}
+        value: ${{ jobs.deploy-infra.outputs.vm_rg_name }}
       vm_name:
-        value: ${{ jobs.deploy-infra.outputs.VM_NAME }}
-      # --- CRITICAL FIX: Expose Web App & ACR Outputs to Job 2 ---
+        value: ${{ jobs.deploy-infra.outputs.vm_name }}
+      # --- FIX: Changed these keys to lowercase to match master-deploy.yml ---
       webapp_name:
-        value: ${{ jobs.deploy-infra.outputs.WEBAPP_NAME }}
+        value: ${{ jobs.deploy-infra.outputs.webapp_name }}
       webapp_rg_name:
-        value: ${{ jobs.deploy-infra.outputs.WEBAPP_RG_NAME }}
+        value: ${{ jobs.deploy-infra.outputs.webapp_rg_name }}
       acr_login_server:
-        value: ${{ jobs.deploy-infra.outputs.ACR_LOGIN_SERVER }}
+        value: ${{ jobs.deploy-infra.outputs.acr_login_server }}
       acr_username:
-        value: ${{ jobs.deploy-infra.outputs.ACR_USERNAME }}
+        value: ${{ jobs.deploy-infra.outputs.acr_username }}
       acr_password:
-        value: ${{ jobs.deploy-infra.outputs.ACR_PASSWORD }}
+        value: ${{ jobs.deploy-infra.outputs.acr_password }}
 
     secrets:
       AZURE_CREDENTIALS:
@@ -55,14 +55,14 @@ jobs:
       name: ${{ inputs.client_name }}-${{ inputs.environment }}
 
     outputs:
-      VM_RG_NAME: "rg-${{ inputs.client_name }}-${{ inputs.environment }}-vm"
-      VM_NAME: "${{ inputs.client_name }}-${{ inputs.environment }}-sqlvm"
-      # --- CRITICAL FIX: Map Step Outputs to Job Outputs ---
-      WEBAPP_NAME: ${{ steps.apply.outputs.webapp_name }}
-      WEBAPP_RG_NAME: ${{ steps.apply.outputs.webapp_rg_name }}
-      ACR_LOGIN_SERVER: ${{ steps.apply.outputs.acr_login_server }}
-      ACR_USERNAME: ${{ steps.apply.outputs.acr_username }}
-      ACR_PASSWORD: ${{ steps.apply.outputs.acr_password }}
+      # --- FIX: Lowercase keys here match the job outputs above ---
+      vm_rg_name: ${{ steps.apply.outputs.vm_rg_name }}
+      vm_name: ${{ steps.apply.outputs.vm_name }}
+      webapp_name: ${{ steps.apply.outputs.webapp_name }}
+      webapp_rg_name: ${{ steps.apply.outputs.webapp_rg_name }}
+      acr_login_server: ${{ steps.apply.outputs.acr_login_server }}
+      acr_username: ${{ steps.apply.outputs.acr_username }}
+      acr_password: ${{ steps.apply.outputs.acr_password }}
 
     defaults:
       run:
@@ -115,7 +115,8 @@ jobs:
         run: |
           terraform apply -auto-approve tfplan
           
-          # --- CRITICAL FIX: Capture Terraform Outputs into GitHub Actions ---
+          # Capture Terraform Outputs into GitHub Actions
+          # Note: The variable names on the left (e.g. vm_name) MUST be lowercase
           
           echo "vm_name=$(terraform output -raw vm_name)" >> $GITHUB_OUTPUT
           echo "vm_rg_name=$(terraform output -raw vm_rg_name)" >> $GITHUB_OUTPUT
@@ -124,9 +125,12 @@ jobs:
           echo "webapp_rg_name=$(terraform output -raw webapp_rg_name)" >> $GITHUB_OUTPUT
           echo "acr_login_server=$(terraform output -raw acr_login_server)" >> $GITHUB_OUTPUT
           
+          # Handle Sensitive Outputs
           ACR_USER=$(terraform output -raw acr_admin_username)
           ACR_PASS=$(terraform output -raw acr_admin_password)
+          
           echo "::add-mask::$ACR_USER"
           echo "::add-mask::$ACR_PASS"
+          
           echo "acr_username=$ACR_USER" >> $GITHUB_OUTPUT
           echo "acr_password=$ACR_PASS" >> $GITHUB_OUTPUT

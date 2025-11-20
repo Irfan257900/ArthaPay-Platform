@@ -75,6 +75,8 @@ jobs:
       VM_ADMIN_PASSWORD: ${{ secrets.VM_ADMIN_PASSWORD }}
       APP_SQL_PASSWORD: ${{ secrets.APP_SQL_PASSWORD }}
 
+  # ... (Deploy Infra Job above) ...
+
   # ===================================================================
   # JOB 2: DEPLOY UI (CONTAINER)
   # ===================================================================
@@ -87,22 +89,17 @@ jobs:
       environment: ${{ github.event.inputs.environment }}
       client_domain_extension: ${{ github.event.inputs.client_domain_extension }}
       
-      # --- Docker Config ---
       docker_image: "${{ github.event.inputs.client_name }}-ui"
       docker_tag: "latest"
-      
-      # --- Source Control ---
       azure_repo_url: ${{ github.event.inputs.azure_devops_repo_url }}
       
-      # --- Infra Outputs (The "Bridge" between Job 1 and Job 2) ---
-      # THIS IS WHAT WAS MISSING OR INCORRECT BEFORE:
+      # --- FIX: Ensure these match the lowercase outputs in callable-deploy-infra ---
       webapp_name: ${{ needs.deploy-infra.outputs.webapp_name }}
       webapp_rg_name: ${{ needs.deploy-infra.outputs.webapp_rg_name }}
       acr_login_server: ${{ needs.deploy-infra.outputs.acr_login_server }}
       acr_username: ${{ needs.deploy-infra.outputs.acr_username }}
       acr_password: ${{ needs.deploy-infra.outputs.acr_password }}
       
-      # --- Auth0 ---
       auth0_domain: ${{ github.event.inputs.auth0_domain }}
       auth0_client_id: ${{ github.event.inputs.auth0_client_id }}
     secrets:
