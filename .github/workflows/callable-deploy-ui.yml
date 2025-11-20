@@ -63,11 +63,20 @@ jobs:
           CLIENT=$(echo "${{ inputs.client_name }}" | tr '[:upper:]' '[:lower:]')
           ENV=$(echo "${{ inputs.environment }}" | tr '[:upper:]' '[:lower:]')
           EXT=$(echo "${{ inputs.client_domain_extension }}" | tr '[:upper:]' '[:lower:]')
+          
+          # Clean Docker Image Name (Lowercase)
           DOCKER_IMAGE_LOWER=$(echo "${{ inputs.docker_image }}" | tr '[:upper:]' '[:lower:]')
+          
+          # Clean ACR Name (Remove URL part)
           ACR_NAME=$(echo ${{ inputs.acr_login_server }} | cut -d'.' -f1)
+
+          # FIX: Clean Task Name (Remove hyphens as requested)
+          # Example: build-demo-ui -> builddemoui
+          TASK_NAME="build${CLIENT}ui"
           
           BASE_DOMAIN="${CLIENT}.${EXT}"
           
+          # URLs
           APP_URL="https://${CLIENT}${ENV}payments.${BASE_DOMAIN}"
           ADMIN_URL="https://${CLIENT}${ENV}admin.${BASE_DOMAIN}"
           CORE_API_URL="https://${CLIENT}${ENV}core.${BASE_DOMAIN}"
@@ -85,6 +94,8 @@ jobs:
           echo "ENV=$ENV" >> $GITHUB_OUTPUT
           echo "DOCKER_IMAGE_LOWER=$DOCKER_IMAGE_LOWER" >> $GITHUB_OUTPUT
           echo "ACR_NAME=$ACR_NAME" >> $GITHUB_OUTPUT
+          echo "TASK_NAME=$TASK_NAME" >> $GITHUB_OUTPUT
+          
           echo "APP_URL=$APP_URL" >> $GITHUB_OUTPUT
           echo "ADMIN_URL=$ADMIN_URL" >> $GITHUB_OUTPUT
           echo "CORE_API_URL=$CORE_API_URL" >> $GITHUB_OUTPUT
@@ -96,12 +107,22 @@ jobs:
           echo "SIGNALR_URL=$SIGNALR_URL" >> $GITHUB_OUTPUT
           echo "VITE_AUDIENCE=$AUDIENCE" >> $GITHUB_OUTPUT
 
-      - name: "2. Log in to Azure"
+      - name: "2. Check for Missing Inputs"
+        shell: bash
+        run: |
+          if [ -z "${{ steps.vars.outputs.ACR_NAME }}" ]; then
+            echo "❌ ERROR: ACR Name is empty!"
+            echo "This means Job 1 (Infra) did not output the 'acr_login_server' correctly."
+            echo "Please check if you pushed the updated 'output.tf' and 'callable-deploy-infra.yml' files."
+            exit 1
+          fi
+
+      - name: "3. Log in to Azure"
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: "3. Link Web App to ACR Image"
+      - name: "4. Link Web App to ACR Image"
         shell: bash
         run: |
           echo "Configuring Web App '${{ inputs.webapp_name }}'..."
@@ -114,19 +135,19 @@ jobs:
             --docker-registry-server-password "${{ inputs.acr_password }}" \
             --enable-app-service-storage false
 
-          # Enable CI/CD so Web App updates when ACR gets new image
           az webapp deployment container config --enable-cd true \
             --name "${{ inputs.webapp_name }}" \
             --resource-group "${{ inputs.webapp_rg_name }}"
 
-      - name: "4. Create Build Task (Connect to Git)"
+      - name: "5. Create Build Task (Connect to Git)"
         shell: bash
         run: |
           echo "Creating ACR Task to watch repo: ${{ inputs.azure_repo_url }}"
           
+          # FIX: Use sanitized TASK_NAME (builddemoui) and ensure ACR_NAME is valid
           az acr task create \
             --registry "${{ steps.vars.outputs.ACR_NAME }}" \
-            --name "build-${{ steps.vars.outputs.CLIENT }}-ui" \
+            --name "${{ steps.vars.outputs.TASK_NAME }}" \
             --image "${{ steps.vars.outputs.DOCKER_IMAGE_LOWER }}:${{ inputs.docker_tag }}" \
             --context "${{ inputs.azure_repo_url }}" \
             --file "Dockerfile" \
@@ -134,9 +155,9 @@ jobs:
             --platform "linux/amd64" \
             --commit-trigger-enabled true 
             
-          echo "✅ ACR Task Created!"
+          echo "✅ ACR Task '${{ steps.vars.outputs.TASK_NAME }}' Created!"
 
-      - name: "5. Push Env Vars to Web App"
+      - name: "6. Push Env Vars to Web App"
         shell: bash
         run: |
           echo "Pushing environment variables..."
