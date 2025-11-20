@@ -15,12 +15,9 @@ locals {
   vm_name                  = "${local._name_prefix}-sqlvm"
   key_vault_name           = "${local._name_prefix}-kv-${substr(md5(timestamp()), 0, 5)}"
   storage_account_name     = "st${lower(var.client_name)}${lower(var.environment_name)}${substr(md5(timestamp()), 0, 3)}"
-  
-  # Windows Plan (For Backend Functions)
   app_service_plan_name    = "${local._name_prefix}-asp"
-  
   service_bus_namespace_name = "${local._name_prefix}-sb-namespace"
-
+  
   # Container Names
   acr_name                 = "acr${lower(var.client_name)}${lower(var.environment_name)}${substr(md5(timestamp()), 0, 3)}"
   ui_web_app_name          = "${local._name_prefix}-ui-app"
@@ -85,7 +82,7 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
-# --- Windows VM (SQL) ---
+# --- Windows VM ---
 resource "azurerm_windows_virtual_machine" "vm" {
   name                = local.vm_name
   computer_name       = substr(local.vm_name, 0, 15)
@@ -140,7 +137,7 @@ resource "azurerm_virtual_machine_data_disk_attachment" "attachment_2" {
   caching            = "ReadWrite"
 }
 
-# --- SQL Extension ---
+# --- SQL IaaS ---
 resource "azurerm_mssql_virtual_machine" "sqlvm" {
   virtual_machine_id               = azurerm_windows_virtual_machine.vm.id
   sql_license_type                 = "PAYG"
@@ -165,7 +162,7 @@ SETTINGS
   depends_on = [azurerm_mssql_virtual_machine.sqlvm]
 }
 
-# --- NEW MODULE: Container App (UI + ACR) ---
+# --- Container App Module ---
 module "container_app" {
   source                = "../../modules/container_app"
   resource_group_name   = azurerm_resource_group.rg_apps.name
@@ -186,7 +183,7 @@ module "storage_account" {
   tags                 = local.common_tags
 }
 
-# --- Windows App Service Plan (Backend) ---
+# --- Windows Plan (Backend) ---
 module "app_service_plan" {
   source                = "../../modules/app_service_plan"
   app_service_plan_name = local.app_service_plan_name

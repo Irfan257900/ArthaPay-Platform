@@ -3,24 +3,12 @@ name: "Reusable: Deploy Infrastructure"
 on:
   workflow_call:
     inputs:
-      client_name:
-        type: string
-        required: true
-      environment:
-        type: string
-        required: true
-      vm_admin_username:
-        type: string
-        required: true
-      auth0_domain:
-        type: string
-        required: true
-      mailgun_key:
-        type: string
-        required: true
-      twilio_sid:
-        type: string
-        required: true
+      client_name: { type: string, required: true }
+      environment: { type: string, required: true }
+      vm_admin_username: { type: string, required: true }
+      auth0_domain: { type: string, required: true }
+      mailgun_key: { type: string, required: true }
+      twilio_sid: { type: string, required: true }
     
     outputs:
       # --- OUTPUTS (All Lowercase) ---
@@ -40,12 +28,9 @@ on:
         value: ${{ jobs.deploy-infra.outputs.acr_password }}
 
     secrets:
-      AZURE_CREDENTIALS:
-        required: true
-      VM_ADMIN_PASSWORD:
-        required: true
-      APP_SQL_PASSWORD:
-        required: true
+      AZURE_CREDENTIALS: { required: true }
+      VM_ADMIN_PASSWORD: { required: true }
+      APP_SQL_PASSWORD: { required: true }
 
 jobs:
   deploy-infra:
@@ -55,7 +40,7 @@ jobs:
       name: ${{ inputs.client_name }}-${{ inputs.environment }}
 
     outputs:
-      # --- JOB OUTPUT MAPPING (All Lowercase) ---
+      # --- MAP STEPS TO JOB OUTPUTS (LOWERCASE) ---
       vm_rg_name: ${{ steps.apply.outputs.vm_rg_name }}
       vm_name: ${{ steps.apply.outputs.vm_name }}
       webapp_name: ${{ steps.apply.outputs.webapp_name }}
@@ -111,11 +96,13 @@ jobs:
         run: |
           terraform apply -auto-approve tfplan
           
-          # --- CAPTURE OUTPUTS (Lowercase keys on left side) ---
+          # --- CAPTURE OUTPUTS (LOWERCASE KEYS) ---
           echo "vm_name=$(terraform output -raw vm_name)" >> $GITHUB_OUTPUT
           echo "vm_rg_name=$(terraform output -raw vm_rg_name)" >> $GITHUB_OUTPUT
           echo "webapp_name=$(terraform output -raw webapp_name)" >> $GITHUB_OUTPUT
           echo "webapp_rg_name=$(terraform output -raw webapp_rg_name)" >> $GITHUB_OUTPUT
+          
+          # This is the specific value causing your error. We capture it here:
           echo "acr_login_server=$(terraform output -raw acr_login_server)" >> $GITHUB_OUTPUT
           
           # Handle Sensitive Outputs
@@ -126,15 +113,17 @@ jobs:
           echo "acr_username=$ACR_USER" >> $GITHUB_OUTPUT
           echo "acr_password=$ACR_PASS" >> $GITHUB_OUTPUT
 
-      # --- DEBUG STEP: Print values to log to verify they exist ---
-      - name: "7. DEBUG: Print Outputs"
+      # --- DEBUG STEP: PROOF THAT TERRAFORM HAS THE VALUE ---
+      - name: "7. Debug Outputs"
         run: |
-          echo "--- DEBUGGING OUTPUTS ---"
-          echo "Web App: ${{ steps.apply.outputs.webapp_name }}"
+          echo "--- CHECKING CAPTURED VARIABLES ---"
+          echo "Web App Name: ${{ steps.apply.outputs.webapp_name }}"
           echo "ACR Server: ${{ steps.apply.outputs.acr_login_server }}"
+          
           if [ -z "${{ steps.apply.outputs.acr_login_server }}" ]; then
-             echo "❌ FAIL: ACR Server is EMPTY in Job 1"
-             exit 1
+            echo "❌ FAILURE: Terraform did not output 'acr_login_server'."
+            echo "Check your output.tf file!"
+            exit 1
           else
-             echo "✅ SUCCESS: ACR Server detected"
+            echo "✅ SUCCESS: Terraform found the ACR Server."
           fi
