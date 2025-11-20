@@ -20,20 +20,17 @@ output "webapp_rg_name" {
   value       = azurerm_resource_group.rg_apps.name
 }
 
-# --- ACR Outputs (CRITICAL: This was missing!) ---
+# --- ACR Outputs (Make sure these are here!) ---
 output "acr_login_server" {
-  description = "The login server URL for the Container Registry"
-  value       = azurerm_container_registry.acr.login_server
+  value = azurerm_container_registry.acr.login_server
 }
 
 output "acr_admin_username" {
-  description = "ACR Admin Username"
-  value       = azurerm_container_registry.acr.admin_username
-  sensitive   = true
+  value = azurerm_container_registry.acr.admin_username
+  sensitive = true
 }
 
 output "acr_admin_password" {
-  description = "ACR Admin Password"
-  value       = azurerm_container_registry.acr.admin_password
-  sensitive   = true
+  value = azurerm_container_registry.acr.admin_password
+  sensitive = true
 }

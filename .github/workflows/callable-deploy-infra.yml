@@ -124,12 +124,9 @@ jobs:
           echo "webapp_rg_name=$(terraform output -raw webapp_rg_name)" >> $GITHUB_OUTPUT
           echo "acr_login_server=$(terraform output -raw acr_login_server)" >> $GITHUB_OUTPUT
           
-          # Handle Sensitive Outputs (Mask them in logs, then export)
           ACR_USER=$(terraform output -raw acr_admin_username)
           ACR_PASS=$(terraform output -raw acr_admin_password)
-          
           echo "::add-mask::$ACR_USER"
           echo "::add-mask::$ACR_PASS"
-          
           echo "acr_username=$ACR_USER" >> $GITHUB_OUTPUT
           echo "acr_password=$ACR_PASS" >> $GITHUB_OUTPUT
