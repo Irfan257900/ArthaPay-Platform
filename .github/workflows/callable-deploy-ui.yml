@@ -1,4 +1,4 @@
-name: "Reusable: Deploy React UI"
+name: "Reusable: Deploy UI Container"
 
 on:
   workflow_call:
@@ -12,7 +12,28 @@ on:
       client_domain_extension:
         type: string
         required: true
-      swa_deploy_token:
+      webapp_name:
+        type: string
+        required: true
+      webapp_rg_name:
+        type: string
+        required: true
+      acr_login_server:
+        type: string
+        required: true
+      acr_username:
+        type: string
+        required: true
+      acr_password:
+        type: string
+        required: true
+      docker_image:
+        type: string
+        required: true
+      docker_tag:
+        type: string
+        required: true
+      azure_repo_url:
         type: string
         required: true
       auth0_domain:
@@ -24,84 +45,46 @@ on:
     secrets:
       AZURE_CREDENTIALS:
         required: true
+      AZURE_DEVOPS_PAT:
+        required: true
 
 jobs:
-  deploy-ui:
-    name: "Deploy React UI"
+  deploy-container:
+    name: "Config Web App Container"
     runs-on: ubuntu-latest
-
-    # --- Environment is required for Azure Login ---
     environment:
       name: ${{ inputs.client_name }}-${{ inputs.environment }}
 
-    defaults:
-      run:
-        working-directory: ./ArthapayUI 
-
     steps:
-      - name: "1. Check out Application Code"
-        uses: actions/checkout@v4
-
-      - name: "2. Setup Node.js (v18)"
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: "3. Install NPM Dependencies"
-        run: npm install --force
-
-      - name: "4. Set Dynamic Variables"
+      - name: "1. Calculate Variables"
         id: vars
         shell: bash
         run: |
-          # 1. Normalize inputs to lowercase
           CLIENT=$(echo "${{ inputs.client_name }}" | tr '[:upper:]' '[:lower:]')
           ENV=$(echo "${{ inputs.environment }}" | tr '[:upper:]' '[:lower:]')
           EXT=$(echo "${{ inputs.client_domain_extension }}" | tr '[:upper:]' '[:lower:]')
+          DOCKER_IMAGE_LOWER=$(echo "${{ inputs.docker_image }}" | tr '[:upper:]' '[:lower:]')
+          ACR_NAME=$(echo ${{ inputs.acr_login_server }} | cut -d'.' -f1)
           
-          # 2. Define Base Domain (e.g., fast-xe.com)
           BASE_DOMAIN="${CLIENT}.${EXT}"
           
-          # 3. Construct URLs using Standard Pattern
-          # Pattern: https://[client][env][module].[base_domain]
-          
-          # Frontend URLs
           APP_URL="https://${CLIENT}${ENV}payments.${BASE_DOMAIN}"
           ADMIN_URL="https://${CLIENT}${ENV}admin.${BASE_DOMAIN}"
-          
-          # Backend API URLs
           CORE_API_URL="https://${CLIENT}${ENV}core.${BASE_DOMAIN}"
           PAYMENTS_API="https://${CLIENT}${ENV}payments.${BASE_DOMAIN}"
           EXCHANGE_API="https://${CLIENT}${ENV}exchange.${BASE_DOMAIN}"
           BANKS_API="https://${CLIENT}${ENV}banks.${BASE_DOMAIN}"
           CARDS_API="https://${CLIENT}${ENV}cards.${BASE_DOMAIN}"
           NOTIFICATIONS_API="https://${CLIENT}${ENV}core.${BASE_DOMAIN}"
-          
-          # SignalR / Notification Hub URL
           SIGNALR_URL="https://${CLIENT}${ENV}signalr.${BASE_DOMAIN}"
           
-          # 4. Build Script Logic
-          if [ "$ENV" == "tst" ]; then
-            BUILD_ENV="testing"
-          elif [ "$ENV" == "stg" ]; then
-            BUILD_ENV="staging"
-          elif [ "$ENV" == "prd" ]; then
-            BUILD_ENV="production" 
-          else
-            BUILD_ENV=$ENV
-          fi
-          
-          BUILD_SCRIPT="build:artha:${BUILD_ENV}"
-          
-          # 5. Auth0 Audience
           AUTH0_DOMAIN="${{ inputs.auth0_domain }}"
           AUDIENCE="https://$(echo $AUTH0_DOMAIN | cut -d'.' -f1)Api.net"
 
-          # 6. Output everything
           echo "CLIENT=$CLIENT" >> $GITHUB_OUTPUT
           echo "ENV=$ENV" >> $GITHUB_OUTPUT
-          echo "BUILD_SCRIPT=$BUILD_SCRIPT" >> $GITHUB_OUTPUT
-          
+          echo "DOCKER_IMAGE_LOWER=$DOCKER_IMAGE_LOWER" >> $GITHUB_OUTPUT
+          echo "ACR_NAME=$ACR_NAME" >> $GITHUB_OUTPUT
           echo "APP_URL=$APP_URL" >> $GITHUB_OUTPUT
           echo "ADMIN_URL=$ADMIN_URL" >> $GITHUB_OUTPUT
           echo "CORE_API_URL=$CORE_API_URL" >> $GITHUB_OUTPUT
@@ -112,56 +95,56 @@ jobs:
           echo "NOTIFICATIONS_API=$NOTIFICATIONS_API" >> $GITHUB_OUTPUT
           echo "SIGNALR_URL=$SIGNALR_URL" >> $GITHUB_OUTPUT
           echo "VITE_AUDIENCE=$AUDIENCE" >> $GITHUB_OUTPUT
-          
-          # Resource Names for CLI
-          echo "SWA_NAME=${CLIENT}-${ENV}-ui" >> $GITHUB_OUTPUT
-          echo "RG_NAME=rg-${CLIENT}-${ENV}-apps" >> $GITHUB_OUTPUT
 
-      - name: "5. Generate .env File (Build-Time)"
-        shell: bash
-        run: |
-          echo "Creating minimal build-time .env..."
-          cat <<EOF > .env
-          VITE_CLIENT=${{ steps.vars.outputs.CLIENT }}
-          VITE_NODE_ENV=production
-          VITE_CLIENT_NAME="${{ inputs.client_name }}" 
-          EOF
-          cat .env
-
-      - name: "6. Build React App"
-        run: |
-          SCRIPT="${{ steps.vars.outputs.BUILD_SCRIPT }}"
-          echo "Running build script: npm run $SCRIPT"
-          npm run $SCRIPT
-      
-      - name: "7. Log in to Azure"
+      - name: "2. Log in to Azure"
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: "8. Deploy to SWA"
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ inputs.swa_deploy_token }}
-          app_location: "ArthapayUI/dist" 
-          skip_app_build: true
-          skip_api_build: true
-          api_location: ""
-          action: "upload"
-          
-      - name: "9. Push Env Vars to Azure Portal"
+      - name: "3. Link Web App to ACR Image"
         shell: bash
         run: |
-          echo "Pushing environment variables to Static Web App Configuration..."
+          echo "Configuring Web App '${{ inputs.webapp_name }}'..."
+          az webapp config container set \
+            --name "${{ inputs.webapp_name }}" \
+            --resource-group "${{ inputs.webapp_rg_name }}" \
+            --docker-custom-image-name "${{ inputs.acr_login_server }}/${{ steps.vars.outputs.DOCKER_IMAGE_LOWER }}:${{ inputs.docker_tag }}" \
+            --docker-registry-server-url "https://${{ inputs.acr_login_server }}" \
+            --docker-registry-server-user "${{ inputs.acr_username }}" \
+            --docker-registry-server-password "${{ inputs.acr_password }}" \
+            --enable-app-service-storage false
+
+          # Enable CI/CD so Web App updates when ACR gets new image
+          az webapp deployment container config --enable-cd true \
+            --name "${{ inputs.webapp_name }}" \
+            --resource-group "${{ inputs.webapp_rg_name }}"
+
+      - name: "4. Create Build Task (Connect to Git)"
+        shell: bash
+        run: |
+          echo "Creating ACR Task to watch repo: ${{ inputs.azure_repo_url }}"
           
-          # Using Azure CLI to set variables. 
-          # Dynamic values are filled in. 
-          # Client-specific secrets are set to empty strings ("") as placeholders.
-          
-          az staticwebapp appsettings set \
-            --name "${{ steps.vars.outputs.SWA_NAME }}" \
-            --resource-group "${{ steps.vars.outputs.RG_NAME }}" \
-            --setting-names \
+          az acr task create \
+            --registry "${{ steps.vars.outputs.ACR_NAME }}" \
+            --name "build-${{ steps.vars.outputs.CLIENT }}-ui" \
+            --image "${{ steps.vars.outputs.DOCKER_IMAGE_LOWER }}:${{ inputs.docker_tag }}" \
+            --context "${{ inputs.azure_repo_url }}" \
+            --file "Dockerfile" \
+            --git-access-token "${{ secrets.AZURE_DEVOPS_PAT }}" \
+            --platform "linux/amd64" \
+            --commit-trigger-enabled true 
+            
+          echo "✅ ACR Task Created!"
+
+      - name: "5. Push Env Vars to Web App"
+        shell: bash
+        run: |
+          echo "Pushing environment variables..."
+          az webapp config appsettings set \
+            --name "${{ inputs.webapp_name }}" \
+            --resource-group "${{ inputs.webapp_rg_name }}" \
+            --settings \
+              "SOURCE_REPO_URL=${{ inputs.azure_repo_url }}" \
               "CLIENT=${{ steps.vars.outputs.CLIENT }}" \
               "ENV=${{ steps.vars.outputs.ENV }}" \
               "VITE_CLIENT=${{ steps.vars.outputs.CLIENT }}" \
@@ -185,4 +168,22 @@ jobs:
               "VITE_WEB3_API_BANKS_END_POINT=${{ steps.vars.outputs.BANKS_API }}" \
               "VITE_NODE_ENV=production" \
               "VITE_IPSTACK_API=https://api.ipstack.com" \
-              
+              "VITE_IPSTACK_ACCESS_KEY=" \
+              "VITE_WALLET_TYPE=" \
+              "VITE_ARCANA_CLIENT_ID=" \
+              "VITE_ARCANA_ID=" \
+              "VITE_OWNER_ACCOUNT_WALLET_ADDRESS=" \
+              "VITE_NAME=" \
+              "VITE_SEND_VERIFICATION_HIDE=" \
+              "VITE_APP_KYC_KYB_PROVIDER=" \
+              "VITE_APP_SUMSUB_KYB_FLOW=" \
+              "VITE_APP_SUMSUB_KYC_FLOW=" \
+              "VITE_APP_PAYEE_ON_THE_GO_MODE=" \
+              "VITE_APP_EXCHANGE_ON_THE_GO_MODE=" \
+              "VITE_APP_SMALL_DECIMALS_ENABLED=" \
+              "VITE_APP_IS_SHOW_PAYIN_FIAT=" \
+              "VITE_APP_IS_QUICKLICKS_ENABLED=" \
+              "VITE_WEB3_WALLET_ID=" \
+              "VITE_TREZOR_EMAIL=" \
+              "VITE_WEB3_API_END_POINT=" \
+              "VITE_API_LOYALITY_END_POINT="

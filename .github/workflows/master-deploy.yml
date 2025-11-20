@@ -3,7 +3,7 @@ name: "Master Deploy: ArthaPay Platform"
 on:
   workflow_dispatch:
     inputs:
-      # --- 1. Client & Environment (3 inputs) ---
+      # --- 1. Client & Environment ---
       client_name:
         description: "Client name (e.g., Artha, demo)"
         type: string
@@ -23,13 +23,20 @@ on:
           - prd
         default: "tst"
       
-      # --- 2. Module Selection (1 input) ---
+      # --- 2. Module Selection ---
       backend_modules_to_deploy:
         description: "Modules to deploy (e.g., 'all', 'core', 'core,banks')"
         type: string
         default: "all"
+
+      # --- 3. Source Control ---
+      azure_devops_repo_url:
+        description: "Azure DevOps Repo URL (for cloning/tracking)"
+        type: string
+        required: true
+        default: "https://dev.azure.com/..."
         
-      # --- 3. Third-Party Config (4 inputs) ---
+      # --- 4. Third-Party Config ---
       auth0_domain:
         description: "Auth0 Domain"
         type: string
@@ -47,7 +54,7 @@ on:
         type: string
         required: true
       
-      # --- TOTAL: 8 INPUTS ---
+      # --- TOTAL: 9 INPUTS ---
 
 jobs:
   # ===================================================================
@@ -59,6 +66,7 @@ jobs:
     with:
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
+      # Auto-generate admin user
       vm_admin_username: "${{ github.event.inputs.client_name }}${{ github.event.inputs.environment }}admin"
       auth0_domain: ${{ github.event.inputs.auth0_domain }}
       mailgun_key: ${{ github.event.inputs.mailgun_key }}
@@ -69,41 +77,42 @@ jobs:
       APP_SQL_PASSWORD: ${{ secrets.APP_SQL_PASSWORD }}
 
   # ===================================================================
-  # JOB 2: REACT UI
+  # JOB 2: DEPLOY UI (CONTAINER)
   # ===================================================================
   deploy-ui:
-    name: "Job 2: Deploy React UI"
+    name: "Job 2: Deploy React UI Container"
     needs: deploy-infra 
     uses: ./.github/workflows/callable-deploy-ui.yml
     with:
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
       client_domain_extension: ${{ github.event.inputs.client_domain_extension }}
-      swa_deploy_token: ${{ needs.deploy-infra.outputs.static_web_app_api_key }}
+      
+      # --- Docker Config ---
+      # Automatically names the image [client]-ui (e.g., artha-ui)
+      docker_image: "${{ github.event.inputs.client_name }}-ui"
+      docker_tag: "latest"
+      
+      # --- Source Control ---
+      azure_repo_url: ${{ github.event.inputs.azure_devops_repo_url }}
+      
+      # --- Infra Outputs ---
+      webapp_name: ${{ needs.deploy-infra.outputs.webapp_name }}
+      webapp_rg_name: ${{ needs.deploy-infra.outputs.webapp_rg_name }}
+      acr_login_server: ${{ needs.deploy-infra.outputs.acr_login_server }}
+      acr_username: ${{ needs.deploy-infra.outputs.acr_username }}
+      acr_password: ${{ needs.deploy-infra.outputs.acr_password }}
+      
+      # --- Auth0 ---
       auth0_domain: ${{ github.event.inputs.auth0_domain }}
       auth0_client_id: ${{ github.event.inputs.auth0_client_id }}
     secrets:
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+      # This secret is required to create the ACR Task
+      AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
 
   # ===================================================================
-  # JOB 3: SQL DATABASE (Temporarily Disabled)
+  # JOB 3: DEPLOY BACKEND APIs (Disabled)
   # ===================================================================
-  # configure-sql:
-  #   name: "Job 3: Configure SQL Database"
-  #   needs: deploy-infra 
-  #   uses: ./.github/workflows/callable-configure-sql.yml
-  #   ... (rest of job commented out)
-
-  # ===================================================================
-  # JOB 4: DEPLOY BACKEND APIs
-  # ===================================================================
-  deploy-backend:
-    name: "Job 4: Deploy .NET Backend"
-    needs: [deploy-infra]
-    uses: ./.github/workflows/callable-deploy-backend.yml
-    with:
-      client_name: ${{ github.event.inputs.client_name }}
-      environment: ${{ github.event.inputs.environment }}
-      modules_to_deploy: ${{ github.event.inputs.backend_modules_to_deploy }}
-    secrets:
-      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+  # deploy-backend:
+  #   ... (disabled until source code is available) ...
