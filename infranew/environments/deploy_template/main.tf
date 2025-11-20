@@ -304,9 +304,10 @@ module "function_apps" {
   tags                           = local.common_tags
   function_app_name              = "${local._name_prefix}-${each.key}-func"
   dotnet_version                 = var.dotnet_version
-  app_service_plan_id            = azurerm_service_plan.ui_plan.id # Share the Linux plan? Or create separate Windows plan?
-  # NOTE: If your functions are .NET (Windows), they CANNOT share the Linux UI plan.
-  # Assuming functions are Windows for now. If they need Windows, uncomment module app_service_plan below.
+  
+  # --- FIX: Point to the Windows Plan, NOT the Linux UI Plan ---
+  app_service_plan_id            = module.app_service_plan.id 
+  
   app_insights_instrumentation_key = "dummy-key"
   storage_account_name           = module.storage_account.name
   storage_account_access_key     = module.storage_account.primary_access_key
