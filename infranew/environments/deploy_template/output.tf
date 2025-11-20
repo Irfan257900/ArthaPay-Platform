@@ -37,9 +37,3 @@ output "acr_admin_password" {
   value       = azurerm_container_registry.acr.admin_password
   sensitive   = true
 }
-
-# --- Function App Outputs (Optional/Debug) ---
-output "function_app_names" {
-  description = "Names of the deployed backend Function Apps"
-  value       = [for f in module.function_apps : f.function_app_name]
-}
