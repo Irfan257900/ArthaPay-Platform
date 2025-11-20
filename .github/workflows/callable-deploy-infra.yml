@@ -23,11 +23,11 @@ on:
         required: true
     
     outputs:
+      # --- OUTPUTS (All Lowercase) ---
       vm_rg_name:
         value: ${{ jobs.deploy-infra.outputs.vm_rg_name }}
       vm_name:
         value: ${{ jobs.deploy-infra.outputs.vm_name }}
-      # --- FIX: Changed these keys to lowercase to match master-deploy.yml ---
       webapp_name:
         value: ${{ jobs.deploy-infra.outputs.webapp_name }}
       webapp_rg_name:
@@ -55,7 +55,7 @@ jobs:
       name: ${{ inputs.client_name }}-${{ inputs.environment }}
 
     outputs:
-      # --- FIX: Lowercase keys here match the job outputs above ---
+      # --- JOB OUTPUT MAPPING (All Lowercase) ---
       vm_rg_name: ${{ steps.apply.outputs.vm_rg_name }}
       vm_name: ${{ steps.apply.outputs.vm_name }}
       webapp_name: ${{ steps.apply.outputs.webapp_name }}
@@ -69,7 +69,7 @@ jobs:
         working-directory: ./infranew/environments/deploy_template
 
     steps:
-      - name: "1. Check out Infrastructure Code"
+      - name: "1. Check out Code"
         uses: actions/checkout@v4
 
       - name: "2. Log in to Azure"
@@ -81,15 +81,11 @@ jobs:
         uses: hashicorp/setup-terraform@v3
 
       - name: "4. Terraform Init"
-        id: init
         env:
           STATE_FILE_KEY: "${{ inputs.client_name }}-${{ inputs.environment }}.terraform.tfstate"
-        run: |
-          echo "Initializing Terraform for state file: $STATE_FILE_KEY"
-          terraform init -backend-config="key=$STATE_FILE_KEY"
+        run: terraform init -backend-config="key=$STATE_FILE_KEY"
 
       - name: "5. Terraform Plan"
-        id: plan
         env:
           TF_VAR_client_name: ${{ inputs.client_name }}
           TF_VAR_environment_name: ${{ inputs.environment }}
@@ -115,12 +111,9 @@ jobs:
         run: |
           terraform apply -auto-approve tfplan
           
-          # Capture Terraform Outputs into GitHub Actions
-          # Note: The variable names on the left (e.g. vm_name) MUST be lowercase
-          
+          # --- CAPTURE OUTPUTS (Lowercase keys on left side) ---
           echo "vm_name=$(terraform output -raw vm_name)" >> $GITHUB_OUTPUT
           echo "vm_rg_name=$(terraform output -raw vm_rg_name)" >> $GITHUB_OUTPUT
-          
           echo "webapp_name=$(terraform output -raw webapp_name)" >> $GITHUB_OUTPUT
           echo "webapp_rg_name=$(terraform output -raw webapp_rg_name)" >> $GITHUB_OUTPUT
           echo "acr_login_server=$(terraform output -raw acr_login_server)" >> $GITHUB_OUTPUT
@@ -128,9 +121,20 @@ jobs:
           # Handle Sensitive Outputs
           ACR_USER=$(terraform output -raw acr_admin_username)
           ACR_PASS=$(terraform output -raw acr_admin_password)
-          
           echo "::add-mask::$ACR_USER"
           echo "::add-mask::$ACR_PASS"
-          
           echo "acr_username=$ACR_USER" >> $GITHUB_OUTPUT
           echo "acr_password=$ACR_PASS" >> $GITHUB_OUTPUT
+
+      # --- DEBUG STEP: Print values to log to verify they exist ---
+      - name: "7. DEBUG: Print Outputs"
+        run: |
+          echo "--- DEBUGGING OUTPUTS ---"
+          echo "Web App: ${{ steps.apply.outputs.webapp_name }}"
+          echo "ACR Server: ${{ steps.apply.outputs.acr_login_server }}"
+          if [ -z "${{ steps.apply.outputs.acr_login_server }}" ]; then
+             echo "❌ FAIL: ACR Server is EMPTY in Job 1"
+             exit 1
+          else
+             echo "✅ SUCCESS: ACR Server detected"
+          fi

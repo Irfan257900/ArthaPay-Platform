@@ -3,40 +3,30 @@ name: "Master Deploy: ArthaPay Platform"
 on:
   workflow_dispatch:
     inputs:
-      # --- 1. Client & Environment ---
       client_name:
-        description: "Client name (e.g., Artha, demo)"
+        description: "Client name"
         type: string
         required: true
         default: "Artha"
       client_domain_extension:
-        description: "Domain Extension (e.g., work, com, ch)"
+        description: "Domain Extension"
         type: string
         required: true
         default: "work"
       environment:
-        description: "Environment (tst, stg, prd)"
+        description: "Environment"
         type: choice
-        options:
-          - tst
-          - stg
-          - prd
+        options: [tst, stg, prd]
         default: "tst"
-      
-      # --- 2. Module Selection ---
       backend_modules_to_deploy:
-        description: "Modules to deploy (e.g., 'all', 'core', 'core,banks')"
+        description: "Modules"
         type: string
         default: "all"
-
-      # --- 3. Source Control ---
       azure_devops_repo_url:
-        description: "Azure DevOps Repo URL (for cloning/tracking)"
+        description: "Azure DevOps Repo URL"
         type: string
         required: true
         default: "https://dev.azure.com/..."
-        
-      # --- 4. Third-Party Config ---
       auth0_domain:
         description: "Auth0 Domain"
         type: string
@@ -46,20 +36,15 @@ on:
         type: string
         required: true
       mailgun_key:
-        description: "Mailgun API Key"
+        description: "Mailgun Key"
         type: string
         required: true
       twilio_sid:
-        description: "Twilio Account SID"
+        description: "Twilio SID"
         type: string
         required: true
-      
-      # --- TOTAL: 9 INPUTS ---
 
 jobs:
-  # ===================================================================
-  # JOB 1: INFRASTRUCTURE
-  # ===================================================================
   deploy-infra:
     name: "Job 1: Deploy Infrastructure"
     uses: ./.github/workflows/callable-deploy-infra.yml
@@ -75,11 +60,6 @@ jobs:
       VM_ADMIN_PASSWORD: ${{ secrets.VM_ADMIN_PASSWORD }}
       APP_SQL_PASSWORD: ${{ secrets.APP_SQL_PASSWORD }}
 
-  # ... (Deploy Infra Job above) ...
-
-  # ===================================================================
-  # JOB 2: DEPLOY UI (CONTAINER)
-  # ===================================================================
   deploy-ui:
     name: "Job 2: Deploy React UI Container"
     needs: deploy-infra 
@@ -88,12 +68,11 @@ jobs:
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
       client_domain_extension: ${{ github.event.inputs.client_domain_extension }}
-      
       docker_image: "${{ github.event.inputs.client_name }}-ui"
       docker_tag: "latest"
       azure_repo_url: ${{ github.event.inputs.azure_devops_repo_url }}
       
-      # --- FIX: Ensure these match the lowercase outputs in callable-deploy-infra ---
+      # --- DATA PASSING (All Lowercase) ---
       webapp_name: ${{ needs.deploy-infra.outputs.webapp_name }}
       webapp_rg_name: ${{ needs.deploy-infra.outputs.webapp_rg_name }}
       acr_login_server: ${{ needs.deploy-infra.outputs.acr_login_server }}
@@ -105,9 +84,3 @@ jobs:
     secrets:
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
       AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
-
-  # ===================================================================
-  # JOB 3: DEPLOY BACKEND APIs (Disabled)
-  # ===================================================================
-  # deploy-backend:
-  #   ... (disabled) ...
