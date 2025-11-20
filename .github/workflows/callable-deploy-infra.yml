@@ -27,6 +27,7 @@ on:
         value: ${{ jobs.deploy-infra.outputs.VM_RG_NAME }}
       vm_name:
         value: ${{ jobs.deploy-infra.outputs.VM_NAME }}
+      # --- CRITICAL FIX: Expose Web App & ACR Outputs to Job 2 ---
       webapp_name:
         value: ${{ jobs.deploy-infra.outputs.WEBAPP_NAME }}
       webapp_rg_name:
@@ -56,6 +57,7 @@ jobs:
     outputs:
       VM_RG_NAME: "rg-${{ inputs.client_name }}-${{ inputs.environment }}-vm"
       VM_NAME: "${{ inputs.client_name }}-${{ inputs.environment }}-sqlvm"
+      # --- CRITICAL FIX: Map Step Outputs to Job Outputs ---
       WEBAPP_NAME: ${{ steps.apply.outputs.webapp_name }}
       WEBAPP_RG_NAME: ${{ steps.apply.outputs.webapp_rg_name }}
       ACR_LOGIN_SERVER: ${{ steps.apply.outputs.acr_login_server }}
@@ -113,17 +115,21 @@ jobs:
         run: |
           terraform apply -auto-approve tfplan
           
-          # Output Non-Sensitive
+          # --- CRITICAL FIX: Capture Terraform Outputs into GitHub Actions ---
+          
           echo "vm_name=$(terraform output -raw vm_name)" >> $GITHUB_OUTPUT
           echo "vm_rg_name=$(terraform output -raw vm_rg_name)" >> $GITHUB_OUTPUT
+          
           echo "webapp_name=$(terraform output -raw webapp_name)" >> $GITHUB_OUTPUT
           echo "webapp_rg_name=$(terraform output -raw webapp_rg_name)" >> $GITHUB_OUTPUT
           echo "acr_login_server=$(terraform output -raw acr_login_server)" >> $GITHUB_OUTPUT
           
-          # Output Sensitive (Masked)
+          # Handle Sensitive Outputs (Mask them in logs, then export)
           ACR_USER=$(terraform output -raw acr_admin_username)
           ACR_PASS=$(terraform output -raw acr_admin_password)
+          
           echo "::add-mask::$ACR_USER"
           echo "::add-mask::$ACR_PASS"
+          
           echo "acr_username=$ACR_USER" >> $GITHUB_OUTPUT
           echo "acr_password=$ACR_PASS" >> $GITHUB_OUTPUT
