@@ -20,7 +20,7 @@ output "webapp_rg_name" {
   value       = azurerm_resource_group.rg_apps.name
 }
 
-# --- ACR Outputs ---
+# --- ACR Outputs (CRITICAL: This was missing!) ---
 output "acr_login_server" {
   description = "The login server URL for the Container Registry"
   value       = azurerm_container_registry.acr.login_server
