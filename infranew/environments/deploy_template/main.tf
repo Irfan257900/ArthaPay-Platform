@@ -20,17 +20,19 @@ locals {
   # Shared Resources
   key_vault_name           = "${local._name_prefix}-kv-${substr(md5(timestamp()), 0, 5)}"
   storage_account_name     = "st${lower(var.client_name)}${lower(var.environment_name)}${substr(md5(timestamp()), 0, 3)}"
-  service_bus_namespace    = "${local._name_prefix}-sb"
+  
+  # --- FIX: Renamed this variable to match the module usage below ---
+  service_bus_namespace_name = "${local._name_prefix}-sb"
   
   # App Service Plans
-  plan_linux_name          = "${local._name_prefix}-plan-linux"   # For Node UI
-  plan_windows_name        = "${local._name_prefix}-plan-windows" # For .NET Backend & Functions
+  plan_linux_name          = "${local._name_prefix}-plan-linux"
+  plan_windows_name        = "${local._name_prefix}-plan-windows"
 
-  # --- FIXED UI NAMES (Node) ---
+  # Fixed UI Names
   ui_app_name              = "${local._name_prefix}-App"
   ui_admin_name            = "${local._name_prefix}-Admin"
 
-  # --- FIXED FUNCTION NAMES (.NET) ---
+  # Fixed Function Names
   func_market_name         = "${local._name_prefix}-Marketdata"
   func_subscriber_name     = "${local._name_prefix}-Subscriber"
   func_publisher_name      = "${local._name_prefix}-Publisher"
@@ -94,7 +96,7 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
-# --- SQL Virtual Machine (Free Developer Edition) ---
+# --- SQL VM ---
 resource "azurerm_windows_virtual_machine" "vm" {
   name                = local.vm_name
   computer_name       = substr(local.vm_name, 0, 15)
@@ -109,7 +111,7 @@ resource "azurerm_windows_virtual_machine" "vm" {
   source_image_reference {
     publisher = "MicrosoftSQLServer"
     offer     = "sql2022-ws2022"
-    sku       = "sqldev-gen2" # Free License
+    sku       = "sqldev-gen2"
     version   = "latest"
   }
   os_disk {
@@ -118,7 +120,7 @@ resource "azurerm_windows_virtual_machine" "vm" {
   }
 }
 
-# --- SQL IaaS Agent ---
+# --- SQL IaaS ---
 resource "azurerm_mssql_virtual_machine" "sqlvm" {
   virtual_machine_id               = azurerm_windows_virtual_machine.vm.id
   sql_license_type                 = "PAYG"
@@ -129,7 +131,7 @@ resource "azurerm_mssql_virtual_machine" "sqlvm" {
   sql_connectivity_update_username = var.vm_admin_username
 }
 
-# --- DB Auto-Creation Script ---
+# --- DB Setup Script ---
 resource "azurerm_virtual_machine_extension" "sql_db_setup" {
   name                 = "sql-db-setup"
   virtual_machine_id   = azurerm_windows_virtual_machine.vm.id
@@ -144,7 +146,7 @@ SETTINGS
   depends_on = [azurerm_mssql_virtual_machine.sqlvm]
 }
 
-# --- APP SERVICE PLANS ---
+# --- Service Plans ---
 resource "azurerm_service_plan" "linux_plan" {
   name                = local.plan_linux_name
   location            = azurerm_resource_group.rg_apps.location
@@ -163,7 +165,7 @@ resource "azurerm_service_plan" "windows_plan" {
   tags                = local.common_tags
 }
 
-# --- FIXED UI APPS (Node.js) ---
+# --- Fixed UI Apps ---
 resource "azurerm_linux_web_app" "ui_app" {
   name                = local.ui_app_name
   location            = azurerm_resource_group.rg_apps.location
@@ -188,7 +190,7 @@ resource "azurerm_linux_web_app" "ui_admin" {
   }
 }
 
-# --- DYNAMIC BACKEND APPS (.NET) ---
+# --- Dynamic Backend Web Apps ---
 resource "azurerm_windows_web_app" "backend_apps" {
   for_each            = toset(var.backend_modules)
   name                = "${local._name_prefix}-${each.key}"
@@ -201,7 +203,7 @@ resource "azurerm_windows_web_app" "backend_apps" {
   }
 }
 
-# --- FIXED FUNCTION APPS (.NET) ---
+# --- Fixed Function Apps ---
 resource "azurerm_windows_function_app" "func_market" {
   name                = local.func_market_name
   location            = azurerm_resource_group.rg_apps.location
@@ -210,9 +212,7 @@ resource "azurerm_windows_function_app" "func_market" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  site_config {
-    application_stack { dotnet_version = "v8.0" }
-  }
+  site_config { application_stack { dotnet_version = "v8.0" } }
 }
 
 resource "azurerm_windows_function_app" "func_subscriber" {
@@ -223,9 +223,7 @@ resource "azurerm_windows_function_app" "func_subscriber" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  site_config {
-    application_stack { dotnet_version = "v8.0" }
-  }
+  site_config { application_stack { dotnet_version = "v8.0" } }
 }
 
 resource "azurerm_windows_function_app" "func_publisher" {
@@ -236,9 +234,7 @@ resource "azurerm_windows_function_app" "func_publisher" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  site_config {
-    application_stack { dotnet_version = "v8.0" }
-  }
+  site_config { application_stack { dotnet_version = "v8.0" } }
 }
 
 # --- Supporting Services ---
@@ -252,6 +248,7 @@ module "storage_account" {
 
 module "service_bus" {
   source                     = "../../modules/service_bus"
+  # --- FIX: Matched variable name ---
   service_bus_namespace_name = local.service_bus_namespace_name
   location                   = azurerm_resource_group.rg_apps.location
   resource_group_name        = azurerm_resource_group.rg_apps.name
