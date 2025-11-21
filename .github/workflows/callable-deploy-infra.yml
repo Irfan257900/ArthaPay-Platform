@@ -117,8 +117,8 @@ jobs:
           ACR_PASS=$(terraform output -raw acr_admin_password)
           echo "::add-mask::$ACR_USER"
           echo "::add-mask::$ACR_PASS"
-          echo "acr_username=$ACR_USER" >> $GITHUB_OUTPUT
-          echo "acr_password=$ACR_PASS" >> $GITHUB_OUTPUT
+          echo "acr_admin_username=$ACR_USER" >> $GITHUB_OUTPUT
+          echo "acr_admin_password=$ACR_PASS" >> $GITHUB_OUTPUT
 
       # --- DEBUG STEP: PROOF THAT TERRAFORM HAS THE VALUE ---
       - name: "7. Debug Outputs"
