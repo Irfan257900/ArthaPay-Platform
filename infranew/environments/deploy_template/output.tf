@@ -1,32 +1,30 @@
-# --- Virtual Machine Outputs ---
 output "vm_name" {
   value = azurerm_windows_virtual_machine.vm.name
 }
-
 output "vm_rg_name" {
   value = azurerm_resource_group.rg_infra.name
 }
 
-# --- Web App Outputs (FROM MODULE) ---
-output "webapp_name" {
-  value = module.container_app.webapp_name
+# UI Web Apps
+output "ui_app_name" {
+  value = azurerm_linux_web_app.ui_app.name
+}
+output "ui_admin_name" {
+  value = azurerm_linux_web_app.ui_admin.name
 }
 
-output "webapp_rg_name" {
-  value = azurerm_resource_group.rg_apps.name
+# Backend Web Apps (Map)
+output "backend_app_names" {
+  value = [for app in azurerm_windows_web_app.backend_apps : app.name]
 }
 
-# --- ACR Outputs (FROM MODULE) ---
-output "acr_login_server" {
-  value = module.container_app.acr_login_server
+# Function Apps
+output "function_market_name" {
+  value = azurerm_windows_function_app.func_market.name
 }
-
-output "acr_admin_username" {
-  value = module.container_app.acr_admin_username
-  sensitive = true
+output "function_subscriber_name" {
+  value = azurerm_windows_function_app.func_subscriber.name
 }
-
-output "acr_admin_password" {
-  value = module.container_app.acr_admin_password
-  sensitive = true
+output "function_publisher_name" {
+  value = azurerm_windows_function_app.func_publisher.name
 }
