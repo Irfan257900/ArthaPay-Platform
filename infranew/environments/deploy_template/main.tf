@@ -20,9 +20,7 @@ locals {
   # Shared Resources
   key_vault_name           = "${local._name_prefix}-kv-${substr(md5(timestamp()), 0, 5)}"
   storage_account_name     = "st${lower(var.client_name)}${lower(var.environment_name)}${substr(md5(timestamp()), 0, 3)}"
-  
-  # FIX: Variable name match
-  service_bus_namespace_name = "${local._name_prefix}-bus"
+  service_bus_namespace    = "${local._name_prefix}-sb"
   
   # App Service Plans
   plan_linux_name          = "${local._name_prefix}-plan-linux"   # For Node UI
@@ -96,7 +94,7 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
-# --- SQL Virtual Machine ---
+# --- SQL Virtual Machine (Free Developer Edition) ---
 resource "azurerm_windows_virtual_machine" "vm" {
   name                = local.vm_name
   computer_name       = substr(local.vm_name, 0, 15)
@@ -108,10 +106,15 @@ resource "azurerm_windows_virtual_machine" "vm" {
   network_interface_ids = [azurerm_network_interface.nic.id]
   tags                = local.common_tags
 
+  # --- UPDATED: Identity for Key Vault Access ---
+  identity {
+    type = "SystemAssigned"
+  }
+
   source_image_reference {
     publisher = "MicrosoftSQLServer"
     offer     = "sql2022-ws2022"
-    sku       = "sqldev-gen2"
+    sku       = "sqldev-gen2" # Free License
     version   = "latest"
   }
   os_disk {
@@ -173,9 +176,7 @@ resource "azurerm_linux_web_app" "ui_app" {
   service_plan_id     = azurerm_service_plan.linux_plan.id
   tags                = local.common_tags
   site_config {
-    application_stack {
-      node_version = "18-lts"
-    }
+    application_stack { node_version = "18-lts" }
     app_command_line = "pm2 serve /home/site/wwwroot --no-daemon --spa"
   }
 }
@@ -187,9 +188,7 @@ resource "azurerm_linux_web_app" "ui_admin" {
   service_plan_id     = azurerm_service_plan.linux_plan.id
   tags                = local.common_tags
   site_config {
-    application_stack {
-      node_version = "18-lts"
-    }
+    application_stack { node_version = "18-lts" }
     app_command_line = "pm2 serve /home/site/wwwroot --no-daemon --spa"
   }
 }
@@ -203,14 +202,11 @@ resource "azurerm_windows_web_app" "backend_apps" {
   service_plan_id     = azurerm_service_plan.windows_plan.id
   tags                = local.common_tags
   site_config {
-    application_stack {
-      dotnet_version = "v8.0"
-    }
+    application_stack { dotnet_version = "v8.0" }
   }
 }
 
 # --- FIXED FUNCTION APPS (.NET) ---
-# FIX: Multi-line site_config blocks to prevent syntax errors
 resource "azurerm_windows_function_app" "func_market" {
   name                = local.func_market_name
   location            = azurerm_resource_group.rg_apps.location
@@ -219,12 +215,7 @@ resource "azurerm_windows_function_app" "func_market" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  
-  site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
-  }
+  site_config { application_stack { dotnet_version = "v8.0" } }
 }
 
 resource "azurerm_windows_function_app" "func_subscriber" {
@@ -235,12 +226,7 @@ resource "azurerm_windows_function_app" "func_subscriber" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  
-  site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
-  }
+  site_config { application_stack { dotnet_version = "v8.0" } }
 }
 
 resource "azurerm_windows_function_app" "func_publisher" {
@@ -251,12 +237,7 @@ resource "azurerm_windows_function_app" "func_publisher" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  
-  site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
-  }
+  site_config { application_stack { dotnet_version = "v8.0" } }
 }
 
 # --- Supporting Services ---
@@ -292,6 +273,14 @@ resource "azurerm_role_assignment" "kv_admin_rbac" {
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
+# --- NEW: Grant VM Access to Key Vault (Secrets User) ---
+resource "azurerm_role_assignment" "vm_kv_access" {
+  scope                = module.key_vault.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = azurerm_windows_virtual_machine.vm.identity[0].principal_id
+}
+
+# --- Secrets ---
 resource "azurerm_key_vault_secret" "auth0_domain" {
   name         = "Auth0-Domain"
   value        = var.auth0_domain
