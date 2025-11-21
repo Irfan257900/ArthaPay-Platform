@@ -294,13 +294,13 @@ data "azurerm_servicebus_namespace" "sb_lookup" {
 resource "azurerm_servicebus_queue" "q_processing" {
   name         = "processing-queue"
   namespace_id = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning = true
+  partitioning_enabled = true
 }
 
 resource "azurerm_servicebus_topic" "t_market" {
   name         = "market-data-events"
   namespace_id = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning = true
+  partitioning_enabled = true
 }
 
 resource "azurerm_servicebus_subscription" "sub_subscriber" {
