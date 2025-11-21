@@ -22,10 +22,10 @@ on:
         value: ${{ jobs.deploy-infra.outputs.webapp_rg_name }}
       acr_login_server:
         value: ${{ jobs.deploy-infra.outputs.acr_login_server }}
-      acr_username:
-        value: ${{ jobs.deploy-infra.outputs.acr_username }}
-      acr_password:
-        value: ${{ jobs.deploy-infra.outputs.acr_password }}
+      acr_admin_username:
+        value: ${{ jobs.deploy-infra.outputs.acr_admin_username }}
+      acr_admin_password:
+        value: ${{ jobs.deploy-infra.outputs.acr_admin_password }}
 
     secrets:
       AZURE_CREDENTIALS: { required: true }
@@ -46,8 +46,8 @@ jobs:
       webapp_name: ${{ steps.apply.outputs.webapp_name }}
       webapp_rg_name: ${{ steps.apply.outputs.webapp_rg_name }}
       acr_login_server: ${{ steps.apply.outputs.acr_login_server }}
-      acr_username: ${{ steps.apply.outputs.acr_admin_username }}
-      acr_password: ${{ steps.apply.outputs.acr_admin_password }}
+      acr_admin_username: ${{ steps.apply.outputs.acr_admin_username }}
+      acr_admin_password: ${{ steps.apply.outputs.acr_admin_password }}
 
 
     defaults:

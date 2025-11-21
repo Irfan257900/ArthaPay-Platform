@@ -9,8 +9,8 @@ on:
       webapp_name: { type: string, required: true }
       webapp_rg_name: { type: string, required: true }
       acr_login_server: { type: string, required: true }
-      acr_username: { type: string, required: true }
-      acr_password: { type: string, required: true }
+      acr_admin_username: { type: string, required: true }
+      acr_admin_password: { type: string, required: true }
       docker_image: { type: string, required: true }
       docker_tag: { type: string, required: true }
       azure_repo_url: { type: string, required: true }

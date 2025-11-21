@@ -80,8 +80,8 @@ jobs:
       webapp_name: ${{ needs.deploy-infra.outputs.webapp_name }}
       webapp_rg_name: ${{ needs.deploy-infra.outputs.webapp_rg_name }}
       acr_login_server: ${{ needs.deploy-infra.outputs.acr_login_server }}
-      acr_username: ${{ needs.deploy-infra.outputs.acr_admin_username }}
-      acr_password: ${{ needs.deploy-infra.outputs.acr_admin_password }}
+      acr_admin_username: ${{ needs.deploy-infra.outputs.acr_admin_username }}
+      acr_admin_password: ${{ needs.deploy-infra.outputs.acr_admin_password }}
 
       
       auth0_domain: ${{ github.event.inputs.auth0_domain }}
