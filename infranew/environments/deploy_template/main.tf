@@ -106,7 +106,7 @@ resource "azurerm_windows_virtual_machine" "vm" {
   network_interface_ids = [azurerm_network_interface.nic.id]
   tags                = local.common_tags
 
-  # --- Enable Managed Identity for Key Vault Access ---
+  # Enable Managed Identity for Key Vault Access
   identity {
     type = "SystemAssigned"
   }
@@ -168,7 +168,7 @@ resource "azurerm_service_plan" "windows_plan" {
   tags                = local.common_tags
 }
 
-# --- FIXED UI APPS (Node.js) ---
+# --- FIXED UI APPS ---
 resource "azurerm_linux_web_app" "ui_app" {
   name                = local.ui_app_name
   location            = azurerm_resource_group.rg_apps.location
@@ -176,9 +176,7 @@ resource "azurerm_linux_web_app" "ui_app" {
   service_plan_id     = azurerm_service_plan.linux_plan.id
   tags                = local.common_tags
   site_config {
-    application_stack {
-      node_version = "18-lts"
-    }
+    application_stack { node_version = "18-lts" }
     app_command_line = "pm2 serve /home/site/wwwroot --no-daemon --spa"
   }
 }
@@ -190,14 +188,12 @@ resource "azurerm_linux_web_app" "ui_admin" {
   service_plan_id     = azurerm_service_plan.linux_plan.id
   tags                = local.common_tags
   site_config {
-    application_stack {
-      node_version = "18-lts"
-    }
+    application_stack { node_version = "18-lts" }
     app_command_line = "pm2 serve /home/site/wwwroot --no-daemon --spa"
   }
 }
 
-# --- DYNAMIC BACKEND APPS (.NET) ---
+# --- DYNAMIC BACKEND APPS ---
 resource "azurerm_windows_web_app" "backend_apps" {
   for_each            = toset(var.backend_modules)
   name                = "${local._name_prefix}-${each.key}"
@@ -205,16 +201,10 @@ resource "azurerm_windows_web_app" "backend_apps" {
   resource_group_name = azurerm_resource_group.rg_apps.name
   service_plan_id     = azurerm_service_plan.windows_plan.id
   tags                = local.common_tags
-  
-  # FIX: Multi-line block to prevent parsing error
-  site_config {
-    application_stack {
-      dotnet_version = "v8.0"
-    }
-  }
+  site_config { application_stack { dotnet_version = "v8.0" } }
 }
 
-# --- FIXED FUNCTION APPS (.NET) ---
+# --- FIXED FUNCTION APPS ---
 resource "azurerm_windows_function_app" "func_market" {
   name                = local.func_market_name
   location            = azurerm_resource_group.rg_apps.location
@@ -223,13 +213,7 @@ resource "azurerm_windows_function_app" "func_market" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  
-  # FIX: Multi-line block
-  site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
-  }
+  site_config { application_stack { dotnet_version = "v8.0" } }
 }
 
 resource "azurerm_windows_function_app" "func_subscriber" {
@@ -240,13 +224,7 @@ resource "azurerm_windows_function_app" "func_subscriber" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  
-  # FIX: Multi-line block
-  site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
-  }
+  site_config { application_stack { dotnet_version = "v8.0" } }
 }
 
 resource "azurerm_windows_function_app" "func_publisher" {
@@ -257,13 +235,7 @@ resource "azurerm_windows_function_app" "func_publisher" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  
-  # FIX: Multi-line block
-  site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
-  }
+  site_config { application_stack { dotnet_version = "v8.0" } }
 }
 
 # --- Supporting Services ---
@@ -284,6 +256,37 @@ module "service_bus" {
   tags                       = local.common_tags
 }
 
+# --- SERVICE BUS QUEUES, TOPICS & SUBSCRIPTIONS (NEW) ---
+
+# 1. Look up the Namespace created by the module
+data "azurerm_servicebus_namespace" "sb_lookup" {
+  name                = local.service_bus_namespace_name
+  resource_group_name = azurerm_resource_group.rg_apps.name
+  depends_on          = [module.service_bus]
+}
+
+# 2. Create a Queue
+resource "azurerm_servicebus_queue" "q_processing" {
+  name         = "processing-queue"
+  namespace_id = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+
+# 3. Create a Topic
+resource "azurerm_servicebus_topic" "t_market" {
+  name         = "market-data-events"
+  namespace_id = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+
+# 4. Create a Subscription
+resource "azurerm_servicebus_subscription" "sub_subscriber" {
+  name               = "subscriber-service"
+  topic_id           = azurerm_servicebus_topic.t_market.id
+  max_delivery_count = 10
+}
+
+# --- Key Vault & Security ---
 module "key_vault" {
   source              = "../../modules/key_vault"
   key_vault_name      = local.key_vault_name
@@ -299,14 +302,13 @@ resource "azurerm_role_assignment" "kv_admin_rbac" {
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
-# --- Grant VM Access to Key Vault ---
+# Grant SQL VM Access to Key Vault
 resource "azurerm_role_assignment" "vm_kv_access" {
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Secrets User"
   principal_id         = azurerm_windows_virtual_machine.vm.identity[0].principal_id
 }
 
-# --- Secrets ---
 resource "azurerm_key_vault_secret" "auth0_domain" {
   name         = "Auth0-Domain"
   value        = var.auth0_domain
@@ -325,7 +327,8 @@ resource "azurerm_key_vault_secret" "twilio_sid" {
   key_vault_id = module.key_vault.id
   depends_on   = [azurerm_role_assignment.kv_admin_rbac]
 }
-# --- NEW: Store SQL Credentials in Key Vault ---
+
+# Store SQL Password
 resource "azurerm_key_vault_secret" "sql_password" {
   name         = "SQL-App-Password"
   value        = var.app_sql_password
