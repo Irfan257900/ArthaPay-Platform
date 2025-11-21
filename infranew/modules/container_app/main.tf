@@ -23,12 +23,14 @@ resource "azurerm_linux_web_app" "ui_webapp" {
   service_plan_id     = azurerm_service_plan.ui_plan.id
   tags                = var.tags
 
+  # Identity is required for Role Assignment
   identity {
     type = "SystemAssigned"
   }
 
   site_config {
     application_stack {
+      # Initial placeholder image until your pipeline pushes the real one
       docker_image_name   = "mcr.microsoft.com/appsvc/staticsite:latest"
       docker_registry_url = "https://mcr.microsoft.com"
     }
@@ -36,13 +38,14 @@ resource "azurerm_linux_web_app" "ui_webapp" {
   
   app_settings = {
     "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
+    # These settings tell the Web App how to talk to the ACR
     "DOCKER_REGISTRY_SERVER_URL"          = "https://${azurerm_container_registry.acr.login_server}"
     "DOCKER_REGISTRY_SERVER_USERNAME"     = azurerm_container_registry.acr.admin_username
     "DOCKER_REGISTRY_SERVER_PASSWORD"     = azurerm_container_registry.acr.admin_password
   }
 }
 
-# Grant Web App permission to pull from ACR
+# Grant Web App permission to pull from ACR (AcrPull Role)
 resource "azurerm_role_assignment" "webapp_acr_pull" {
   scope                = azurerm_container_registry.acr.id
   role_definition_name = "AcrPull"

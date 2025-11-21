@@ -7,7 +7,7 @@ output "vm_rg_name" {
   value = azurerm_resource_group.rg_infra.name
 }
 
-# --- Web App Outputs ---
+# --- Web App Outputs (FROM MODULE) ---
 output "webapp_name" {
   value = module.container_app.webapp_name
 }
@@ -16,7 +16,7 @@ output "webapp_rg_name" {
   value = azurerm_resource_group.rg_apps.name
 }
 
-# --- ACR Outputs (LOWERCASE KEYS) ---
+# --- ACR Outputs (FROM MODULE) ---
 output "acr_login_server" {
   value = module.container_app.acr_login_server
 }

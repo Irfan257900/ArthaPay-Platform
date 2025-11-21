@@ -8,9 +8,12 @@ on:
       client_domain_extension: { type: string, required: true }
       webapp_name: { type: string, required: true }
       webapp_rg_name: { type: string, required: true }
+      
+      # --- STANDARDIZED INPUT NAMES ---
       acr_login_server: { type: string, required: true }
-      acr_admin_username: { type: string, required: true }
-      acr_admin_password: { type: string, required: true }
+      acr_username: { type: string, required: true } # Matches code usage
+      acr_password: { type: string, required: true } # Matches code usage
+      
       docker_image: { type: string, required: true }
       docker_tag: { type: string, required: true }
       azure_repo_url: { type: string, required: true }
@@ -37,11 +40,9 @@ jobs:
           EXT=$(echo "${{ inputs.client_domain_extension }}" | tr '[:upper:]' '[:lower:]')
           DOCKER_IMAGE_LOWER=$(echo "${{ inputs.docker_image }}" | tr '[:upper:]' '[:lower:]')
           ACR_NAME=$(echo ${{ inputs.acr_login_server }} | cut -d'.' -f1)
+          TASK_NAME="build${CLIENT}ui"
           BASE_DOMAIN="${CLIENT}.${EXT}"
           
-          # Clean Task Name
-          TASK_NAME="build${CLIENT}ui"
-
           # URLs
           APP_URL="https://${CLIENT}${ENV}payments.${BASE_DOMAIN}"
           ADMIN_URL="https://${CLIENT}${ENV}admin.${BASE_DOMAIN}"
@@ -52,7 +53,6 @@ jobs:
           CARDS_API="https://${CLIENT}${ENV}cards.${BASE_DOMAIN}"
           NOTIFICATIONS_API="https://${CLIENT}${ENV}core.${BASE_DOMAIN}"
           SIGNALR_URL="https://${CLIENT}${ENV}signalr.${BASE_DOMAIN}"
-          
           AUTH0_DOMAIN="${{ inputs.auth0_domain }}"
           AUDIENCE="https://$(echo $AUTH0_DOMAIN | cut -d'.' -f1)Api.net"
 
@@ -76,7 +76,7 @@ jobs:
         shell: bash
         run: |
           if [ -z "${{ steps.vars.outputs.ACR_NAME }}" ]; then
-            echo "❌ ERROR: ACR Name is empty! Job 1 did not pass data correctly."
+            echo "❌ ERROR: ACR Name is empty! Pipeline link is broken."
             exit 1
           fi
 
@@ -89,6 +89,7 @@ jobs:
         shell: bash
         run: |
           echo "Configuring Web App '${{ inputs.webapp_name }}'..."
+          # Now using correct inputs.acr_username matching definition
           az webapp config container set \
             --name "${{ inputs.webapp_name }}" \
             --resource-group "${{ inputs.webapp_rg_name }}" \

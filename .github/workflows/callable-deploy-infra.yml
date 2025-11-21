@@ -11,7 +11,7 @@ on:
       twilio_sid: { type: string, required: true }
     
     outputs:
-      # --- OUTPUTS (All Lowercase) ---
+      # Standardized Output Names (All Lowercase)
       vm_rg_name:
         value: ${{ jobs.deploy-infra.outputs.vm_rg_name }}
       vm_name:
@@ -22,10 +22,10 @@ on:
         value: ${{ jobs.deploy-infra.outputs.webapp_rg_name }}
       acr_login_server:
         value: ${{ jobs.deploy-infra.outputs.acr_login_server }}
-      acr_admin_username:
-        value: ${{ jobs.deploy-infra.outputs.acr_admin_username }}
-      acr_admin_password:
-        value: ${{ jobs.deploy-infra.outputs.acr_admin_password }}
+      acr_username:
+        value: ${{ jobs.deploy-infra.outputs.acr_username }}
+      acr_password:
+        value: ${{ jobs.deploy-infra.outputs.acr_password }}
 
     secrets:
       AZURE_CREDENTIALS: { required: true }
@@ -40,15 +40,13 @@ jobs:
       name: ${{ inputs.client_name }}-${{ inputs.environment }}
 
     outputs:
-      # --- MAP STEPS TO JOB OUTPUTS (LOWERCASE) ---
       vm_rg_name: ${{ steps.apply.outputs.vm_rg_name }}
       vm_name: ${{ steps.apply.outputs.vm_name }}
       webapp_name: ${{ steps.apply.outputs.webapp_name }}
       webapp_rg_name: ${{ steps.apply.outputs.webapp_rg_name }}
       acr_login_server: ${{ steps.apply.outputs.acr_login_server }}
-      acr_admin_username: ${{ steps.apply.outputs.acr_admin_username }}
-      acr_admin_password: ${{ steps.apply.outputs.acr_admin_password }}
-
+      acr_username: ${{ steps.apply.outputs.acr_username }}
+      acr_password: ${{ steps.apply.outputs.acr_password }}
 
     defaults:
       run:
@@ -96,41 +94,20 @@ jobs:
           TF_VAR_app_sql_password: ${{ secrets.APP_SQL_PASSWORD }}
         run: |
           terraform apply -auto-approve tfplan
-          # 2. REFRESH STATE (Crucial: Reads current Azure values into Terraform)
-          echo "🔄 Refreshing Terraform State..."
-          terraform refresh
           
-          # 3. DEBUG: Show us the values in the logs
-          echo "🔍 DEBUG: Checking Terraform Outputs..."
-          terraform output
-          # --- CAPTURE OUTPUTS (LOWERCASE KEYS) ---
+          # --- CAPTURE OUTPUTS ---
           echo "vm_name=$(terraform output -raw vm_name)" >> $GITHUB_OUTPUT
           echo "vm_rg_name=$(terraform output -raw vm_rg_name)" >> $GITHUB_OUTPUT
           echo "webapp_name=$(terraform output -raw webapp_name)" >> $GITHUB_OUTPUT
           echo "webapp_rg_name=$(terraform output -raw webapp_rg_name)" >> $GITHUB_OUTPUT
-          
-          # This is the specific value causing your error. We capture it here:
           echo "acr_login_server=$(terraform output -raw acr_login_server)" >> $GITHUB_OUTPUT
           
-          # Handle Sensitive Outputs
+          # Handle Sensitive Outputs (Mapping 'admin_username' to 'acr_username')
           ACR_USER=$(terraform output -raw acr_admin_username)
           ACR_PASS=$(terraform output -raw acr_admin_password)
+          
           echo "::add-mask::$ACR_USER"
           echo "::add-mask::$ACR_PASS"
-          echo "acr_admin_username=$ACR_USER" >> $GITHUB_OUTPUT
-          echo "acr_admin_password=$ACR_PASS" >> $GITHUB_OUTPUT
-
-      # --- DEBUG STEP: PROOF THAT TERRAFORM HAS THE VALUE ---
-      - name: "7. Debug Outputs"
-        run: |
-          echo "--- CHECKING CAPTURED VARIABLES ---"
-          echo "Web App Name: ${{ steps.apply.outputs.webapp_name }}"
-          echo "ACR Server: ${{ steps.apply.outputs.acr_login_server }}"
           
-          if [ -z "${{ steps.apply.outputs.acr_login_server }}" ]; then
-            echo "❌ FAILURE: Terraform did not output 'acr_login_server'."
-            echo "Check your output.tf file!"
-            exit 1
-          else
-            echo "✅ SUCCESS: Terraform found the ACR Server."
-          fi
+          echo "acr_username=$ACR_USER" >> $GITHUB_OUTPUT
+          echo "acr_password=$ACR_PASS" >> $GITHUB_OUTPUT
