@@ -20,17 +20,17 @@ locals {
   # Shared Resources
   key_vault_name           = "${local._name_prefix}-kv-${substr(md5(timestamp()), 0, 5)}"
   storage_account_name     = "st${lower(var.client_name)}${lower(var.environment_name)}${substr(md5(timestamp()), 0, 3)}"
-  service_bus_namespace    = "${local._name_prefix}-sb"
+  service_bus_namespace_name = "${local._name_prefix}-bus"
   
   # App Service Plans
-  plan_linux_name          = "${local._name_prefix}-plan-linux"   # For Node UI
-  plan_windows_name        = "${local._name_prefix}-plan-windows" # For .NET Backend & Functions
+  plan_linux_name          = "${local._name_prefix}-plan-linux"
+  plan_windows_name        = "${local._name_prefix}-plan-windows"
 
-  # --- FIXED UI NAMES (Node) ---
+  # UI Names
   ui_app_name              = "${local._name_prefix}-App"
   ui_admin_name            = "${local._name_prefix}-Admin"
 
-  # --- FIXED FUNCTION NAMES (.NET) ---
+  # Function Names
   func_market_name         = "${local._name_prefix}-Marketdata"
   func_subscriber_name     = "${local._name_prefix}-Subscriber"
   func_publisher_name      = "${local._name_prefix}-Publisher"
@@ -94,7 +94,7 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
-# --- SQL Virtual Machine (Free Developer Edition) ---
+# --- SQL Virtual Machine ---
 resource "azurerm_windows_virtual_machine" "vm" {
   name                = local.vm_name
   computer_name       = substr(local.vm_name, 0, 15)
@@ -106,7 +106,7 @@ resource "azurerm_windows_virtual_machine" "vm" {
   network_interface_ids = [azurerm_network_interface.nic.id]
   tags                = local.common_tags
 
-  # --- UPDATED: Identity for Key Vault Access ---
+  # --- NEW: Enable Managed Identity for Key Vault Access ---
   identity {
     type = "SystemAssigned"
   }
@@ -168,7 +168,7 @@ resource "azurerm_service_plan" "windows_plan" {
   tags                = local.common_tags
 }
 
-# --- FIXED UI APPS (Node.js) ---
+# --- FIXED UI APPS ---
 resource "azurerm_linux_web_app" "ui_app" {
   name                = local.ui_app_name
   location            = azurerm_resource_group.rg_apps.location
@@ -193,7 +193,7 @@ resource "azurerm_linux_web_app" "ui_admin" {
   }
 }
 
-# --- DYNAMIC BACKEND APPS (.NET) ---
+# --- DYNAMIC BACKEND APPS ---
 resource "azurerm_windows_web_app" "backend_apps" {
   for_each            = toset(var.backend_modules)
   name                = "${local._name_prefix}-${each.key}"
@@ -201,12 +201,10 @@ resource "azurerm_windows_web_app" "backend_apps" {
   resource_group_name = azurerm_resource_group.rg_apps.name
   service_plan_id     = azurerm_service_plan.windows_plan.id
   tags                = local.common_tags
-  site_config {
-    application_stack { dotnet_version = "v8.0" }
-  }
+  site_config { application_stack { dotnet_version = "v8.0" } }
 }
 
-# --- FIXED FUNCTION APPS (.NET) ---
+# --- FIXED FUNCTION APPS ---
 resource "azurerm_windows_function_app" "func_market" {
   name                = local.func_market_name
   location            = azurerm_resource_group.rg_apps.location
@@ -273,7 +271,7 @@ resource "azurerm_role_assignment" "kv_admin_rbac" {
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
-# --- NEW: Grant VM Access to Key Vault (Secrets User) ---
+# --- NEW: Grant SQL VM Access to Key Vault ---
 resource "azurerm_role_assignment" "vm_kv_access" {
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Secrets User"
@@ -296,6 +294,14 @@ resource "azurerm_key_vault_secret" "mailgun_key" {
 resource "azurerm_key_vault_secret" "twilio_sid" {
   name         = "Twilio-SID"
   value        = var.twilio_sid
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+# --- NEW: Store SQL Credentials in Key Vault ---
+resource "azurerm_key_vault_secret" "sql_password" {
+  name         = "SQL-App-Password"
+  value        = var.app_sql_password
   key_vault_id = module.key_vault.id
   depends_on   = [azurerm_role_assignment.kv_admin_rbac]
 }
