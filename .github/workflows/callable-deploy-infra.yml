@@ -11,21 +11,11 @@ on:
       twilio_sid: { type: string, required: true }
     
     outputs:
-      # Standardized Output Names (All Lowercase)
-      vm_rg_name:
-        value: ${{ jobs.deploy-infra.outputs.vm_rg_name }}
-      vm_name:
-        value: ${{ jobs.deploy-infra.outputs.vm_name }}
-      webapp_name:
-        value: ${{ jobs.deploy-infra.outputs.webapp_name }}
-      webapp_rg_name:
-        value: ${{ jobs.deploy-infra.outputs.webapp_rg_name }}
-      acr_login_server:
-        value: ${{ jobs.deploy-infra.outputs.acr_login_server }}
-      acr_username:
-        value: ${{ jobs.deploy-infra.outputs.acr_username }}
-      acr_password:
-        value: ${{ jobs.deploy-infra.outputs.acr_password }}
+      vm_rg_name: { value: ${{ jobs.deploy-infra.outputs.vm_rg_name }} }
+      vm_name: { value: ${{ jobs.deploy-infra.outputs.vm_name }} }
+      ui_app_name: { value: ${{ jobs.deploy-infra.outputs.ui_app_name }} }
+      ui_admin_name: { value: ${{ jobs.deploy-infra.outputs.ui_admin_name }} }
+      webapp_rg_name: { value: ${{ jobs.deploy-infra.outputs.webapp_rg_name }} }
 
     secrets:
       AZURE_CREDENTIALS: { required: true }
@@ -42,11 +32,9 @@ jobs:
     outputs:
       vm_rg_name: ${{ steps.apply.outputs.vm_rg_name }}
       vm_name: ${{ steps.apply.outputs.vm_name }}
-      webapp_name: ${{ steps.apply.outputs.webapp_name }}
+      ui_app_name: ${{ steps.apply.outputs.ui_app_name }}
+      ui_admin_name: ${{ steps.apply.outputs.ui_admin_name }}
       webapp_rg_name: ${{ steps.apply.outputs.webapp_rg_name }}
-      acr_login_server: ${{ steps.apply.outputs.acr_login_server }}
-      acr_username: ${{ steps.apply.outputs.acr_username }}
-      acr_password: ${{ steps.apply.outputs.acr_password }}
 
     defaults:
       run:
@@ -95,19 +83,8 @@ jobs:
         run: |
           terraform apply -auto-approve tfplan
           
-          # --- CAPTURE OUTPUTS ---
           echo "vm_name=$(terraform output -raw vm_name)" >> $GITHUB_OUTPUT
           echo "vm_rg_name=$(terraform output -raw vm_rg_name)" >> $GITHUB_OUTPUT
-          echo "webapp_name=$(terraform output -raw webapp_name)" >> $GITHUB_OUTPUT
+          echo "ui_app_name=$(terraform output -raw ui_app_name)" >> $GITHUB_OUTPUT
+          echo "ui_admin_name=$(terraform output -raw ui_admin_name)" >> $GITHUB_OUTPUT
           echo "webapp_rg_name=$(terraform output -raw webapp_rg_name)" >> $GITHUB_OUTPUT
-          echo "acr_login_server=$(terraform output -raw acr_login_server)" >> $GITHUB_OUTPUT
-          
-          # Handle Sensitive Outputs (Mapping 'admin_username' to 'acr_username')
-          ACR_USER=$(terraform output -raw acr_admin_username)
-          ACR_PASS=$(terraform output -raw acr_admin_password)
-          
-          echo "::add-mask::$ACR_USER"
-          echo "::add-mask::$ACR_PASS"
-          
-          echo "acr_username=$ACR_USER" >> $GITHUB_OUTPUT
-          echo "acr_password=$ACR_PASS" >> $GITHUB_OUTPUT

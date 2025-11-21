@@ -58,7 +58,7 @@ resource "azurerm_resource_group" "rg_infra" {
   tags     = local.common_tags
 }
 
-# --- Networking (VNet, Subnets) ---
+# --- Networking ---
 module "networking" {
   source                        = "../../modules/networking"
   vnet_name                     = local.vnet_name
@@ -71,7 +71,7 @@ module "networking" {
   depends_on                    = [azurerm_resource_group.rg_infra]
 }
 
-# --- VM Public IP & NIC ---
+# --- Public IP & NIC ---
 resource "azurerm_public_ip" "pip" {
   name                = "pip-${local.vm_name}"
   location            = azurerm_resource_group.rg_infra.location
@@ -94,13 +94,13 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
-# --- SQL Virtual Machine (Free License Edition) ---
+# --- SQL Virtual Machine (Free Developer Edition) ---
 resource "azurerm_windows_virtual_machine" "vm" {
   name                = local.vm_name
   computer_name       = substr(local.vm_name, 0, 15)
   resource_group_name = azurerm_resource_group.rg_infra.name
   location            = azurerm_resource_group.rg_infra.location
-  size                = "Standard_B2ms" # Cost effective (NOT free, but cheap)
+  size                = "Standard_B2ms"
   admin_username      = var.vm_admin_username
   admin_password      = var.vm_admin_password
   network_interface_ids = [azurerm_network_interface.nic.id]
@@ -109,7 +109,7 @@ resource "azurerm_windows_virtual_machine" "vm" {
   source_image_reference {
     publisher = "MicrosoftSQLServer"
     offer     = "sql2022-ws2022"
-    sku       = "sqldev-gen2" # <--- DEVELOPER EDITION (Free License)
+    sku       = "sqldev-gen2" # Free License
     version   = "latest"
   }
   os_disk {
@@ -118,7 +118,7 @@ resource "azurerm_windows_virtual_machine" "vm" {
   }
 }
 
-# --- SQL IaaS Agent (Management) ---
+# --- SQL IaaS Agent ---
 resource "azurerm_mssql_virtual_machine" "sqlvm" {
   virtual_machine_id               = azurerm_windows_virtual_machine.vm.id
   sql_license_type                 = "PAYG"
@@ -129,7 +129,7 @@ resource "azurerm_mssql_virtual_machine" "sqlvm" {
   sql_connectivity_update_username = var.vm_admin_username
 }
 
-# --- SQL DB Auto-Creation Script ---
+# --- DB Auto-Creation Script ---
 resource "azurerm_virtual_machine_extension" "sql_db_setup" {
   name                 = "sql-db-setup"
   virtual_machine_id   = azurerm_windows_virtual_machine.vm.id
@@ -145,8 +145,6 @@ SETTINGS
 }
 
 # --- APP SERVICE PLANS ---
-
-# 1. Linux Plan (For Node.js UI)
 resource "azurerm_service_plan" "linux_plan" {
   name                = local.plan_linux_name
   location            = azurerm_resource_group.rg_apps.location
@@ -156,7 +154,6 @@ resource "azurerm_service_plan" "linux_plan" {
   tags                = local.common_tags
 }
 
-# 2. Windows Plan (For .NET Backend & Functions)
 resource "azurerm_service_plan" "windows_plan" {
   name                = local.plan_windows_name
   location            = azurerm_resource_group.rg_apps.location
@@ -166,42 +163,32 @@ resource "azurerm_service_plan" "windows_plan" {
   tags                = local.common_tags
 }
 
-# --- FRONTEND WEB APPS (Node.js) ---
-
-# 1. Client App (UI)
+# --- FIXED UI APPS (Node.js) ---
 resource "azurerm_linux_web_app" "ui_app" {
   name                = local.ui_app_name
   location            = azurerm_resource_group.rg_apps.location
   resource_group_name = azurerm_resource_group.rg_apps.name
   service_plan_id     = azurerm_service_plan.linux_plan.id
   tags                = local.common_tags
-
   site_config {
-    application_stack {
-      node_version = "18-lts"
-    }
+    application_stack { node_version = "18-lts" }
     app_command_line = "pm2 serve /home/site/wwwroot --no-daemon --spa"
   }
 }
 
-# 2. Client Admin (UI)
 resource "azurerm_linux_web_app" "ui_admin" {
   name                = local.ui_admin_name
   location            = azurerm_resource_group.rg_apps.location
   resource_group_name = azurerm_resource_group.rg_apps.name
   service_plan_id     = azurerm_service_plan.linux_plan.id
   tags                = local.common_tags
-
   site_config {
-    application_stack {
-      node_version = "18-lts"
-    }
+    application_stack { node_version = "18-lts" }
     app_command_line = "pm2 serve /home/site/wwwroot --no-daemon --spa"
   }
 }
 
-# --- BACKEND WEB APPS (.NET) ---
-# Creates one Web App for each module selected (e.g. Core, Cards)
+# --- DYNAMIC BACKEND APPS (.NET) ---
 resource "azurerm_windows_web_app" "backend_apps" {
   for_each            = toset(var.backend_modules)
   name                = "${local._name_prefix}-${each.key}"
@@ -209,16 +196,12 @@ resource "azurerm_windows_web_app" "backend_apps" {
   resource_group_name = azurerm_resource_group.rg_apps.name
   service_plan_id     = azurerm_service_plan.windows_plan.id
   tags                = local.common_tags
-
   site_config {
-    application_stack {
-      dotnet_version = "v8.0"
-    }
+    application_stack { dotnet_version = "v8.0" }
   }
 }
 
-# --- BACKEND FUNCTION APPS (.NET) ---
-# 1. MarketData
+# --- FIXED FUNCTION APPS (.NET) ---
 resource "azurerm_windows_function_app" "func_market" {
   name                = local.func_market_name
   location            = azurerm_resource_group.rg_apps.location
@@ -228,13 +211,10 @@ resource "azurerm_windows_function_app" "func_market" {
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
   site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
+    application_stack { dotnet_version = "v8.0" }
   }
 }
 
-# 2. Subscriber
 resource "azurerm_windows_function_app" "func_subscriber" {
   name                = local.func_subscriber_name
   location            = azurerm_resource_group.rg_apps.location
@@ -244,13 +224,10 @@ resource "azurerm_windows_function_app" "func_subscriber" {
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
   site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
+    application_stack { dotnet_version = "v8.0" }
   }
 }
 
-# 3. Publisher
 resource "azurerm_windows_function_app" "func_publisher" {
   name                = local.func_publisher_name
   location            = azurerm_resource_group.rg_apps.location
@@ -260,14 +237,11 @@ resource "azurerm_windows_function_app" "func_publisher" {
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
   site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
+    application_stack { dotnet_version = "v8.0" }
   }
 }
 
 # --- Supporting Services ---
-
 module "storage_account" {
   source               = "../../modules/storage_account"
   storage_account_name = local.storage_account_name

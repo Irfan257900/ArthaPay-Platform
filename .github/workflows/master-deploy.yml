@@ -29,8 +29,8 @@ jobs:
       VM_ADMIN_PASSWORD: ${{ secrets.VM_ADMIN_PASSWORD }}
       APP_SQL_PASSWORD: ${{ secrets.APP_SQL_PASSWORD }}
 
-  deploy-ui:
-    name: "Job 2: Deploy React UI Container"
+  configure-ui:
+    name: "Job 2: Configure UI Apps"
     needs: deploy-infra 
     uses: ./.github/workflows/callable-deploy-ui.yml
     with:
@@ -38,19 +38,12 @@ jobs:
       environment: ${{ github.event.inputs.environment }}
       client_domain_extension: ${{ github.event.inputs.client_domain_extension }}
       
-      docker_image: "${{ github.event.inputs.client_name }}-ui"
-      docker_tag: "latest"
-      azure_repo_url: ${{ github.event.inputs.azure_devops_repo_url }}
-      
-      # --- DATA MAPPING (Using Standardized Names) ---
-      webapp_name: ${{ needs.deploy-infra.outputs.webapp_name }}
-      webapp_rg_name: ${{ needs.deploy-infra.outputs.webapp_rg_name }}
-      acr_login_server: ${{ needs.deploy-infra.outputs.acr_login_server }}
-      acr_username: ${{ needs.deploy-infra.outputs.acr_username }}
-      acr_password: ${{ needs.deploy-infra.outputs.acr_password }}
-      
+      # Pass the App Names from Infra
+      ui_app_name: ${{ needs.deploy-infra.outputs.ui_app_name }}
+      ui_admin_name: ${{ needs.deploy-infra.outputs.ui_admin_name }}
+      webapp_rg_name: ${{ needs.deploy-infra.outputs.webapp_rg_name }} # This is usually rg_apps, passed via outputs
+
       auth0_domain: ${{ github.event.inputs.auth0_domain }}
       auth0_client_id: ${{ github.event.inputs.auth0_client_id }}
     secrets:
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-      AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}

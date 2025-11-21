@@ -1,4 +1,4 @@
-name: "Reusable: Deploy UI Container"
+name: "Reusable: Configure UI Env Vars"
 
 on:
   workflow_call:
@@ -6,26 +6,17 @@ on:
       client_name: { type: string, required: true }
       environment: { type: string, required: true }
       client_domain_extension: { type: string, required: true }
-      webapp_name: { type: string, required: true }
+      ui_app_name: { type: string, required: true }
+      ui_admin_name: { type: string, required: true }
       webapp_rg_name: { type: string, required: true }
-      
-      # --- STANDARDIZED INPUT NAMES ---
-      acr_login_server: { type: string, required: true }
-      acr_username: { type: string, required: true } # Matches code usage
-      acr_password: { type: string, required: true } # Matches code usage
-      
-      docker_image: { type: string, required: true }
-      docker_tag: { type: string, required: true }
-      azure_repo_url: { type: string, required: true }
       auth0_domain: { type: string, required: true }
       auth0_client_id: { type: string, required: true }
     secrets:
       AZURE_CREDENTIALS: { required: true }
-      AZURE_DEVOPS_PAT: { required: true }
 
 jobs:
-  deploy-container:
-    name: "Config Web App Container"
+  configure-ui:
+    name: "Push Env Vars"
     runs-on: ubuntu-latest
     environment:
       name: ${{ inputs.client_name }}-${{ inputs.environment }}
@@ -38,12 +29,8 @@ jobs:
           CLIENT=$(echo "${{ inputs.client_name }}" | tr '[:upper:]' '[:lower:]')
           ENV=$(echo "${{ inputs.environment }}" | tr '[:upper:]' '[:lower:]')
           EXT=$(echo "${{ inputs.client_domain_extension }}" | tr '[:upper:]' '[:lower:]')
-          DOCKER_IMAGE_LOWER=$(echo "${{ inputs.docker_image }}" | tr '[:upper:]' '[:lower:]')
-          ACR_NAME=$(echo ${{ inputs.acr_login_server }} | cut -d'.' -f1)
-          TASK_NAME="build${CLIENT}ui"
           BASE_DOMAIN="${CLIENT}.${EXT}"
           
-          # URLs
           APP_URL="https://${CLIENT}${ENV}payments.${BASE_DOMAIN}"
           ADMIN_URL="https://${CLIENT}${ENV}admin.${BASE_DOMAIN}"
           CORE_API_URL="https://${CLIENT}${ENV}core.${BASE_DOMAIN}"
@@ -53,14 +40,12 @@ jobs:
           CARDS_API="https://${CLIENT}${ENV}cards.${BASE_DOMAIN}"
           NOTIFICATIONS_API="https://${CLIENT}${ENV}core.${BASE_DOMAIN}"
           SIGNALR_URL="https://${CLIENT}${ENV}signalr.${BASE_DOMAIN}"
+          
           AUTH0_DOMAIN="${{ inputs.auth0_domain }}"
           AUDIENCE="https://$(echo $AUTH0_DOMAIN | cut -d'.' -f1)Api.net"
 
           echo "CLIENT=$CLIENT" >> $GITHUB_OUTPUT
           echo "ENV=$ENV" >> $GITHUB_OUTPUT
-          echo "DOCKER_IMAGE_LOWER=$DOCKER_IMAGE_LOWER" >> $GITHUB_OUTPUT
-          echo "ACR_NAME=$ACR_NAME" >> $GITHUB_OUTPUT
-          echo "TASK_NAME=$TASK_NAME" >> $GITHUB_OUTPUT
           echo "APP_URL=$APP_URL" >> $GITHUB_OUTPUT
           echo "ADMIN_URL=$ADMIN_URL" >> $GITHUB_OUTPUT
           echo "CORE_API_URL=$CORE_API_URL" >> $GITHUB_OUTPUT
@@ -72,63 +57,19 @@ jobs:
           echo "SIGNALR_URL=$SIGNALR_URL" >> $GITHUB_OUTPUT
           echo "VITE_AUDIENCE=$AUDIENCE" >> $GITHUB_OUTPUT
 
-      - name: "2. Check for Missing Inputs"
-        shell: bash
-        run: |
-          if [ -z "${{ steps.vars.outputs.ACR_NAME }}" ]; then
-            echo "❌ ERROR: ACR Name is empty! Pipeline link is broken."
-            exit 1
-          fi
-
-      - name: "3. Log in to Azure"
+      - name: "2. Log in to Azure"
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: "4. Link Web App to ACR Image"
+      - name: "3. Push Env Vars to UI App"
         shell: bash
         run: |
-          echo "Configuring Web App '${{ inputs.webapp_name }}'..."
-          # Now using correct inputs.acr_username matching definition
-          az webapp config container set \
-            --name "${{ inputs.webapp_name }}" \
-            --resource-group "${{ inputs.webapp_rg_name }}" \
-            --docker-custom-image-name "${{ inputs.acr_login_server }}/${{ steps.vars.outputs.DOCKER_IMAGE_LOWER }}:${{ inputs.docker_tag }}" \
-            --docker-registry-server-url "https://${{ inputs.acr_login_server }}" \
-            --docker-registry-server-user "${{ inputs.acr_username }}" \
-            --docker-registry-server-password "${{ inputs.acr_password }}" \
-            --enable-app-service-storage false
-
-          az webapp deployment container config --enable-cd true \
-            --name "${{ inputs.webapp_name }}" \
-            --resource-group "${{ inputs.webapp_rg_name }}"
-
-      - name: "5. Create Build Task (Connect to Git)"
-        shell: bash
-        run: |
-          echo "Creating ACR Task: ${{ steps.vars.outputs.TASK_NAME }}"
-          
-          az acr task create \
-            --registry "${{ steps.vars.outputs.ACR_NAME }}" \
-            --name "${{ steps.vars.outputs.TASK_NAME }}" \
-            --image "${{ steps.vars.outputs.DOCKER_IMAGE_LOWER }}:${{ inputs.docker_tag }}" \
-            --context "${{ inputs.azure_repo_url }}" \
-            --file "Dockerfile" \
-            --git-access-token "${{ secrets.AZURE_DEVOPS_PAT }}" \
-            --platform "linux/amd64" \
-            --commit-trigger-enabled true 
-            
-          echo "✅ ACR Task Created!"
-
-      - name: "6. Push Env Vars to Web App"
-        shell: bash
-        run: |
-          echo "Pushing environment variables..."
+          echo "Pushing settings to ${{ inputs.ui_app_name }}..."
           az webapp config appsettings set \
-            --name "${{ inputs.webapp_name }}" \
+            --name "${{ inputs.ui_app_name }}" \
             --resource-group "${{ inputs.webapp_rg_name }}" \
             --settings \
-              "SOURCE_REPO_URL=${{ inputs.azure_repo_url }}" \
               "CLIENT=${{ steps.vars.outputs.CLIENT }}" \
               "ENV=${{ steps.vars.outputs.ENV }}" \
               "VITE_CLIENT=${{ steps.vars.outputs.CLIENT }}" \
@@ -137,6 +78,59 @@ jobs:
               "VITE_AUTHORITY=${{ inputs.auth0_domain }}" \
               "VITE_AUDIENCE=${{ steps.vars.outputs.VITE_AUDIENCE }}" \
               "VITE_SILENT_REDIRECT_URI=${{ steps.vars.outputs.APP_URL }}/silent_redirect" \
+              "VITE_CORE_API_END_POINT=${{ steps.vars.outputs.CORE_API_URL }}" \
+              "VITE_APP_URL=${{ steps.vars.outputs.APP_URL }}" \
+              "VITE_ADMIN_URL=${{ steps.vars.outputs.ADMIN_URL }}" \
+              "VITE_API_END_POINT=${{ steps.vars.outputs.CORE_API_URL }}/api/v1" \
+              "VITE_UPLOAD_API_END_POINT=${{ steps.vars.outputs.CORE_API_URL }}/" \
+              "VITE_API_PAYMENTS_END_POINT=${{ steps.vars.outputs.PAYMENTS_API }}" \
+              "VITE_API_NOTIFICATIONS_END_POINT=${{ steps.vars.outputs.NOTIFICATIONS_API }}" \
+              "VITE_API_EXCHANGE_END_POINT=${{ steps.vars.outputs.EXCHANGE_API }}" \
+              "VITE_API_BANKS_END_POINT=${{ steps.vars.outputs.BANKS_API }}" \
+              "VITE_API_CARDS_END_POINT=${{ steps.vars.outputs.CARDS_API }}" \
+              "VITE_NOTIFICATION_HUB=${{ steps.vars.outputs.SIGNALR_URL }}" \
+              "VITE_WEB3_API_EXCHANGE_END_POINT=${{ steps.vars.outputs.EXCHANGE_API }}" \
+              "VITE_WEB3_API_BANKS_END_POINT=${{ steps.vars.outputs.BANKS_API }}" \
+              "VITE_NODE_ENV=production" \
+              "VITE_IPSTACK_API=https://api.ipstack.com" \
+              "VITE_IPSTACK_ACCESS_KEY=" \
+              "VITE_WALLET_TYPE=" \
+              "VITE_ARCANA_CLIENT_ID=" \
+              "VITE_ARCANA_ID=" \
+              "VITE_OWNER_ACCOUNT_WALLET_ADDRESS=" \
+              "VITE_NAME=" \
+              "VITE_SEND_VERIFICATION_HIDE=" \
+              "VITE_APP_KYC_KYB_PROVIDER=" \
+              "VITE_APP_SUMSUB_KYB_FLOW=" \
+              "VITE_APP_SUMSUB_KYC_FLOW=" \
+              "VITE_APP_PAYEE_ON_THE_GO_MODE=" \
+              "VITE_APP_EXCHANGE_ON_THE_GO_MODE=" \
+              "VITE_APP_SMALL_DECIMALS_ENABLED=" \
+              "VITE_APP_IS_SHOW_PAYIN_FIAT=" \
+              "VITE_APP_IS_QUICKLICKS_ENABLED=" \
+              "VITE_WEB3_WALLET_ID=" \
+              "VITE_TREZOR_EMAIL=" \
+              "VITE_WEB3_API_END_POINT=" \
+              "VITE_API_LOYALITY_END_POINT="
+
+      - name: "4. Push Env Vars to UI Admin"
+        shell: bash
+        run: |
+          echo "Pushing settings to ${{ inputs.ui_admin_name }}..."
+          # Pushing same vars to Admin app as requested ("same for all webapps")
+          az webapp config appsettings set \
+            --name "${{ inputs.ui_admin_name }}" \
+            --resource-group "${{ inputs.webapp_rg_name }}" \
+            --settings \
+              "CLIENT=${{ steps.vars.outputs.CLIENT }}" \
+              "ENV=${{ steps.vars.outputs.ENV }}" \
+              # ... (The CLI command will reuse the last settings block structure implicitly or copy-paste if needed, here it repeats for safety) ...
+              "VITE_CLIENT=${{ steps.vars.outputs.CLIENT }}" \
+              "VITE_REDIRECT_URI=${{ steps.vars.outputs.ADMIN_URL }}/callback" \
+              "VITE_CLIENT_ID=${{ inputs.auth0_client_id }}" \
+              "VITE_AUTHORITY=${{ inputs.auth0_domain }}" \
+              "VITE_AUDIENCE=${{ steps.vars.outputs.VITE_AUDIENCE }}" \
+              "VITE_SILENT_REDIRECT_URI=${{ steps.vars.outputs.ADMIN_URL }}/silent_redirect" \
               "VITE_CORE_API_END_POINT=${{ steps.vars.outputs.CORE_API_URL }}" \
               "VITE_APP_URL=${{ steps.vars.outputs.APP_URL }}" \
               "VITE_ADMIN_URL=${{ steps.vars.outputs.ADMIN_URL }}" \
