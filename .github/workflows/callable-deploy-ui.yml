@@ -117,14 +117,14 @@ jobs:
         shell: bash
         run: |
           echo "Pushing settings to ${{ inputs.ui_admin_name }}..."
-          # Pushing same vars to Admin app as requested ("same for all webapps")
+          
+          # Note: We repeat the settings here without comments to prevent syntax errors
           az webapp config appsettings set \
             --name "${{ inputs.ui_admin_name }}" \
             --resource-group "${{ inputs.webapp_rg_name }}" \
             --settings \
               "CLIENT=${{ steps.vars.outputs.CLIENT }}" \
               "ENV=${{ steps.vars.outputs.ENV }}" \
-              # ... (The CLI command will reuse the last settings block structure implicitly or copy-paste if needed, here it repeats for safety) ...
               "VITE_CLIENT=${{ steps.vars.outputs.CLIENT }}" \
               "VITE_REDIRECT_URI=${{ steps.vars.outputs.ADMIN_URL }}/callback" \
               "VITE_CLIENT_ID=${{ inputs.auth0_client_id }}" \
