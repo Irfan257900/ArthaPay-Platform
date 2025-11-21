@@ -3,24 +3,44 @@ name: "Reusable: Deploy Infrastructure"
 on:
   workflow_call:
     inputs:
-      client_name: { type: string, required: true }
-      environment: { type: string, required: true }
-      vm_admin_username: { type: string, required: true }
-      auth0_domain: { type: string, required: true }
-      mailgun_key: { type: string, required: true }
-      twilio_sid: { type: string, required: true }
+      client_name:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: true
+      vm_admin_username:
+        type: string
+        required: true
+      auth0_domain:
+        type: string
+        required: true
+      mailgun_key:
+        type: string
+        required: true
+      twilio_sid:
+        type: string
+        required: true
     
     outputs:
-      vm_rg_name: { value: ${{ jobs.deploy-infra.outputs.vm_rg_name }} }
-      vm_name: { value: ${{ jobs.deploy-infra.outputs.vm_name }} }
-      ui_app_name: { value: ${{ jobs.deploy-infra.outputs.ui_app_name }} }
-      ui_admin_name: { value: ${{ jobs.deploy-infra.outputs.ui_admin_name }} }
-      webapp_rg_name: { value: ${{ jobs.deploy-infra.outputs.webapp_rg_name }} }
+      vm_rg_name:
+        value: ${{ jobs.deploy-infra.outputs.vm_rg_name }}
+      vm_name:
+        value: ${{ jobs.deploy-infra.outputs.vm_name }}
+      ui_app_name:
+        value: ${{ jobs.deploy-infra.outputs.ui_app_name }}
+      ui_admin_name:
+        value: ${{ jobs.deploy-infra.outputs.ui_admin_name }}
+      webapp_rg_name:
+        value: ${{ jobs.deploy-infra.outputs.webapp_rg_name }}
 
     secrets:
-      AZURE_CREDENTIALS: { required: true }
-      VM_ADMIN_PASSWORD: { required: true }
-      APP_SQL_PASSWORD: { required: true }
+      AZURE_CREDENTIALS:
+        required: true
+      VM_ADMIN_PASSWORD:
+        required: true
+      APP_SQL_PASSWORD:
+        required: true
 
 jobs:
   deploy-infra:
@@ -83,6 +103,7 @@ jobs:
         run: |
           terraform apply -auto-approve tfplan
           
+          # --- CAPTURE OUTPUTS ---
           echo "vm_name=$(terraform output -raw vm_name)" >> $GITHUB_OUTPUT
           echo "vm_rg_name=$(terraform output -raw vm_rg_name)" >> $GITHUB_OUTPUT
           echo "ui_app_name=$(terraform output -raw ui_app_name)" >> $GITHUB_OUTPUT
