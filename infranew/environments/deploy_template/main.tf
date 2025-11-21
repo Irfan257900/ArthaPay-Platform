@@ -325,3 +325,10 @@ resource "azurerm_key_vault_secret" "twilio_sid" {
   key_vault_id = module.key_vault.id
   depends_on   = [azurerm_role_assignment.kv_admin_rbac]
 }
+# --- NEW: Store SQL Credentials in Key Vault ---
+resource "azurerm_key_vault_secret" "sql_password" {
+  name         = "SQL-App-Password"
+  value        = var.app_sql_password
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
