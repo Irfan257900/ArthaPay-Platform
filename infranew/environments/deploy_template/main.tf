@@ -22,7 +22,7 @@ locals {
   storage_account_name     = "st${lower(var.client_name)}${lower(var.environment_name)}${substr(md5(timestamp()), 0, 3)}"
   
   # FIX: Variable name match
-  service_bus_namespace_name = "${local._name_prefix}-sb"
+  service_bus_namespace_name = "${local._name_prefix}-bus"
   
   # App Service Plans
   plan_linux_name          = "${local._name_prefix}-plan-linux"   # For Node UI
