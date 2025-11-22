@@ -1,5 +1,6 @@
 # --- STAGING (STG) CONFIGURATION ---
-# Based on your provided script: 4 RGs, Integration VM, Premium Plans
+# Location: Southeast Asia
+# SKU: Premium V2 (P1v2)
 
 locals {
   common_tags = {
@@ -12,7 +13,7 @@ locals {
   
   _name_prefix = "${var.client_name}-${var.environment_name}"
   
-  # Resource Groups (Matched to your STG script structure)
+  # Resource Groups
   network_rg_name          = "rg-${local._name_prefix}-network"
   app_rg_name              = "rg-${local._name_prefix}-app"
   vm_rg_name               = "rg-${local._name_prefix}-vm"
@@ -21,7 +22,7 @@ locals {
   # Resources
   vnet_name                = "${local._name_prefix}-vnet"
   sql_vm_name              = "${local._name_prefix}-sqlvm"
-  integ_vm_name            = "${local._name_prefix}-integvm" # Extra VM for STG
+  integ_vm_name            = "${local._name_prefix}-integvm"
   
   key_vault_name           = "${local._name_prefix}-kv-${substr(md5(timestamp()), 0, 5)}"
   storage_account_name     = "st${lower(var.client_name)}${lower(var.environment_name)}${substr(md5(timestamp()), 0, 3)}"
@@ -34,13 +35,11 @@ locals {
   # Web App Names
   ui_app_name              = "${local._name_prefix}-App"
   ui_admin_name            = "${local._name_prefix}-Admin"
-
-  # Function Names
   func_market_name         = "${local._name_prefix}-Marketdata"
   func_subscriber_name     = "${local._name_prefix}-Subscriber"
   func_publisher_name      = "${local._name_prefix}-Publisher"
 
-  # STG Network Config (10.10.x.x)
+  # STG Network Config
   vnet_address_space       = ["10.10.0.0/16"]
   subnets = {
     "sqlVmSubnet"         = { address_prefixes = ["10.10.1.0/24"] }
@@ -51,7 +50,7 @@ locals {
 
 data "azurerm_client_config" "current" {}
 
-# --- 1. RESOURCE GROUPS (4 Distinct Groups) ---
+# --- RESOURCE GROUPS ---
 resource "azurerm_resource_group" "rg_network" {
   name     = local.network_rg_name
   location = var.location
@@ -73,7 +72,7 @@ resource "azurerm_resource_group" "rg_security" {
   tags     = local.common_tags
 }
 
-# --- 2. NETWORKING ---
+# --- NETWORKING ---
 module "networking" {
   source                        = "../../modules/networking"
   vnet_name                     = local.vnet_name
@@ -86,7 +85,7 @@ module "networking" {
   depends_on                    = [azurerm_resource_group.rg_network]
 }
 
-# --- 3. SQL VM (Standard_B2ms) ---
+# --- SQL VM ---
 resource "azurerm_public_ip" "pip_sql" {
   name                = "pip-${local.sql_vm_name}"
   location            = azurerm_resource_group.rg_vm.location
@@ -120,7 +119,8 @@ resource "azurerm_windows_virtual_machine" "vm_sql" {
   network_interface_ids = [azurerm_network_interface.nic_sql.id]
   tags                = local.common_tags
   
-  identity { type = "SystemAssigned" } # For Key Vault Access
+  # Enable Identity for Key Vault
+  identity { type = "SystemAssigned" } 
 
   source_image_reference {
     publisher = "MicrosoftSQLServer"
@@ -134,7 +134,6 @@ resource "azurerm_windows_virtual_machine" "vm_sql" {
   }
 }
 
-# SQL IaaS & Setup Script
 resource "azurerm_mssql_virtual_machine" "sqlvm" {
   virtual_machine_id               = azurerm_windows_virtual_machine.vm_sql.id
   sql_license_type                 = "PAYG"
@@ -159,7 +158,7 @@ SETTINGS
   depends_on = [azurerm_mssql_virtual_machine.sqlvm]
 }
 
-# --- 4. INTEGRATION VM (Extra VM for STG) ---
+# --- INTEGRATION VM ---
 resource "azurerm_public_ip" "pip_integ" {
   name                = "pip-${local.integ_vm_name}"
   location            = azurerm_resource_group.rg_vm.location
@@ -187,7 +186,7 @@ resource "azurerm_windows_virtual_machine" "vm_integ" {
   computer_name       = substr(local.integ_vm_name, 0, 15)
   resource_group_name = azurerm_resource_group.rg_vm.name
   location            = azurerm_resource_group.rg_vm.location
-  size                = "Standard_B2s" # As per your STG script
+  size                = "Standard_B2s"
   admin_username      = var.vm_admin_username
   admin_password      = var.vm_admin_password
   network_interface_ids = [azurerm_network_interface.nic_integ.id]
@@ -205,13 +204,13 @@ resource "azurerm_windows_virtual_machine" "vm_integ" {
   }
 }
 
-# --- 5. PREMIUM APP SERVICE PLANS (P1v2) ---
+# --- APP PLANS (Premium P1v2) ---
 resource "azurerm_service_plan" "linux_plan" {
   name                = local.plan_linux_name
   location            = azurerm_resource_group.rg_apps.location
   resource_group_name = azurerm_resource_group.rg_apps.name
   os_type             = "Linux"
-  sku_name            = "P1v2" # Premium
+  sku_name            = "P1v2"
   tags                = local.common_tags
 }
 
@@ -220,7 +219,7 @@ resource "azurerm_service_plan" "windows_plan" {
   location            = azurerm_resource_group.rg_apps.location
   resource_group_name = azurerm_resource_group.rg_apps.name
   os_type             = "Windows"
-  sku_name            = "P1v2" # Premium
+  sku_name            = "P1v2"
   tags                = local.common_tags
 }
 
@@ -232,7 +231,9 @@ resource "azurerm_linux_web_app" "ui_app" {
   service_plan_id     = azurerm_service_plan.linux_plan.id
   tags                = local.common_tags
   site_config {
-    application_stack { node_version = "18-lts" }
+    application_stack {
+      node_version = "18-lts"
+    }
     app_command_line = "pm2 serve /home/site/wwwroot --no-daemon --spa"
   }
 }
@@ -244,7 +245,9 @@ resource "azurerm_linux_web_app" "ui_admin" {
   service_plan_id     = azurerm_service_plan.linux_plan.id
   tags                = local.common_tags
   site_config {
-    application_stack { node_version = "18-lts" }
+    application_stack {
+      node_version = "18-lts"
+    }
     app_command_line = "pm2 serve /home/site/wwwroot --no-daemon --spa"
   }
 }
@@ -256,8 +259,12 @@ resource "azurerm_windows_web_app" "backend_apps" {
   resource_group_name = azurerm_resource_group.rg_apps.name
   service_plan_id     = azurerm_service_plan.windows_plan.id
   tags                = local.common_tags
+  
+  # FIX: Expanded multi-line block
   site_config {
-    application_stack { dotnet_version = "v8.0" }
+    application_stack {
+      dotnet_version = "v8.0"
+    }
   }
 }
 
@@ -270,7 +277,13 @@ resource "azurerm_windows_function_app" "func_market" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  site_config { application_stack { dotnet_version = "v8.0" } }
+  
+  # FIX: Expanded multi-line block
+  site_config {
+    application_stack {
+        dotnet_version = "v8.0"
+    }
+  }
 }
 
 resource "azurerm_windows_function_app" "func_subscriber" {
@@ -281,7 +294,13 @@ resource "azurerm_windows_function_app" "func_subscriber" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  site_config { application_stack { dotnet_version = "v8.0" } }
+  
+  # FIX: Expanded multi-line block
+  site_config {
+    application_stack {
+        dotnet_version = "v8.0"
+    }
+  }
 }
 
 resource "azurerm_windows_function_app" "func_publisher" {
@@ -292,10 +311,16 @@ resource "azurerm_windows_function_app" "func_publisher" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  site_config { application_stack { dotnet_version = "v8.0" } }
+  
+  # FIX: Expanded multi-line block
+  site_config {
+    application_stack {
+        dotnet_version = "v8.0"
+    }
+  }
 }
 
-# --- SUPPORTING SERVICES ---
+# --- SERVICES ---
 module "storage_account" {
   source               = "../../modules/storage_account"
   storage_account_name = local.storage_account_name
@@ -309,26 +334,50 @@ module "service_bus" {
   service_bus_namespace_name = local.service_bus_namespace_name
   location                   = azurerm_resource_group.rg_apps.location
   resource_group_name        = azurerm_resource_group.rg_apps.name
-  sku                        = "Standard" # Usually Standard is enough, upgrade to Premium if needed
+  sku                        = "Standard"
   tags                       = local.common_tags
+}
+
+data "azurerm_servicebus_namespace" "sb_lookup" {
+  name                = local.service_bus_namespace_name
+  resource_group_name = azurerm_resource_group.rg_apps.name
+  depends_on          = [module.service_bus]
+}
+
+resource "azurerm_servicebus_queue" "q_processing" {
+  name         = "processing-queue"
+  namespace_id = data.azurerm_servicebus_namespace.sb_lookup.id
+  partitioning_enabled = true
+}
+
+resource "azurerm_servicebus_topic" "t_market" {
+  name         = "market-data-events"
+  namespace_id = data.azurerm_servicebus_namespace.sb_lookup.id
+  partitioning_enabled = true
+}
+
+resource "azurerm_servicebus_subscription" "sub_subscriber" {
+  name               = "subscriber-service"
+  topic_id           = azurerm_servicebus_topic.t_market.id
+  max_delivery_count = 10
 }
 
 module "key_vault" {
   source              = "../../modules/key_vault"
   key_vault_name      = local.key_vault_name
-  location            = azurerm_resource_group.rg_security.location # Security RG
+  location            = azurerm_resource_group.rg_security.location
   resource_group_name = azurerm_resource_group.rg_security.name
   tenant_id           = data.azurerm_client_config.current.tenant_id
   tags                = local.common_tags
 }
 
-# --- PERMISSIONS & SECRETS ---
 resource "azurerm_role_assignment" "kv_admin_rbac" {
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Administrator"
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
+# Grant SQL VM Access
 resource "azurerm_role_assignment" "vm_kv_access" {
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Secrets User"
