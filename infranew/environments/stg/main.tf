@@ -1,8 +1,7 @@
 # --- STAGING (STG) CONFIGURATION ---
-# Type: Container Apps (Docker)
+# Architecture: Linux Container Apps (Docker) + ACR
 # Region: Southeast Asia
 # SKU: Downgraded to Basic (B1) for Free Trial.
-# FUTURE UPGRADE: Change Plans to "P1v2" and VMs to "Standard_B2ms".
 
 locals {
   common_tags = {
@@ -35,8 +34,8 @@ locals {
   
   # Plans
   plan_linux_name          = "${local._name_prefix}-plan-linux"
-  plan_windows_name        = "${local._name_prefix}-plan-windows"
-  
+  # plan_windows_name      = "${local._name_prefix}-plan-windows" # Not needed if all are Linux Containers
+
   # Function Names
   func_market_name         = "${local._name_prefix}-Marketdata"
   func_subscriber_name     = "${local._name_prefix}-Subscriber"
@@ -236,7 +235,7 @@ resource "azurerm_container_registry" "acr" {
   tags                = local.common_tags
 }
 
-# --- APP PLAN (Basic B1) ---
+# --- APP PLAN (Linux for Docker) ---
 resource "azurerm_service_plan" "linux_plan" {
   name                = local.plan_linux_name
   location            = azurerm_resource_group.rg_apps.location
@@ -250,6 +249,7 @@ resource "azurerm_service_plan" "linux_plan" {
 }
 
 # --- DYNAMIC CONTAINER APPS (9 Specific Apps) ---
+# This creates ALL apps (admin, api, signalR, etc.) as Linux Containers
 resource "azurerm_linux_web_app" "container_apps" {
   for_each            = local.stg_container_services
   
@@ -265,6 +265,8 @@ resource "azurerm_linux_web_app" "container_apps" {
 
   site_config {
     application_stack {
+        # Points to the image path (e.g. Rapidz/admin-app)
+        # We default to a placeholder until deployment updates it.
         docker_image_name        = "mcr.microsoft.com/appsvc/staticsite:latest"
         docker_registry_url      = "https://${azurerm_container_registry.acr.login_server}"
         docker_registry_username = azurerm_container_registry.acr.admin_username
@@ -280,16 +282,14 @@ resource "azurerm_linux_web_app" "container_apps" {
   }
 }
 
-# --- FUNCTION APPS (Windows Code) ---
+# --- FUNCTION APPS (Windows Code - Not Container) ---
+# Note: Requires a separate Windows Plan because Functions are usually .NET Code
 resource "azurerm_service_plan" "windows_plan" {
   name                = "${local._name_prefix}-plan-windows"
   location            = azurerm_resource_group.rg_apps.location
   resource_group_name = azurerm_resource_group.rg_apps.name
   os_type             = "Windows"
-  
-  # Downgraded for Trial. Upgrade to P1v2 later.
-  sku_name            = "B1" 
-  
+  sku_name            = "B1" # Downgraded
   tags                = local.common_tags
 }
 
@@ -301,10 +301,11 @@ resource "azurerm_windows_function_app" "func_market" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  site_config { 
-    application_stack { 
-        dotnet_version = "v8.0" 
-    } 
+  
+  site_config {
+    application_stack {
+        dotnet_version = "v8.0"
+    }
   }
 }
 
@@ -316,10 +317,11 @@ resource "azurerm_windows_function_app" "func_subscriber" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  site_config { 
-    application_stack { 
-        dotnet_version = "v8.0" 
-    } 
+  
+  site_config {
+    application_stack {
+        dotnet_version = "v8.0"
+    }
   }
 }
 
@@ -331,10 +333,11 @@ resource "azurerm_windows_function_app" "func_publisher" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  site_config { 
-    application_stack { 
-        dotnet_version = "v8.0" 
-    } 
+  
+  site_config {
+    application_stack {
+        dotnet_version = "v8.0"
+    }
   }
 }
 
