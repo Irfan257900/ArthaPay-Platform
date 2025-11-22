@@ -1,5 +1,5 @@
 # --- PRODUCTION (PRD) CONFIGURATION ---
-# Location: Switzerland North
+# Location: Southeast Asia
 # SKU: Currently downgraded to Basic (B1/B1ms) for Free Trial Quota.
 # FUTURE: Upgrade to Premium (P1v2) and Standard_B2ms for Go-Live.
 
@@ -50,25 +50,25 @@ locals {
 
 data "azurerm_client_config" "current" {}
 
-# --- 1. RESOURCE GROUPS (Switzerland North) ---
+# --- 1. RESOURCE GROUPS (Southeast Asia) ---
 resource "azurerm_resource_group" "rg_network" {
   name     = local.network_rg_name
-  location = "Switzerland North"
+  location = "Southeast Asia"
   tags     = local.common_tags
 }
 resource "azurerm_resource_group" "rg_apps" {
   name     = local.app_rg_name
-  location = "Switzerland North"
+  location = "Southeast Asia"
   tags     = local.common_tags
 }
 resource "azurerm_resource_group" "rg_vm" {
   name     = local.vm_rg_name
-  location = "Switzerland North"
+  location = "Southeast Asia"
   tags     = local.common_tags
 }
 resource "azurerm_resource_group" "rg_security" {
   name     = local.security_rg_name
-  location = "Switzerland North"
+  location = "Southeast Asia"
   tags     = local.common_tags
 }
 
