@@ -1,6 +1,8 @@
 # --- STAGING (STG) CONFIGURATION ---
-# Location: Southeast Asia
-# SKU: Premium V2 (P1v2)
+# Type: Container Apps (Docker)
+# Region: Southeast Asia
+# SKU: Downgraded to Basic (B1) for Free Trial.
+# FUTURE UPGRADE: Change Plans to "P1v2" and VMs to "Standard_B2ms".
 
 locals {
   common_tags = {
@@ -12,6 +14,8 @@ locals {
   }
   
   _name_prefix = "${var.client_name}-${var.environment_name}"
+  # Naming pattern for containers: ClientEnv (No hyphen) e.g. ArthaStg
+  _container_prefix = "${var.client_name}${var.environment_name}"
   
   # Resource Groups
   network_rg_name          = "rg-${local._name_prefix}-network"
@@ -23,6 +27,7 @@ locals {
   vnet_name                = "${local._name_prefix}-vnet"
   sql_vm_name              = "${local._name_prefix}-sqlvm"
   integ_vm_name            = "${local._name_prefix}-integvm"
+  acr_name                 = "acr${lower(var.client_name)}${lower(var.environment_name)}${substr(md5(timestamp()), 0, 3)}"
   
   key_vault_name           = "${local._name_prefix}-kv-${substr(md5(timestamp()), 0, 5)}"
   storage_account_name     = "st${lower(var.client_name)}${lower(var.environment_name)}${substr(md5(timestamp()), 0, 3)}"
@@ -31,10 +36,8 @@ locals {
   # Plans
   plan_linux_name          = "${local._name_prefix}-plan-linux"
   plan_windows_name        = "${local._name_prefix}-plan-windows"
-
-  # Web App Names
-  ui_app_name              = "${local._name_prefix}-App"
-  ui_admin_name            = "${local._name_prefix}-Admin"
+  
+  # Function Names
   func_market_name         = "${local._name_prefix}-Marketdata"
   func_subscriber_name     = "${local._name_prefix}-Subscriber"
   func_publisher_name      = "${local._name_prefix}-Publisher"
@@ -45,6 +48,20 @@ locals {
     "sqlVmSubnet"         = { address_prefixes = ["10.10.1.0/24"] }
     "IntegrationvmSubnet" = { address_prefixes = ["10.10.2.0/24"] }
     "PrivateEndpoints"    = { address_prefixes = ["10.10.3.0/24"] }
+  }
+
+  # --- CONTAINER APPS LIST (9 Apps) ---
+  # These suffixes are appended to the dynamic prefix (e.g., ArthaStg-admin)
+  stg_container_services = {
+    "admin"       = "admin-app"
+    "api"         = "api-app"
+    "signalR"     = "signal-app"
+    "coreapi"     = "coreapi-app"
+    "cardsapi"    = "cardsapi-app"
+    "banksapi"    = "banksapi-app"
+    "paymentsapi" = "paymentsapi-app"
+    "paylinks"    = "paylinks-app"
+    "user"        = "user-app" # This represents the main app (Rapidzstg)
   }
 }
 
@@ -113,14 +130,15 @@ resource "azurerm_windows_virtual_machine" "vm_sql" {
   computer_name       = substr(local.sql_vm_name, 0, 15)
   resource_group_name = azurerm_resource_group.rg_vm.name
   location            = azurerm_resource_group.rg_vm.location
-  # FUTURE UPGRADE: Change to "Standard_B2ms" (2 vCPU) for better performance
-  size                = "Standard_B1ms"
+  
+  # Downgraded for Trial (1 Core). Upgrade to "Standard_B2ms" later.
+  size                = "Standard_B1ms" 
+  
   admin_username      = var.vm_admin_username
   admin_password      = var.vm_admin_password
   network_interface_ids = [azurerm_network_interface.nic_sql.id]
   tags                = local.common_tags
   
-  # Enable Identity for Key Vault
   identity { type = "SystemAssigned" } 
 
   source_image_reference {
@@ -187,8 +205,10 @@ resource "azurerm_windows_virtual_machine" "vm_integ" {
   computer_name       = substr(local.integ_vm_name, 0, 15)
   resource_group_name = azurerm_resource_group.rg_vm.name
   location            = azurerm_resource_group.rg_vm.location
-  # FUTURE UPGRADE: Change to "Standard_B2s" (2 vCPU) for better performance
-  size                = "Standard_B1ms"
+  
+  # Downgraded for Trial (1 Core). Upgrade to "Standard_B2s" later.
+  size                = "Standard_B1ms" 
+  
   admin_username      = var.vm_admin_username
   admin_password      = var.vm_admin_password
   network_interface_ids = [azurerm_network_interface.nic_integ.id]
@@ -206,71 +226,73 @@ resource "azurerm_windows_virtual_machine" "vm_integ" {
   }
 }
 
-# --- APP PLANS ---
+# --- ACR (Required for Container Apps) ---
+resource "azurerm_container_registry" "acr" {
+  name                = local.acr_name
+  resource_group_name = azurerm_resource_group.rg_apps.name
+  location            = azurerm_resource_group.rg_apps.location
+  sku                 = "Basic"
+  admin_enabled       = true
+  tags                = local.common_tags
+}
+
+# --- APP PLAN (Basic B1) ---
 resource "azurerm_service_plan" "linux_plan" {
   name                = local.plan_linux_name
   location            = azurerm_resource_group.rg_apps.location
   resource_group_name = azurerm_resource_group.rg_apps.name
   os_type             = "Linux"
-  # FUTURE UPGRADE: Change to "P1v2" (Premium) for Production features & Auto-scale
-  sku_name            = "B1"
+  
+  # Downgraded for Trial. Upgrade to P1v2 later.
+  sku_name            = "B1" 
+  
   tags                = local.common_tags
 }
 
+# --- DYNAMIC CONTAINER APPS (9 Specific Apps) ---
+resource "azurerm_linux_web_app" "container_apps" {
+  for_each            = local.stg_container_services
+  
+  # Logic: If key is 'user', name is just 'ArthaStg'. Else 'ArthaStg-admin'
+  name                = each.key == "user" ? local._container_prefix : "${local._container_prefix}-${each.key}"
+  
+  location            = azurerm_resource_group.rg_apps.location
+  resource_group_name = azurerm_resource_group.rg_apps.name
+  service_plan_id     = azurerm_service_plan.linux_plan.id
+  tags                = local.common_tags
+  
+  identity { type = "SystemAssigned" }
+
+  site_config {
+    application_stack {
+        docker_image_name        = "mcr.microsoft.com/appsvc/staticsite:latest"
+        docker_registry_url      = "https://${azurerm_container_registry.acr.login_server}"
+        docker_registry_username = azurerm_container_registry.acr.admin_username
+        docker_registry_password = azurerm_container_registry.acr.admin_password
+    }
+  }
+  
+  app_settings = {
+    "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
+    "DOCKER_REGISTRY_SERVER_URL"          = "https://${azurerm_container_registry.acr.login_server}"
+    "DOCKER_REGISTRY_SERVER_USERNAME"     = azurerm_container_registry.acr.admin_username
+    "DOCKER_REGISTRY_SERVER_PASSWORD"     = azurerm_container_registry.acr.admin_password
+  }
+}
+
+# --- FUNCTION APPS (Windows Code) ---
 resource "azurerm_service_plan" "windows_plan" {
-  name                = local.plan_windows_name
+  name                = "${local._name_prefix}-plan-windows"
   location            = azurerm_resource_group.rg_apps.location
   resource_group_name = azurerm_resource_group.rg_apps.name
   os_type             = "Windows"
-  # FUTURE UPGRADE: Change to "P1v2" (Premium) for Production features & Auto-scale
-  sku_name            = "B1"
+  
+  # Downgraded for Trial. Upgrade to P1v2 later.
+  sku_name            = "B1" 
+  
   tags                = local.common_tags
 }
 
-# --- WEB APPS ---
-resource "azurerm_linux_web_app" "ui_app" {
-  name                = local.ui_app_name
-  location            = azurerm_resource_group.rg_apps.location
-  resource_group_name = azurerm_resource_group.rg_apps.name
-  service_plan_id     = azurerm_service_plan.linux_plan.id
-  tags                = local.common_tags
-  site_config {
-    application_stack {
-      node_version = "18-lts"
-    }
-    app_command_line = "pm2 serve /home/site/wwwroot --no-daemon --spa"
-  }
-}
-
-resource "azurerm_linux_web_app" "ui_admin" {
-  name                = local.ui_admin_name
-  location            = azurerm_resource_group.rg_apps.location
-  resource_group_name = azurerm_resource_group.rg_apps.name
-  service_plan_id     = azurerm_service_plan.linux_plan.id
-  tags                = local.common_tags
-  site_config {
-    application_stack {
-      node_version = "18-lts"
-    }
-    app_command_line = "pm2 serve /home/site/wwwroot --no-daemon --spa"
-  }
-}
-
-resource "azurerm_windows_web_app" "backend_apps" {
-  for_each            = toset(var.backend_modules)
-  name                = "${local._name_prefix}-${each.key}"
-  location            = azurerm_resource_group.rg_apps.location
-  resource_group_name = azurerm_resource_group.rg_apps.name
-  service_plan_id     = azurerm_service_plan.windows_plan.id
-  tags                = local.common_tags
-  site_config {
-    application_stack {
-      dotnet_version = "v8.0"
-    }
-  }
-}
-
-# --- FUNCTION APPS (FIXED FORMATTING) ---
 resource "azurerm_windows_function_app" "func_market" {
   name                = local.func_market_name
   location            = azurerm_resource_group.rg_apps.location
@@ -279,12 +301,10 @@ resource "azurerm_windows_function_app" "func_market" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  
-  # FIX: Expanded multi-line block
-  site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
+  site_config { 
+    application_stack { 
+        dotnet_version = "v8.0" 
+    } 
   }
 }
 
@@ -296,12 +316,10 @@ resource "azurerm_windows_function_app" "func_subscriber" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  
-  # FIX: Expanded multi-line block
-  site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
+  site_config { 
+    application_stack { 
+        dotnet_version = "v8.0" 
+    } 
   }
 }
 
@@ -313,12 +331,10 @@ resource "azurerm_windows_function_app" "func_publisher" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  
-  # FIX: Expanded multi-line block
-  site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
+  site_config { 
+    application_stack { 
+        dotnet_version = "v8.0" 
+    } 
   }
 }
 
@@ -379,6 +395,7 @@ resource "azurerm_role_assignment" "kv_admin_rbac" {
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
+# Grant SQL VM Access
 resource "azurerm_role_assignment" "vm_kv_access" {
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Secrets User"
