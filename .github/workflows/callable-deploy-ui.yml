@@ -5,7 +5,8 @@ on:
     inputs:
       client_name: { type: string, required: true }
       environment: { type: string, required: true }
-      client_domain_extension: { type: string, required: true }
+      # Removed: client_domain_extension
+      
       ui_app_name: { type: string, required: true }
       ui_admin_name: { type: string, required: true }
       webapp_rg_name: { type: string, required: true }
@@ -28,7 +29,10 @@ jobs:
         run: |
           CLIENT=$(echo "${{ inputs.client_name }}" | tr '[:upper:]' '[:lower:]')
           ENV=$(echo "${{ inputs.environment }}" | tr '[:upper:]' '[:lower:]')
-          EXT=$(echo "${{ inputs.client_domain_extension }}" | tr '[:upper:]' '[:lower:]')
+          
+          # --- FIX: Hardcoded extension since input was removed ---
+          EXT="work" 
+          
           BASE_DOMAIN="${CLIENT}.${EXT}"
           
           APP_URL="https://${CLIENT}${ENV}payments.${BASE_DOMAIN}"
@@ -117,8 +121,6 @@ jobs:
         shell: bash
         run: |
           echo "Pushing settings to ${{ inputs.ui_admin_name }}..."
-          
-          # Note: We repeat the settings here without comments to prevent syntax errors
           az webapp config appsettings set \
             --name "${{ inputs.ui_admin_name }}" \
             --resource-group "${{ inputs.webapp_rg_name }}" \

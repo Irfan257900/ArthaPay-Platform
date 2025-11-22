@@ -3,23 +3,59 @@ name: "Master Deploy: ArthaPay Platform"
 on:
   workflow_dispatch:
     inputs:
-      client_name: { type: string, required: true, default: "Artha" }
-      client_domain_extension: { type: string, required: true, default: "work" }
-      environment: { type: choice, options: [tst, stg, prd], default: "tst" }
-      backend_modules_to_deploy: { type: string, default: "all" }
-      azure_devops_repo_url: { type: string, required: true, default: "https://dev.azure.com/..." }
-      auth0_domain: { type: string, required: true }
-      auth0_client_id: { type: string, required: true }
-      mailgun_key: { type: string, required: true }
-      twilio_sid: { type: string, required: true }
+      # --- 1. Client & Environment ---
+      client_name:
+        description: "Client name (e.g., Artha, demo)"
+        type: string
+        required: true
+        default: "Artha"
+      environment:
+        description: "Environment (tst, stg, prd)"
+        type: choice
+        options:
+          - tst
+          - stg
+          - prd
+        default: "tst"
+      
+      # --- 2. Module Selection ---
+      # Used by Terraform to determine which Backend Web Apps to create
+      backend_modules_to_deploy:
+        description: "Modules to deploy (e.g., 'all', 'core', 'core,banks')"
+        type: string
+        default: "all"
+        
+      # --- 3. Third-Party Config ---
+      auth0_domain:
+        description: "Auth0 Domain"
+        type: string
+        required: true
+      auth0_client_id:
+        description: "Auth0 Client ID"
+        type: string
+        required: true
+      mailgun_key:
+        description: "Mailgun API Key"
+        type: string
+        required: true
+      twilio_sid:
+        description: "Twilio Account SID"
+        type: string
+        required: true
+      
+      # --- TOTAL: 7 INPUTS ---
 
 jobs:
+  # ===================================================================
+  # JOB 1: INFRASTRUCTURE (Terraform)
+  # ===================================================================
   deploy-infra:
     name: "Job 1: Deploy Infrastructure"
     uses: ./.github/workflows/callable-deploy-infra.yml
     with:
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
+      # Auto-generate admin user for SQL VM
       vm_admin_username: "${{ github.event.inputs.client_name }}${{ github.event.inputs.environment }}admin"
       auth0_domain: ${{ github.event.inputs.auth0_domain }}
       mailgun_key: ${{ github.event.inputs.mailgun_key }}
@@ -29,6 +65,9 @@ jobs:
       VM_ADMIN_PASSWORD: ${{ secrets.VM_ADMIN_PASSWORD }}
       APP_SQL_PASSWORD: ${{ secrets.APP_SQL_PASSWORD }}
 
+  # ===================================================================
+  # JOB 2: CONFIGURE UI (Env Vars Only - No Build)
+  # ===================================================================
   configure-ui:
     name: "Job 2: Configure UI Apps"
     needs: deploy-infra 
@@ -36,14 +75,23 @@ jobs:
     with:
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
-      client_domain_extension: ${{ github.event.inputs.client_domain_extension }}
+      # Extension is now hardcoded to "work" inside the called workflow
       
-      # Pass the App Names from Infra
+      # --- Map Outputs from Job 1 to Inputs of Job 2 ---
       ui_app_name: ${{ needs.deploy-infra.outputs.ui_app_name }}
       ui_admin_name: ${{ needs.deploy-infra.outputs.ui_admin_name }}
-      webapp_rg_name: ${{ needs.deploy-infra.outputs.webapp_rg_name }} # This is usually rg_apps, passed via outputs
-
+      webapp_rg_name: ${{ needs.deploy-infra.outputs.webapp_rg_name }}
+      
       auth0_domain: ${{ github.event.inputs.auth0_domain }}
       auth0_client_id: ${{ github.event.inputs.auth0_client_id }}
     secrets:
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+
+  # ===================================================================
+  # JOB 3: DEPLOY BACKEND (Future Step)
+  # ===================================================================
+  # deploy-backend:
+  #   name: "Job 3: Deploy .NET Backend"
+  #   needs: deploy-infra
+  #   uses: ./.github/workflows/callable-deploy-backend.yml
+  #   ...

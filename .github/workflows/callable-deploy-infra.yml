@@ -3,24 +3,12 @@ name: "Reusable: Deploy Infrastructure"
 on:
   workflow_call:
     inputs:
-      client_name:
-        type: string
-        required: true
-      environment:
-        type: string
-        required: true
-      vm_admin_username:
-        type: string
-        required: true
-      auth0_domain:
-        type: string
-        required: true
-      mailgun_key:
-        type: string
-        required: true
-      twilio_sid:
-        type: string
-        required: true
+      client_name: { type: string, required: true }
+      environment: { type: string, required: true }
+      vm_admin_username: { type: string, required: true }
+      auth0_domain: { type: string, required: true }
+      mailgun_key: { type: string, required: true }
+      twilio_sid: { type: string, required: true }
     
     outputs:
       vm_rg_name:
@@ -35,12 +23,9 @@ on:
         value: ${{ jobs.deploy-infra.outputs.webapp_rg_name }}
 
     secrets:
-      AZURE_CREDENTIALS:
-        required: true
-      VM_ADMIN_PASSWORD:
-        required: true
-      APP_SQL_PASSWORD:
-        required: true
+      AZURE_CREDENTIALS: { required: true }
+      VM_ADMIN_PASSWORD: { required: true }
+      APP_SQL_PASSWORD: { required: true }
 
 jobs:
   deploy-infra:
@@ -58,7 +43,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: ./infranew/environments/deploy_template
+        working-directory: ./infranew/environments/${{ inputs.environment }}
 
     steps:
       - name: "1. Check out Code"
@@ -72,10 +57,73 @@ jobs:
       - name: "3. Setup Terraform"
         uses: hashicorp/setup-terraform@v3
 
-      - name: "4. Terraform Init"
-        env:
-          STATE_FILE_KEY: "${{ inputs.client_name }}-${{ inputs.environment }}.terraform.tfstate"
-        run: terraform init -backend-config="key=$STATE_FILE_KEY"
+      # --- AUTOMATED BACKEND CREATION ---
+      - name: "4. Bootstrap & Init Terraform"
+        shell: bash
+        run: |
+          echo "--- 1. CALCULATING DYNAMIC NAMES ---"
+          CLIENT=$(echo "${{ inputs.client_name }}" | tr '[:upper:]' '[:lower:]')
+          ENV=$(echo "${{ inputs.environment }}" | tr '[:upper:]' '[:lower:]')
+          
+          # Dynamic Naming Convention
+          # RG: rg-demo-tst-tf
+          BK_RG="rg-${CLIENT}-${ENV}-tf"
+          # SA: stdemotsttf (Must be unique, lowercase, alphanumeric)
+          BK_SA="st${CLIENT}${ENV}tf"
+          BK_CONTAINER="tfstate"
+          
+          # Determine Location based on Environment
+          if [ "$ENV" == "prd" ]; then
+            LOCATION="switzerlandnorth"
+          else
+            LOCATION="southeastasia"
+          fi
+          
+          echo "Target Resource Group: $BK_RG"
+          echo "Target Storage Account: $BK_SA"
+          echo "Target Location: $LOCATION"
+
+          echo "--- 2. CHECKING/CREATING BACKEND RESOURCES ---"
+          
+          # Create Resource Group if missing
+          if [ $(az group exists --name $BK_RG) = false ]; then
+            echo "Creating Resource Group: $BK_RG..."
+            az group create --name $BK_RG --location $LOCATION
+          else
+            echo "Resource Group $BK_RG already exists."
+          fi
+
+          # Check/Create Storage Account
+          # We use --query to check if it exists. If command fails or returns empty, we create it.
+          SA_CHECK=$(az storage account list --resource-group $BK_RG --query "[?name=='$BK_SA']" -o tsv)
+          
+          if [ -z "$SA_CHECK" ]; then
+            echo "Creating Storage Account: $BK_SA..."
+            az storage account create --resource-group $BK_RG --name $BK_SA --sku Standard_LRS --encryption-services blob
+          else
+            echo "Storage Account $BK_SA already exists."
+          fi
+
+          # Get Storage Account Key (Required to create container)
+          ACCOUNT_KEY=$(az storage account keys list --resource-group $BK_RG --account-name $BK_SA --query '[0].value' -o tsv)
+
+          # Create Container if missing
+          exists=$(az storage container exists --name $BK_CONTAINER --account-name $BK_SA --account-key $ACCOUNT_KEY --query exists)
+          if [ "$exists" == "false" ]; then
+            echo "Creating Container: $BK_CONTAINER..."
+            az storage container create --name $BK_CONTAINER --account-name $BK_SA --account-key $ACCOUNT_KEY
+          else
+             echo "Container $BK_CONTAINER already exists."
+          fi
+
+          echo "--- 3. INITIALIZING TERRAFORM ---"
+          STATE_KEY="${{ inputs.client_name }}-${{ inputs.environment }}.terraform.tfstate"
+          
+          terraform init \
+            -backend-config="resource_group_name=$BK_RG" \
+            -backend-config="storage_account_name=$BK_SA" \
+            -backend-config="container_name=$BK_CONTAINER" \
+            -backend-config="key=$STATE_KEY"
 
       - name: "5. Terraform Plan"
         env:
@@ -103,7 +151,6 @@ jobs:
         run: |
           terraform apply -auto-approve tfplan
           
-          # --- CAPTURE OUTPUTS ---
           echo "vm_name=$(terraform output -raw vm_name)" >> $GITHUB_OUTPUT
           echo "vm_rg_name=$(terraform output -raw vm_rg_name)" >> $GITHUB_OUTPUT
           echo "ui_app_name=$(terraform output -raw ui_app_name)" >> $GITHUB_OUTPUT
