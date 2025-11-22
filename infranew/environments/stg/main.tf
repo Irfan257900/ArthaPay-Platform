@@ -119,7 +119,6 @@ resource "azurerm_windows_virtual_machine" "vm_sql" {
   network_interface_ids = [azurerm_network_interface.nic_sql.id]
   tags                = local.common_tags
   
-  # Enable Identity for Key Vault
   identity { type = "SystemAssigned" } 
 
   source_image_reference {
@@ -204,7 +203,7 @@ resource "azurerm_windows_virtual_machine" "vm_integ" {
   }
 }
 
-# --- APP PLANS (Premium P1v2) ---
+# --- APP PLANS ---
 resource "azurerm_service_plan" "linux_plan" {
   name                = local.plan_linux_name
   location            = azurerm_resource_group.rg_apps.location
@@ -231,9 +230,7 @@ resource "azurerm_linux_web_app" "ui_app" {
   service_plan_id     = azurerm_service_plan.linux_plan.id
   tags                = local.common_tags
   site_config {
-    application_stack {
-      node_version = "18-lts"
-    }
+    application_stack { node_version = "18-lts" }
     app_command_line = "pm2 serve /home/site/wwwroot --no-daemon --spa"
   }
 }
@@ -245,9 +242,7 @@ resource "azurerm_linux_web_app" "ui_admin" {
   service_plan_id     = azurerm_service_plan.linux_plan.id
   tags                = local.common_tags
   site_config {
-    application_stack {
-      node_version = "18-lts"
-    }
+    application_stack { node_version = "18-lts" }
     app_command_line = "pm2 serve /home/site/wwwroot --no-daemon --spa"
   }
 }
@@ -259,12 +254,8 @@ resource "azurerm_windows_web_app" "backend_apps" {
   resource_group_name = azurerm_resource_group.rg_apps.name
   service_plan_id     = azurerm_service_plan.windows_plan.id
   tags                = local.common_tags
-  
-  # FIX: Expanded multi-line block
   site_config {
-    application_stack {
-      dotnet_version = "v8.0"
-    }
+    application_stack { dotnet_version = "v8.0" }
   }
 }
 
@@ -277,13 +268,7 @@ resource "azurerm_windows_function_app" "func_market" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  
-  # FIX: Expanded multi-line block
-  site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
-  }
+  site_config { application_stack { dotnet_version = "v8.0" } }
 }
 
 resource "azurerm_windows_function_app" "func_subscriber" {
@@ -294,13 +279,7 @@ resource "azurerm_windows_function_app" "func_subscriber" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  
-  # FIX: Expanded multi-line block
-  site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
-  }
+  site_config { application_stack { dotnet_version = "v8.0" } }
 }
 
 resource "azurerm_windows_function_app" "func_publisher" {
@@ -311,13 +290,7 @@ resource "azurerm_windows_function_app" "func_publisher" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  
-  # FIX: Expanded multi-line block
-  site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
-  }
+  site_config { application_stack { dotnet_version = "v8.0" } }
 }
 
 # --- SERVICES ---
@@ -344,16 +317,17 @@ data "azurerm_servicebus_namespace" "sb_lookup" {
   depends_on          = [module.service_bus]
 }
 
+# --- FIX: Use 'enable_partitioning' (Older V3 Syntax) ---
 resource "azurerm_servicebus_queue" "q_processing" {
   name         = "processing-queue"
   namespace_id = data.azurerm_servicebus_namespace.sb_lookup.id
-  partitioning_enabled = true
+  enable_partitioning = true
 }
 
 resource "azurerm_servicebus_topic" "t_market" {
   name         = "market-data-events"
   namespace_id = data.azurerm_servicebus_namespace.sb_lookup.id
-  partitioning_enabled = true
+  enable_partitioning = true
 }
 
 resource "azurerm_servicebus_subscription" "sub_subscriber" {
@@ -377,7 +351,6 @@ resource "azurerm_role_assignment" "kv_admin_rbac" {
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
-# Grant SQL VM Access
 resource "azurerm_role_assignment" "vm_kv_access" {
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Secrets User"
