@@ -113,7 +113,8 @@ resource "azurerm_windows_virtual_machine" "vm_sql" {
   computer_name       = substr(local.sql_vm_name, 0, 15)
   resource_group_name = azurerm_resource_group.rg_vm.name
   location            = azurerm_resource_group.rg_vm.location
-  size                = "Standard_B2ms"
+  # FUTURE UPGRADE: Change to "Standard_B2ms" (2 vCPU) for better performance
+  size                = "Standard_B1ms"
   admin_username      = var.vm_admin_username
   admin_password      = var.vm_admin_password
   network_interface_ids = [azurerm_network_interface.nic_sql.id]
@@ -186,7 +187,8 @@ resource "azurerm_windows_virtual_machine" "vm_integ" {
   computer_name       = substr(local.integ_vm_name, 0, 15)
   resource_group_name = azurerm_resource_group.rg_vm.name
   location            = azurerm_resource_group.rg_vm.location
-  size                = "Standard_B2s"
+  # FUTURE UPGRADE: Change to "Standard_B2s" (2 vCPU) for better performance
+  size                = "Standard_B1ms"
   admin_username      = var.vm_admin_username
   admin_password      = var.vm_admin_password
   network_interface_ids = [azurerm_network_interface.nic_integ.id]
@@ -210,7 +212,8 @@ resource "azurerm_service_plan" "linux_plan" {
   location            = azurerm_resource_group.rg_apps.location
   resource_group_name = azurerm_resource_group.rg_apps.name
   os_type             = "Linux"
-  sku_name            = "P1v2"
+  # FUTURE UPGRADE: Change to "P1v2" (Premium) for Production features & Auto-scale
+  sku_name            = "B1"
   tags                = local.common_tags
 }
 
@@ -219,7 +222,8 @@ resource "azurerm_service_plan" "windows_plan" {
   location            = azurerm_resource_group.rg_apps.location
   resource_group_name = azurerm_resource_group.rg_apps.name
   os_type             = "Windows"
-  sku_name            = "P1v2"
+  # FUTURE UPGRADE: Change to "P1v2" (Premium) for Production features & Auto-scale
+  sku_name            = "B1"
   tags                = local.common_tags
 }
 
