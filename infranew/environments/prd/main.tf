@@ -1,6 +1,7 @@
 # --- PRODUCTION (PRD) CONFIGURATION ---
 # Location: Switzerland North
-# SKU: Premium V2 (P1v2)
+# SKU: Currently downgraded to Basic (B1/B1ms) for Free Trial Quota.
+# FUTURE: Upgrade to Premium (P1v2) and Standard_B2ms for Go-Live.
 
 locals {
   common_tags = {
@@ -13,7 +14,7 @@ locals {
   
   _name_prefix = "${var.client_name}-${var.environment_name}"
   
-  # Resource Groups
+  # Resource Groups (4 Separate Groups for PRD)
   network_rg_name          = "rg-${local._name_prefix}-network"
   app_rg_name              = "rg-${local._name_prefix}-app"
   vm_rg_name               = "rg-${local._name_prefix}-vm"
@@ -38,7 +39,7 @@ locals {
   func_subscriber_name     = "${local._name_prefix}-Subscriber"
   func_publisher_name      = "${local._name_prefix}-Publisher"
 
-  # PRD Specific Network Config (Matches your script)
+  # PRD Specific Network Config
   vnet_address_space       = ["10.10.0.0/16"]
   subnets = {
     "IntegrationvmSubnet"    = { address_prefixes = ["10.10.10.0/24"] }
@@ -112,17 +113,22 @@ resource "azurerm_windows_virtual_machine" "vm_sql" {
   computer_name       = substr(local.sql_vm_name, 0, 15)
   resource_group_name = azurerm_resource_group.rg_vm.name
   location            = azurerm_resource_group.rg_vm.location
-  size                = "Standard_B2ms"
+  
+  # FUTURE UPGRADE: Change to "Standard_B2ms" (2 vCPU) for better performance
+  size                = "Standard_B1ms" # Downgraded for Free Trial Quota (1 vCPU)
+  
   admin_username      = var.vm_admin_username
   admin_password      = var.vm_admin_password
   network_interface_ids = [azurerm_network_interface.nic_sql.id]
   tags                = local.common_tags
   
-  identity { type = "SystemAssigned" } # For Key Vault
+  # Identity for Key Vault Access
+  identity { type = "SystemAssigned" } 
 
   source_image_reference {
     publisher = "MicrosoftSQLServer"
     offer     = "sql2022-ws2022"
+    # CRITICAL: 'sqldev' means Developer Edition which is FREE
     sku       = "sqldev-gen2"
     version   = "latest"
   }
@@ -158,13 +164,16 @@ SETTINGS
   depends_on = [azurerm_mssql_virtual_machine.sqlvm]
 }
 
-# --- 4. PREMIUM APP SERVICE PLANS (P1v2) ---
+# --- 4. APP SERVICE PLANS ---
 resource "azurerm_service_plan" "linux_plan" {
   name                = local.plan_linux_name
   location            = azurerm_resource_group.rg_apps.location
   resource_group_name = azurerm_resource_group.rg_apps.name
   os_type             = "Linux"
-  sku_name            = "P1v2" # Premium for Prod
+  
+  # FUTURE UPGRADE: Change to "P1v2" (Premium) for Production features & Auto-scale
+  sku_name            = "B1" # Downgraded for Free Trial Quota
+  
   tags                = local.common_tags
 }
 
@@ -173,7 +182,10 @@ resource "azurerm_service_plan" "windows_plan" {
   location            = azurerm_resource_group.rg_apps.location
   resource_group_name = azurerm_resource_group.rg_apps.name
   os_type             = "Windows"
-  sku_name            = "P1v2" # Premium for Prod
+  
+  # FUTURE UPGRADE: Change to "P1v2" (Premium) for Production features & Auto-scale
+  sku_name            = "B1" # Downgraded for Free Trial Quota
+  
   tags                = local.common_tags
 }
 
@@ -185,7 +197,9 @@ resource "azurerm_linux_web_app" "ui_app" {
   service_plan_id     = azurerm_service_plan.linux_plan.id
   tags                = local.common_tags
   site_config {
-    application_stack { node_version = "18-lts" }
+    application_stack { 
+        node_version = "18-lts" 
+    }
     app_command_line = "pm2 serve /home/site/wwwroot --no-daemon --spa"
   }
 }
@@ -197,7 +211,9 @@ resource "azurerm_linux_web_app" "ui_admin" {
   service_plan_id     = azurerm_service_plan.linux_plan.id
   tags                = local.common_tags
   site_config {
-    application_stack { node_version = "18-lts" }
+    application_stack { 
+        node_version = "18-lts" 
+    }
     app_command_line = "pm2 serve /home/site/wwwroot --no-daemon --spa"
   }
 }
@@ -209,8 +225,12 @@ resource "azurerm_windows_web_app" "backend_apps" {
   resource_group_name = azurerm_resource_group.rg_apps.name
   service_plan_id     = azurerm_service_plan.windows_plan.id
   tags                = local.common_tags
+  
+  # Expanded multi-line block
   site_config {
-    application_stack { dotnet_version = "v8.0" }
+    application_stack { 
+        dotnet_version = "v8.0" 
+    }
   }
 }
 
@@ -223,7 +243,12 @@ resource "azurerm_windows_function_app" "func_market" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  site_config { application_stack { dotnet_version = "v8.0" } }
+  
+  site_config {
+    application_stack {
+        dotnet_version = "v8.0"
+    }
+  }
 }
 
 resource "azurerm_windows_function_app" "func_subscriber" {
@@ -234,7 +259,12 @@ resource "azurerm_windows_function_app" "func_subscriber" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  site_config { application_stack { dotnet_version = "v8.0" } }
+  
+  site_config {
+    application_stack {
+        dotnet_version = "v8.0"
+    }
+  }
 }
 
 resource "azurerm_windows_function_app" "func_publisher" {
@@ -245,7 +275,12 @@ resource "azurerm_windows_function_app" "func_publisher" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  site_config { application_stack { dotnet_version = "v8.0" } }
+  
+  site_config {
+    application_stack {
+        dotnet_version = "v8.0"
+    }
+  }
 }
 
 # --- SUPPORTING SERVICES ---
@@ -275,13 +310,15 @@ data "azurerm_servicebus_namespace" "sb_lookup" {
 resource "azurerm_servicebus_queue" "q_processing" {
   name         = "processing-queue"
   namespace_id = data.azurerm_servicebus_namespace.sb_lookup.id
-  partitioning_enabled = true
+  
+  # Using v3 syntax (enable_partitioning)
+  enable_partitioning = true
 }
 
 resource "azurerm_servicebus_topic" "t_market" {
   name         = "market-data-events"
   namespace_id = data.azurerm_servicebus_namespace.sb_lookup.id
-  partitioning_enabled = true
+  enable_partitioning = true
 }
 
 resource "azurerm_servicebus_subscription" "sub_subscriber" {
@@ -306,6 +343,7 @@ resource "azurerm_role_assignment" "kv_admin_rbac" {
   principal_id         = data.azurerm_client_config.current.object_id
 }
 
+# Grant SQL VM Access
 resource "azurerm_role_assignment" "vm_kv_access" {
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Secrets User"
