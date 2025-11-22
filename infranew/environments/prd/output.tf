@@ -1,45 +1,55 @@
 # --- Virtual Machine Outputs ---
 output "vm_name" {
-  description = "The name of the SQL Virtual Machine"
+  description = "Name of the SQL Database VM"
   value       = azurerm_windows_virtual_machine.vm_sql.name
 }
 
 output "vm_rg_name" {
-  description = "The resource group of the VM"
+  description = "Resource Group for VMs"
   value       = azurerm_resource_group.rg_vm.name
 }
 
-# --- Web App Outputs (Frontend) ---
+# --- Web App Outputs (MAPPED FOR WORKFLOW COMPATIBILITY) ---
+
+# The Workflow expects 'ui_app_name'. We map this to the "user" container app.
 output "ui_app_name" {
-  description = "Name of the Client UI Web App"
-  value       = azurerm_linux_web_app.ui_app.name
+  value = azurerm_linux_web_app.container_apps["user"].name
 }
 
+# The Workflow expects 'ui_admin_name'. We map this to the "admin" container app.
 output "ui_admin_name" {
-  description = "Name of the Admin UI Web App"
-  value       = azurerm_linux_web_app.ui_admin.name
+  value = azurerm_linux_web_app.container_apps["admin"].name
 }
 
 output "webapp_rg_name" {
-  description = "Resource Group where Web Apps are hosted"
+  description = "Resource Group for Web Apps"
   value       = azurerm_resource_group.rg_apps.name
 }
 
-# --- Backend Web Apps ---
-output "backend_app_names" {
-  description = "List of backend Web App names created"
-  value       = [for app in azurerm_windows_web_app.backend_apps : app.name]
+# --- ACR Outputs ---
+output "acr_login_server" {
+  value = azurerm_container_registry.acr.login_server
+}
+
+output "acr_admin_username" {
+  value = azurerm_container_registry.acr.admin_username
+  sensitive = true
+}
+
+output "acr_admin_password" {
+  value = azurerm_container_registry.acr.admin_password
+  sensitive = true
 }
 
 # --- Function App Outputs ---
-output "function_market_name" {
+output "func_market_name" {
   value = azurerm_windows_function_app.func_market.name
 }
 
-output "function_subscriber_name" {
+output "func_subscriber_name" {
   value = azurerm_windows_function_app.func_subscriber.name
 }
 
-output "function_publisher_name" {
+output "func_publisher_name" {
   value = azurerm_windows_function_app.func_publisher.name
 }

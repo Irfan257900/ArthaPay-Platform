@@ -1,5 +1,5 @@
 # --- Virtual Machine Outputs ---
-output "vm_sql_name" {
+output "vm_name" {
   description = "Name of the SQL Database VM"
   value       = azurerm_windows_virtual_machine.vm_sql.name
 }
@@ -14,34 +14,36 @@ output "vm_rg_name" {
   value       = azurerm_resource_group.rg_vm.name
 }
 
-# --- ACR Outputs (CRITICAL for Docker) ---
-output "acr_login_server" {
-  description = "ACR Login URL"
-  value       = azurerm_container_registry.acr.login_server
+# --- Web App Outputs (MAPPED FOR WORKFLOW COMPATIBILITY) ---
+
+# The Workflow expects 'ui_app_name'. We map this to the "user" container app.
+output "ui_app_name" {
+  value = azurerm_linux_web_app.container_apps["user"].name
 }
 
-output "acr_admin_username" {
-  description = "ACR Admin Username"
-  value       = azurerm_container_registry.acr.admin_username
-  sensitive   = true
-}
-
-output "acr_admin_password" {
-  description = "ACR Admin Password"
-  value       = azurerm_container_registry.acr.admin_password
-  sensitive   = true
-}
-
-# --- Container Web Apps (The 9 Linux Apps) ---
-# Returns a list of all app names created (admin-app, api-app, etc.)
-output "container_app_names" {
-  description = "List of all Container Web App names"
-  value       = [for app in azurerm_linux_web_app.container_apps : app.name]
+# The Workflow expects 'ui_admin_name'. We map this to the "admin" container app.
+output "ui_admin_name" {
+  value = azurerm_linux_web_app.container_apps["admin"].name
 }
 
 output "webapp_rg_name" {
   description = "Resource Group for Web Apps"
   value       = azurerm_resource_group.rg_apps.name
+}
+
+# --- ACR Outputs ---
+output "acr_login_server" {
+  value = azurerm_container_registry.acr.login_server
+}
+
+output "acr_admin_username" {
+  value = azurerm_container_registry.acr.admin_username
+  sensitive = true
+}
+
+output "acr_admin_password" {
+  value = azurerm_container_registry.acr.admin_password
+  sensitive = true
 }
 
 # --- Function App Outputs ---
