@@ -21,7 +21,7 @@ on:
       # --- 2. Module Selection ---
       # Used by Terraform to determine which Backend Web Apps to create
       backend_modules_to_deploy:
-        description: "Modules to deploy (e.g., 'all', 'core', 'core,banks')"
+        description: "Modules to deploy (e.g., 'all','coreapi','cardsapi','banksapi','paymentsapi','paylinks','signalR','api','exchangeapi','integration')"
         type: string
         default: "all"
         
