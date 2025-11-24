@@ -39,10 +39,20 @@ variable "twilio_sid" {
   sensitive = true
 }
 
-# Kept for compatibility, though STG uses a hardcoded local list for containers
 variable "backend_modules" {
+  description = "List of backend modules to create Web Apps for"
   type        = list(string)
-  default     = []
+  default     = [
+    "coreapi", 
+    "cardsapi", 
+    "banksapi", 
+    "paymentsapi", 
+    "paylinks", 
+    "signalR", 
+    "api", 
+    "exchangeapi", 
+    "integration"
+  ]
 }
 
 variable "dotnet_version" {

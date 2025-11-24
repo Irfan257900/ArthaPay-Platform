@@ -5,13 +5,16 @@ on:
     inputs:
       client_name: { type: string, required: true }
       environment: { type: string, required: true }
-      # Removed: client_domain_extension
+      # Note: client_domain_extension input is REMOVED. Hardcoded to 'work' below.
       
       ui_app_name: { type: string, required: true }
       ui_admin_name: { type: string, required: true }
       webapp_rg_name: { type: string, required: true }
+      
       auth0_domain: { type: string, required: true }
       auth0_client_id: { type: string, required: true }
+      # Note: backend_modules is not needed here, we configure all URLs assuming they exist.
+      
     secrets:
       AZURE_CREDENTIALS: { required: true }
 
@@ -30,11 +33,13 @@ jobs:
           CLIENT=$(echo "${{ inputs.client_name }}" | tr '[:upper:]' '[:lower:]')
           ENV=$(echo "${{ inputs.environment }}" | tr '[:upper:]' '[:lower:]')
           
-          # --- FIX: Hardcoded extension since input was removed ---
+          # --- HARDCODED EXTENSION ---
           EXT="work" 
           
           BASE_DOMAIN="${CLIENT}.${EXT}"
           
+          # These URL patterns imply you have set up Custom DNS (CNAMEs) mapping 
+          # e.g. arthastgcore.artha.work -> artha-stg-coreapi.azurewebsites.net
           APP_URL="https://${CLIENT}${ENV}payments.${BASE_DOMAIN}"
           ADMIN_URL="https://${CLIENT}${ENV}admin.${BASE_DOMAIN}"
           CORE_API_URL="https://${CLIENT}${ENV}core.${BASE_DOMAIN}"
@@ -46,6 +51,7 @@ jobs:
           SIGNALR_URL="https://${CLIENT}${ENV}signalr.${BASE_DOMAIN}"
           
           AUTH0_DOMAIN="${{ inputs.auth0_domain }}"
+          # Extract "tenant" from "tenant.us.auth0.com"
           AUDIENCE="https://$(echo $AUTH0_DOMAIN | cut -d'.' -f1)Api.net"
 
           echo "CLIENT=$CLIENT" >> $GITHUB_OUTPUT

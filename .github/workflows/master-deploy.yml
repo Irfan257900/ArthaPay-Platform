@@ -55,6 +55,9 @@ jobs:
     with:
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
+      # --- NEW: Pass the module selection to the infra workflow ---
+      backend_modules: ${{ github.event.inputs.backend_modules_to_deploy }}
+      
       # Auto-generate admin user for SQL VM
       vm_admin_username: "${{ github.event.inputs.client_name }}${{ github.event.inputs.environment }}admin"
       auth0_domain: ${{ github.event.inputs.auth0_domain }}

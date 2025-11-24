@@ -49,20 +49,23 @@ locals {
     "PrivateEndpoints"    = { address_prefixes = ["10.10.3.0/24"] }
   }
 
-  # --- CONTAINER APPS LIST (9 Apps) ---
-  # These suffixes are appended to the dynamic prefix (e.g., ArthaStg-admin)
+# --- CONTAINER APPS LIST ---
+  # Keys match the input list. Values are the URL suffix.
   stg_container_services = {
-    "admin"       = "admin-app"
-    "api"         = "api-app"
-    "signalR"     = "signal-app"
     "coreapi"     = "coreapi-app"
     "cardsapi"    = "cardsapi-app"
     "banksapi"    = "banksapi-app"
     "paymentsapi" = "paymentsapi-app"
     "paylinks"    = "paylinks-app"
-    "user"        = "user-app" # This represents the main app (Rapidzstg)
+    "signalR"     = "signal-app"
+    "api"         = "api-app"
+    "exchangeapi" = "exchange-app"
+    "integration" = "integ-app"
+    
+    # Keep these if needed, or remove if handled separately via output mapping
+    "admin"       = "admin-app"
+    "user"        = "user-app"
   }
-}
 
 data "azurerm_client_config" "current" {}
 
@@ -248,13 +251,16 @@ resource "azurerm_service_plan" "linux_plan" {
   tags                = local.common_tags
 }
 
-# --- DYNAMIC CONTAINER APPS (9 Specific Apps) ---
-# This creates ALL apps (admin, api, signalR, etc.) as Linux Containers
+# --- DYNAMIC CONTAINER APPS (Specific Apps) ---
 resource "azurerm_linux_web_app" "container_apps" {
-  for_each            = local.stg_container_services
+  # FILTER LOGIC: Only create apps that are in the 'backend_modules' input list
+  # PLUS always include 'admin' and 'user' as they are frontend/critical
+  for_each = { 
+    for key, val in local.stg_container_services : key => val 
+    if contains(var.backend_modules, key) || key == "admin" || key == "user"
+  }
   
-  # Logic: If key is 'user', name is just 'ArthaStg'. Else 'ArthaStg-admin'
-  name                = each.key == "user" ? local._container_prefix : "${local._container_prefix}-${each.key}"
+  name = each.key == "user" ? local._container_prefix : "${local._container_prefix}-${each.key}"
   
   location            = azurerm_resource_group.rg_apps.location
   resource_group_name = azurerm_resource_group.rg_apps.name

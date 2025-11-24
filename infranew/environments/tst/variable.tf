@@ -39,11 +39,22 @@ variable "twilio_sid" {
   sensitive = true
 }
 
-# --- CHANGED: This now defines which Backend WEB APPS to create ---
 variable "backend_modules" {
-  description = "List of backend modules (e.g. core, cards) to create Web Apps for"
+  description = "List of backend modules to create Web Apps for"
   type        = list(string)
-  default     = ["core", "cards", "banks", "payments", "exchange", "wallets", "payees"]
+  
+  # UPDATED: Matches the standard list used in STG/PRD and Workflow Input
+  default     = [
+    "coreapi", 
+    "cardsapi", 
+    "banksapi", 
+    "paymentsapi", 
+    "paylinks", 
+    "signalR", 
+    "api", 
+    "exchangeapi", 
+    "integration"
+  ]
 }
 
 variable "dotnet_version" {

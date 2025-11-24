@@ -49,16 +49,20 @@ locals {
     "sqlVmSubnet"            = { address_prefixes = ["10.10.12.0/24"] }
   }
 
-  # --- CONTAINER APPS LIST (8 Apps for PRD) ---
+  # --- CONTAINER APPS LIST ---
   prd_container_services = {
-    "admin"       = "admin-app"
-    "signalR"     = "signal-app"
     "coreapi"     = "coreapi-app"
     "cardsapi"    = "cardsapi-app"
     "banksapi"    = "banksapi-app"
     "paymentsapi" = "paymentsapi-app"
     "paylinks"    = "paylinks-app"
-    "user"        = "user-app" # Main App
+    "signalR"     = "signal-app"
+    # "api" - typically omitted in PRD, but if you want it, add it here.
+    "exchangeapi" = "exchange-app"
+    "integration" = "integ-app"
+    
+    "admin"       = "admin-app"
+    "user"        = "user-app"
   }
 }
 
@@ -204,10 +208,13 @@ resource "azurerm_service_plan" "windows_plan" {
 
 # --- DYNAMIC CONTAINER APPS (8 Apps) ---
 resource "azurerm_linux_web_app" "container_apps" {
-  for_each            = local.prd_container_services
+  # FILTER LOGIC
+  for_each = { 
+    for key, val in local.prd_container_services : key => val 
+    if contains(var.backend_modules, key) || key == "admin" || key == "user"
+  }
   
-  # Name Logic: ArthaPrd (User) or ArthaPrd-admin (Others)
-  name                = each.key == "user" ? local._container_prefix : "${local._container_prefix}-${each.key}"
+  name = each.key == "user" ? local._container_prefix : "${local._container_prefix}-${each.key}"
   
   location            = azurerm_resource_group.rg_apps.location
   resource_group_name = azurerm_resource_group.rg_apps.name

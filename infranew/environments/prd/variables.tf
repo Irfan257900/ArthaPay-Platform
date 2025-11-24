@@ -48,11 +48,20 @@ variable "twilio_sid" {
   sensitive   = true
 }
 
-# --- Backend Modules List ---
 variable "backend_modules" {
   description = "List of backend modules to create Web Apps for"
   type        = list(string)
-  default     = ["core", "cards", "banks", "payments", "exchange", "wallets", "payees"]
+  default     = [
+    "coreapi", 
+    "cardsapi", 
+    "banksapi", 
+    "paymentsapi", 
+    "paylinks", 
+    "signalR", 
+    "api", 
+    "exchangeapi", 
+    "integration"
+  ]
 }
 
 variable "dotnet_version" {

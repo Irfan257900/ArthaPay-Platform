@@ -9,6 +9,9 @@ on:
       auth0_domain: { type: string, required: true }
       mailgun_key: { type: string, required: true }
       twilio_sid: { type: string, required: true }
+      
+      # Module selection input
+      backend_modules: { type: string, required: false, default: "all" }
     
     outputs:
       vm_rg_name:
@@ -57,7 +60,28 @@ jobs:
       - name: "3. Setup Terraform"
         uses: hashicorp/setup-terraform@v3
 
-      # --- AUTOMATED BACKEND CREATION ---
+      # --- NEW STEP: PROCESS MODULE SELECTION ---
+      - name: "3b. Process Module Selection"
+        id: modules
+        shell: bash
+        run: |
+          INPUT="${{ inputs.backend_modules }}"
+          echo "User selected: $INPUT"
+          
+          if [[ "$INPUT" == "all" || -z "$INPUT" ]]; then
+             echo "Selection is 'all'. Leaving TF_VAR unset to use variables.tf defaults."
+          else
+             # Convert comma-separated string (core,cards) to JSON list (["core","cards"])
+             # 1. Replace , with ","
+             # 2. Wrap entire string in ["..."]
+             JSON_LIST="[\"$(echo "$INPUT" | sed 's/,/","/g')\"]"
+             
+             echo "Formatted for Terraform: $JSON_LIST"
+             # Export to GITHUB_ENV so Terraform picks it up automatically as TF_VAR_backend_modules
+             echo "TF_VAR_backend_modules=$JSON_LIST" >> $GITHUB_ENV
+          fi
+
+      # --- AUTOMATED BACKEND CREATION (Existing Logic) ---
       - name: "4. Bootstrap & Init Terraform"
         shell: bash
         run: |
@@ -94,7 +118,6 @@ jobs:
           fi
 
           # Check/Create Storage Account
-          # We use --query to check if it exists. If command fails or returns empty, we create it.
           SA_CHECK=$(az storage account list --resource-group $BK_RG --query "[?name=='$BK_SA']" -o tsv)
           
           if [ -z "$SA_CHECK" ]; then
@@ -104,7 +127,7 @@ jobs:
             echo "Storage Account $BK_SA already exists."
           fi
 
-          # Get Storage Account Key (Required to create container)
+          # Get Storage Account Key
           ACCOUNT_KEY=$(az storage account keys list --resource-group $BK_RG --account-name $BK_SA --query '[0].value' -o tsv)
 
           # Create Container if missing
