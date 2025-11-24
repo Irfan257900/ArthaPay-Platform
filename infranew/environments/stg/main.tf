@@ -66,7 +66,7 @@ locals {
     "admin"       = "admin-app"
     "user"        = "user-app"
   }
-
+}
 data "azurerm_client_config" "current" {}
 
 # --- RESOURCE GROUPS ---
