@@ -45,6 +45,23 @@ locals {
     "vm-subnet" = { address_prefixes = ["10.0.1.0/24"] }
     "pep-subnet" = { address_prefixes = ["10.0.2.0/24"] }
   }
+  # --- SQL DATA DISKS CONFIGURATION ---
+  sql_data_disks = {
+    "disk1" = {
+      name                 = "sql-data"
+      disk_size_gb         = 32
+      lun                  = 0
+      caching              = "ReadWrite" 
+      storage_account_type = "Standard_LRS"
+    },
+    "disk2" = {
+      name                 = "sql-logs"
+      disk_size_gb         = 32
+      lun                  = 1
+      caching              = "ReadWrite" 
+      storage_account_type = "Standard_LRS"
+    }
+  }
 }
 
 data "azurerm_client_config" "current" {}
@@ -125,6 +142,32 @@ resource "azurerm_windows_virtual_machine" "vm" {
     caching              = "ReadWrite"
     storage_account_type = "StandardSSD_LRS"
   }
+}
+# --- MANAGED DISKS (Data & Logs) ---
+resource "azurerm_managed_disk" "sql_disks" {
+  for_each             = local.sql_data_disks
+  name                 = "${local.vm_name}-${each.value.name}"
+  
+  # Note: TST uses 'rg_infra', STG/PRD use 'rg_vm'
+  location             = azurerm_resource_group.rg_infra.location 
+  resource_group_name  = azurerm_resource_group.rg_infra.name     
+  
+  storage_account_type = each.value.storage_account_type
+  create_option        = "Empty"
+  disk_size_gb         = each.value.disk_size_gb
+  tags                 = local.common_tags
+}
+
+# --- ATTACH DISKS TO VM ---
+resource "azurerm_virtual_machine_data_disk_attachment" "sql_disk_attach" {
+  for_each           = local.sql_data_disks
+  managed_disk_id    = azurerm_managed_disk.sql_disks[each.key].id
+  
+  # Note: TST resource name is 'vm'
+  virtual_machine_id = azurerm_windows_virtual_machine.vm.id 
+  
+  lun                = each.value.lun
+  caching            = each.value.caching
 }
 
 # --- SQL IaaS Agent ---
