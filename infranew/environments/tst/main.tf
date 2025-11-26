@@ -295,7 +295,20 @@ resource "azurerm_windows_web_app" "backend_apps" {
   resource_group_name = azurerm_resource_group.rg_apps.name
   service_plan_id     = azurerm_service_plan.windows_plan.id
   tags                = local.common_tags
-  
+  # --- 1. ENABLE IDENTITY (Required for Key Vault Access) ---
+  identity { 
+    type = "SystemAssigned" 
+  }
+
+  # --- 2. INJECT SECRETS AS ENV VARS ---
+  app_settings = {
+    "AUTH0_DOMAIN"     = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.auth0_domain.id})"
+    "MAILGUN_API_KEY"  = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.mailgun_key.id})"
+    "TWILIO_SID"       = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.twilio_sid.id})"
+    "SQL_APP_PASSWORD" = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.sql_password.id})"
+  }
+
+
   # Expanded to multi-line to avoid syntax errors
   site_config {
     application_stack {
@@ -447,4 +460,12 @@ resource "azurerm_key_vault_secret" "sql_password" {
   value        = var.app_sql_password
   key_vault_id = module.key_vault.id
   depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+# --- GRANT WEB APPS ACCESS TO KEY VAULT ---
+resource "azurerm_role_assignment" "webapp_kv_access" {
+  for_each             = azurerm_windows_web_app.backend_apps
+  scope                = module.key_vault.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = each.value.identity[0].principal_id
 }
