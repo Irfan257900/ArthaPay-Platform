@@ -302,10 +302,10 @@ resource "azurerm_windows_web_app" "backend_apps" {
 
   # --- 2. INJECT SECRETS AS ENV VARS ---
   app_settings = {
-    "AUTH0_DOMAIN"     = "${azurerm_key_vault_secret.auth0_domain.id}"
-    "MAILGUN_API_KEY"  = "${azurerm_key_vault_secret.mailgun_key.id}"
-    "TWILIO_SID"       = "${azurerm_key_vault_secret.twilio_sid.id}"
-    "SQL_APP_PASSWORD" = "${azurerm_key_vault_secret.sql_password.id}"
+    "AUTH0_DOMAIN"     = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.auth0_domain.id})"
+    "MAILGUN_API_KEY"  = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.mailgun_key.id})"
+    "TWILIO_SID"       = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.twilio_sid.id})"
+    "SQL_APP_PASSWORD" = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.sql_password.id})"
   }
 
 
