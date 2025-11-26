@@ -232,11 +232,18 @@ resource "azurerm_linux_web_app" "container_apps" {
     }
   }
   
+  identity { type = "SystemAssigned" }
   app_settings = {
     "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
     "DOCKER_REGISTRY_SERVER_URL"          = "https://${azurerm_container_registry.acr.login_server}"
     "DOCKER_REGISTRY_SERVER_USERNAME"     = azurerm_container_registry.acr.admin_username
     "DOCKER_REGISTRY_SERVER_PASSWORD"     = azurerm_container_registry.acr.admin_password
+
+    # --- NEW SECRETS ---
+    "AUTH0_DOMAIN"     = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.auth0_domain.id})"
+    "MAILGUN_API_KEY"  = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.mailgun_key.id})"
+    "TWILIO_SID"       = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.twilio_sid.id})"
+    "SQL_APP_PASSWORD" = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.sql_password.id})"
   }
 }
 
@@ -379,4 +386,11 @@ resource "azurerm_key_vault_secret" "sql_password" {
   value        = var.app_sql_password
   key_vault_id = module.key_vault.id
   depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+resource "azurerm_role_assignment" "container_app_kv_access" {
+  for_each             = azurerm_linux_web_app.container_apps
+  scope                = module.key_vault.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = each.value.identity[0].principal_id
 }
