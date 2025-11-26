@@ -462,15 +462,10 @@ resource "azurerm_key_vault_secret" "sql_password" {
   depends_on   = [azurerm_role_assignment.kv_admin_rbac]
 }
 
-# --- GRANT WEB APPS ACCESS (Access Policy Method) ---
-resource "azurerm_key_vault_access_policy" "webapp_kv_access" {
-  for_each     = azurerm_windows_web_app.backend_apps
-  key_vault_id = module.key_vault.id
-  tenant_id    = data.azurerm_client_config.current.tenant_id
-  object_id    = each.value.identity[0].principal_id
-
-  secret_permissions = [
-    "Get",
-    "List"
-  ]
+# --- GRANT ACCESS (RBAC METHOD) ---
+resource "azurerm_role_assignment" "webapp_kv_access" {
+  for_each             = azurerm_windows_web_app.backend_apps
+  scope                = module.key_vault.id
+  role_definition_name = "Key Vault Secrets User" # This is the specific role needed
+  principal_id         = each.value.identity[0].principal_id
 }
