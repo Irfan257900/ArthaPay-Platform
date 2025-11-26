@@ -302,10 +302,10 @@ resource "azurerm_windows_web_app" "backend_apps" {
 
   # --- 2. INJECT SECRETS AS ENV VARS ---
   app_settings = {
-    "AUTH0_DOMAIN"     = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.auth0_domain.id})"
-    "MAILGUN_API_KEY"  = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.mailgun_key.id})"
-    "TWILIO_SID"       = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.twilio_sid.id})"
-    "SQL_APP_PASSWORD" = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.sql_password.id})"
+    "AUTH0_DOMAIN"     = "${azurerm_key_vault_secret.auth0_domain.id}"
+    "MAILGUN_API_KEY"  = "${azurerm_key_vault_secret.mailgun_key.id}"
+    "TWILIO_SID"       = "${azurerm_key_vault_secret.twilio_sid.id}"
+    "SQL_APP_PASSWORD" = "${azurerm_key_vault_secret.sql_password.id}"
   }
 
 
@@ -462,10 +462,15 @@ resource "azurerm_key_vault_secret" "sql_password" {
   depends_on   = [azurerm_role_assignment.kv_admin_rbac]
 }
 
-# --- GRANT WEB APPS ACCESS TO KEY VAULT ---
-resource "azurerm_role_assignment" "webapp_kv_access" {
-  for_each             = azurerm_windows_web_app.backend_apps
-  scope                = module.key_vault.id
-  role_definition_name = "Key Vault Secrets User"
-  principal_id         = each.value.identity[0].principal_id
+# --- GRANT WEB APPS ACCESS (Access Policy Method) ---
+resource "azurerm_key_vault_access_policy" "webapp_kv_access" {
+  for_each     = azurerm_windows_web_app.backend_apps
+  key_vault_id = module.key_vault.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = each.value.identity[0].principal_id
+
+  secret_permissions = [
+    "Get",
+    "List"
+  ]
 }
