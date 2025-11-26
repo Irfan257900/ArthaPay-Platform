@@ -384,6 +384,7 @@ resource "azurerm_servicebus_queue" "q_processing" {
   
   # Use v3 syntax (Critical for your current provider version)
   enable_partitioning = true
+  requires_session    = true
 }
 
 resource "azurerm_servicebus_topic" "t_market" {
@@ -396,6 +397,7 @@ resource "azurerm_servicebus_subscription" "sub_subscriber" {
   name               = "subscriber-service"
   topic_id           = azurerm_servicebus_topic.t_market.id
   max_delivery_count = 10
+  requires_session   = true
 }
 
 module "key_vault" {
