@@ -25,19 +25,24 @@ variable "app_sql_password" {
   sensitive = true
 }
 
-variable "auth0_domain" {
-  type = string
-}
+variable "auth0_client_id" { type = string }
+variable "auth0_client_secret" { type = string }
+variable "twilio_account_sid" { type = string }
+variable "twilio_auth_token" { type = string }
+variable "twilio_service_id" { type = string }
+variable "sumsub_app_token" { type = string }
+variable "sumsub_secret_key" { type = string }
+variable "powerbi_password" { type = string }
+variable "app_secret_key" { type = string }
+variable "token_encrypt_key" { type = string }
+variable "redis_connection_string" { type = string }
+variable "vault_db_connection_string" { type = string }
+variable "general_api_key" { type = string }
+variable "general_api_secret_key" { type = string }
+variable "client_secret_value" { type = string }
+variable "easylink_app_key" { type = string }
+variable "easylink_app_secret" { type = string }
 
-variable "mailgun_key" {
-  type      = string
-  sensitive = true
-}
-
-variable "twilio_sid" {
-  type      = string
-  sensitive = true
-}
 
 variable "backend_modules" {
   description = "List of backend modules to create Web Apps for"

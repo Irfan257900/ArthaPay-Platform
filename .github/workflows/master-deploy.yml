@@ -25,25 +25,7 @@ on:
         type: string
         default: "all"
         
-      # --- 3. Third-Party Config ---
-      auth0_domain:
-        description: "Auth0 Domain"
-        type: string
-        required: true
-      auth0_client_id:
-        description: "Auth0 Client ID"
-        type: string
-        required: true
-      mailgun_key:
-        description: "Mailgun API Key"
-        type: string
-        required: true
-      twilio_sid:
-        description: "Twilio Account SID"
-        type: string
-        required: true
       
-      # --- TOTAL: 7 INPUTS ---
 
 jobs:
   # ===================================================================
@@ -55,21 +37,37 @@ jobs:
     with:
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
-      # --- NEW: Pass the module selection to the infra workflow ---
       backend_modules: ${{ github.event.inputs.backend_modules_to_deploy }}
-      
-      # Auto-generate admin user for SQL VM
+      # We construct the admin username automatically
       vm_admin_username: "${{ github.event.inputs.client_name }}${{ github.event.inputs.environment }}admin"
-      auth0_domain: ${{ github.event.inputs.auth0_domain }}
-      mailgun_key: ${{ github.event.inputs.mailgun_key }}
-      twilio_sid: ${{ github.event.inputs.twilio_sid }}
+    
+    # PASS ALL SECRETS HERE
     secrets:
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
       VM_ADMIN_PASSWORD: ${{ secrets.VM_ADMIN_PASSWORD }}
       APP_SQL_PASSWORD: ${{ secrets.APP_SQL_PASSWORD }}
+      
+      # --- NEW SECRETS ---
+      AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
+      AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
+      TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+      TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+      TWILIO_SERVICE_ID: ${{ secrets.TWILIO_SERVICE_ID }}
+      SUMSUB_APP_TOKEN: ${{ secrets.SUMSUB_APP_TOKEN }}
+      SUMSUB_SECRET_KEY: ${{ secrets.SUMSUB_SECRET_KEY }}
+      POWERBI_PASSWORD: ${{ secrets.POWERBI_PASSWORD }}
+      APP_SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
+      TOKEN_ENCRYPT_KEY: ${{ secrets.TOKEN_ENCRYPT_KEY }}
+      REDIS_CONNECTION: ${{ secrets.REDIS_CONNECTION }}
+      VAULT_DB_CONNECTION: ${{ secrets.VAULT_DB_CONNECTION }}
+      GENERAL_API_KEY: ${{ secrets.GENERAL_API_KEY }}
+      GENERAL_API_SECRET: ${{ secrets.GENERAL_API_SECRET }}
+      CLIENT_SECRET_VALUE: ${{ secrets.CLIENT_SECRET_VALUE }}
+      EASYLINK_APP_KEY: ${{ secrets.EASYLINK_APP_KEY }}
+      EASYLINK_APP_SECRET: ${{ secrets.EASYLINK_APP_SECRET }}
 
   # ===================================================================
-  # JOB 2: CONFIGURE UI (Env Vars Only - No Build)
+  # JOB 2: CONFIGURE UI
   # ===================================================================
   configure-ui:
     name: "Job 2: Configure UI Apps"
@@ -78,23 +76,13 @@ jobs:
     with:
       client_name: ${{ github.event.inputs.client_name }}
       environment: ${{ github.event.inputs.environment }}
-      # Extension is now hardcoded to "work" inside the called workflow
-      
-      # --- Map Outputs from Job 1 to Inputs of Job 2 ---
       ui_app_name: ${{ needs.deploy-infra.outputs.ui_app_name }}
       ui_admin_name: ${{ needs.deploy-infra.outputs.ui_admin_name }}
       webapp_rg_name: ${{ needs.deploy-infra.outputs.webapp_rg_name }}
       
-      auth0_domain: ${{ github.event.inputs.auth0_domain }}
-      auth0_client_id: ${{ github.event.inputs.auth0_client_id }}
+      # We now fetch Auth0 details from Secrets inside the callable workflow, 
+      # or you can pass them as secrets here too if the UI workflow needs them.
+      auth0_domain: "rapidz-stg.us.auth0.com" # If static, or fetch from secret
+      auth0_client_id: ${{ secrets.AUTH0_CLIENT_ID }} # Passed as input or secret
     secrets:
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-
-  # ===================================================================
-  # JOB 3: DEPLOY BACKEND (Future Step)
-  # ===================================================================
-  # deploy-backend:
-  #   name: "Job 3: Deploy .NET Backend"
-  #   needs: deploy-infra
-  #   uses: ./.github/workflows/callable-deploy-backend.yml
-  #   ...

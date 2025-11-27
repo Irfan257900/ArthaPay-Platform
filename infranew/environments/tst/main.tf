@@ -302,10 +302,79 @@ resource "azurerm_windows_web_app" "backend_apps" {
 
   # --- 2. INJECT SECRETS AS ENV VARS ---
   app_settings = {
-    "AUTH0_DOMAIN"     = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.auth0_domain.id})"
-    "MAILGUN_API_KEY"  = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.mailgun_key.id})"
-    "TWILIO_SID"       = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.twilio_sid.id})"
-    "SQL_APP_PASSWORD" = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.sql_password.id})"
+    # --- A. KEY VAULT SECRETS (Dynamic & Secure) ---
+    "AccountSid"                      = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.twilio_sid.id})"
+    "AuthToken"                       = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.twilio_auth.id})"
+    "ServiceId"                       = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.twilio_service.id})"
+    
+    "SUMSUB_APP_TOKEN"                = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.sumsub_token.id})"
+    "SUMSUB_SECRET_KEY"               = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.sumsub_key.id})"
+    
+    "TokenEncryptkey"                 = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.token_key.id})"
+    "SecretKey__Url"                  = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.app_secret.id})"
+    "powerbi__pbiPassword"            = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.powerbi_pass.id})"
+    
+    # Storage & DB (Fetched from Key Vault)
+    "StorageAccount__AccountKey"      = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.storage_key.id})"
+    "ConnectionStrings__DefaultConnection" = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.db_conn.id})"
+    "ConnectionString"                     = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.db_conn.id})"
+    "Redis__ConnectionString" = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.redis_conn.id})"
+    "Vault__Url"              = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.vault_db_conn.id})"
+    
+    "ApiKey"                  = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.general_api_key.id})"
+    "APISecretKey"            = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.general_api_secret.id})"
+    
+    "ClientSecret"            = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.client_secret_val.id})"
+    "Vault__ClientSecret"     = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.client_secret_val.id})"
+    "SecretKey__ClientSecret" = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.client_secret_val.id})"
+    
+    "EasyLink_AppKey"         = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.easylink_key.id})"
+    "EasyLink_AppSecret"      = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.easylink_secret.id})"
+    
+    # Static/Input values from sample
+    "Redis__IsEnable"         = "true"
+    "EasyLink_AppId"          = "ERShFBl3EdW5HFB" # Seems static/non-secret
+    "EasyLink_BaseUrl"        = "http://sandbox.easylink.id:900"
+
+    # --- B. SERVICE BUS (Actual Values from Infrastructure) ---
+    # We use the Namespace Connection String for all "Publisher" variables
+    
+    "aMLRiskScoreExchangaPay__ServiceBusPublisher"     = module.service_bus.default_primary_connection_string
+    "auditlogs__ServiceBusPublisher"                   = module.service_bus.default_primary_connection_string
+    "cardsactionqueue__ServiceBusPublisher"            = module.service_bus.default_primary_connection_string
+    "depositandwithdrawqueue__ServiceBusPublisher"     = module.service_bus.default_primary_connection_string
+    "EmailNotifications__ServiceBusPublisher"          = module.service_bus.default_primary_connection_string
+    "fillgasfee__ServiceBusPublisher"                  = module.service_bus.default_primary_connection_string
+    "KycVerification__ServiceBusPublisher"             = module.service_bus.default_primary_connection_string
+    "LoyaltyAzureQueue__ServiceBusConnectionString"    = module.service_bus.default_primary_connection_string
+    "merchantwalletsVerification__ServiceBusPublisher" = module.service_bus.default_primary_connection_string
+    "mestaAzureQueue__ServiceBusPublisher"             = module.service_bus.default_primary_connection_string
+    "MestaSenderCreation__ServiceBusPublisher"         = module.service_bus.default_primary_connection_string
+    "mobilenotifications__ServiceBusPublisher"         = module.service_bus.default_primary_connection_string
+
+    # --- C. TOPIC & QUEUE NAMES (Actual Names from Resources) ---
+    # Topics
+    "aMLRiskScoreExchangaPay__ServiceBusTopic"     = azurerm_servicebus_topic.t_aml.name
+    "auditlogs__ServiceBusTopic"                   = azurerm_servicebus_topic.t_audit.name
+    "EmailNotifications__ServiceBusTopic"          = azurerm_servicebus_topic.t_email.name
+    "fillgasfee__ServiceBusTopic"                  = azurerm_servicebus_topic.t_gas.name
+    "KycVerification__ServiceBusTopic"             = azurerm_servicebus_topic.t_kyc.name
+    "merchantwalletsVerification__ServiceBusTopic" = azurerm_servicebus_topic.t_merchant.name
+    "MestaSenderCreation__ServiceBusTopic"         = azurerm_servicebus_topic.t_mesta.name
+    "mobilenotifications__ServiceBusTopic"         = azurerm_servicebus_topic.t_mobile.name
+
+    # Queues
+    "cardsactionqueue__ServiceBusQueue"        = azurerm_servicebus_queue.q_cards.name
+    "depositandwithdrawqueue__ServiceBusQueue" = azurerm_servicebus_queue.q_deposit.name
+    "LoyaltyAzureQueue__LoyaltyQueueName"      = azurerm_servicebus_queue.q_loyalty.name
+    "mestaAzureQueue__ServiceBusQueue"         = azurerm_servicebus_queue.q_order.name
+
+    # --- D. OTHER DYNAMIC VALUES ---
+    "StorageAccount__AccountName"   = module.storage_account.name
+    "StorageAccount__ContainerName" = "rapidz${lower(var.environment_name)}" # e.g. rapidztst
+    "Aut0_audience"                 = "https://${var.client_name}${var.environment_name}.net/"
+    "Authority"                     = "https://${var.auth0_domain}/"
+    "Env"                           = upper(var.environment_name)
   }
 
 
@@ -384,35 +453,174 @@ module "service_bus" {
   tags                       = local.common_tags
 }
 
-# --- SERVICE BUS RESOURCES (Queues/Topics/Subs) ---
+# --- SERVICE BUS LOOKUP ---
 data "azurerm_servicebus_namespace" "sb_lookup" {
   name                = local.service_bus_namespace_name
   resource_group_name = azurerm_resource_group.rg_apps.name
   depends_on          = [module.service_bus]
 }
 
+# ==============================================================================
+# 1. QUEUES (All Sessions Enabled)
+# ==============================================================================
+
 resource "azurerm_servicebus_queue" "q_processing" {
-  name         = "processing-queue"
-  namespace_id = data.azurerm_servicebus_namespace.sb_lookup.id
-  
-  # Use v3 syntax (Critical for your current provider version)
+  name                = "processing-queue"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
   enable_partitioning = true
-  requires_session    = true
+  requires_session    = true 
 }
 
+resource "azurerm_servicebus_queue" "q_cards" {
+  name                = "cardsqueue"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+  requires_session    = true # Added
+}
+
+resource "azurerm_servicebus_queue" "q_deposit" {
+  name                = "depositandwithdrawqueue"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+  requires_session    = true # Added
+}
+
+resource "azurerm_servicebus_queue" "q_loyalty" {
+  name                = "loyaltyprogram"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+  requires_session    = true # Added
+}
+
+resource "azurerm_servicebus_queue" "q_order" {
+  name                = "orderqueue"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+  requires_session    = true # Added
+}
+
+# ==============================================================================
+# 2. TOPICS & SUBSCRIPTIONS (All Sessions Enabled)
+# ==============================================================================
+
+# --- A. Existing Market Topic ---
 resource "azurerm_servicebus_topic" "t_market" {
-  name         = "market-data-events"
-  namespace_id = data.azurerm_servicebus_namespace.sb_lookup.id
+  name                = "market-data-events"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
   enable_partitioning = true
 }
-
-resource "azurerm_servicebus_subscription" "sub_subscriber" {
+resource "azurerm_servicebus_subscription" "sub_market" {
   name               = "subscriber-service"
   topic_id           = azurerm_servicebus_topic.t_market.id
   max_delivery_count = 10
-  requires_session   = true
+  requires_session   = true 
 }
 
+# --- B. AML Risk Score ---
+resource "azurerm_servicebus_topic" "t_aml" {
+  name                = "amlriskscore"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+resource "azurerm_servicebus_subscription" "sub_aml" {
+  name               = "sub-processor"
+  topic_id           = azurerm_servicebus_topic.t_aml.id
+  max_delivery_count = 10
+  requires_session   = true # Added
+}
+
+# --- C. Audit Logs ---
+resource "azurerm_servicebus_topic" "t_audit" {
+  name                = "auditlogs"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+resource "azurerm_servicebus_subscription" "sub_audit" {
+  name               = "sub-processor"
+  topic_id           = azurerm_servicebus_topic.t_audit.id
+  max_delivery_count = 10
+  requires_session   = true # Added
+}
+
+# --- D. Email Notifications ---
+resource "azurerm_servicebus_topic" "t_email" {
+  name                = "emailnotifications"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+resource "azurerm_servicebus_subscription" "sub_email" {
+  name               = "sub-processor"
+  topic_id           = azurerm_servicebus_topic.t_email.id
+  max_delivery_count = 10
+  requires_session   = true # Added
+}
+
+# --- E. Fill Gas Fee ---
+resource "azurerm_servicebus_topic" "t_gas" {
+  name                = "fillgasfee"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+resource "azurerm_servicebus_subscription" "sub_gas" {
+  name               = "sub-processor"
+  topic_id           = azurerm_servicebus_topic.t_gas.id
+  max_delivery_count = 10
+  requires_session   = true # Added
+}
+
+# --- F. KYC Verification ---
+resource "azurerm_servicebus_topic" "t_kyc" {
+  name                = "kycverification"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+resource "azurerm_servicebus_subscription" "sub_kyc" {
+  name               = "sub-processor"
+  topic_id           = azurerm_servicebus_topic.t_kyc.id
+  max_delivery_count = 10
+  requires_session   = true # Added
+}
+
+# --- G. Merchant Wallets ---
+resource "azurerm_servicebus_topic" "t_merchant" {
+  name                = "merchantwalletsVerification"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+resource "azurerm_servicebus_subscription" "sub_merchant" {
+  name               = "sub-processor"
+  topic_id           = azurerm_servicebus_topic.t_merchant.id
+  max_delivery_count = 10
+  requires_session   = true # Added
+}
+
+# --- H. Mesta Sender Creation ---
+resource "azurerm_servicebus_topic" "t_mesta" {
+  name                = "mestasendercreation"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+resource "azurerm_servicebus_subscription" "sub_mesta" {
+  name               = "sub-processor"
+  topic_id           = azurerm_servicebus_topic.t_mesta.id
+  max_delivery_count = 10
+  requires_session   = true # Added
+}
+
+# --- I. Mobile Notifications ---
+resource "azurerm_servicebus_topic" "t_mobile" {
+  name                = "mobilenotifications"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+resource "azurerm_servicebus_subscription" "sub_mobile" {
+  name               = "sub-processor"
+  topic_id           = azurerm_servicebus_topic.t_mobile.id
+  max_delivery_count = 10
+  requires_session   = true # Added
+}
+
+#   KEY VAULTS STARTED
 module "key_vault" {
   source              = "../../modules/key_vault"
   key_vault_name      = local.key_vault_name
@@ -435,21 +643,128 @@ resource "azurerm_role_assignment" "vm_kv_access" {
   principal_id         = azurerm_windows_virtual_machine.vm.identity[0].principal_id
 }
 
-resource "azurerm_key_vault_secret" "auth0_domain" {
-  name         = "Auth0-Domain"
-  value        = var.auth0_domain
-  key_vault_id = module.key_vault.id
-  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
-}
-resource "azurerm_key_vault_secret" "mailgun_key" {
-  name         = "Mailgun-ApiKey"
-  value        = var.mailgun_key
-  key_vault_id = module.key_vault.id
-  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
-}
+# --- THIRD PARTY SECRETS ---
+
 resource "azurerm_key_vault_secret" "twilio_sid" {
-  name         = "Twilio-SID"
-  value        = var.twilio_sid
+  name         = "AccountSid"
+  value        = var.twilio_account_sid
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+resource "azurerm_key_vault_secret" "twilio_auth" {
+  name         = "AuthToken"
+  value        = var.twilio_auth_token
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+resource "azurerm_key_vault_secret" "twilio_service" {
+  name         = "ServiceId"
+  value        = var.twilio_service_id
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+resource "azurerm_key_vault_secret" "sumsub_token" {
+  name         = "SUMSUB-APP-TOKEN"
+  value        = var.sumsub_app_token
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+resource "azurerm_key_vault_secret" "sumsub_key" {
+  name         = "SUMSUB-SECRET-KEY"
+  value        = var.sumsub_secret_key
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+resource "azurerm_key_vault_secret" "powerbi_pass" {
+  name         = "pbiPassword"
+  value        = var.powerbi_password
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+resource "azurerm_key_vault_secret" "token_key" {
+  name         = "TokenEncryptkey"
+  value        = var.token_encrypt_key
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+resource "azurerm_key_vault_secret" "app_secret" {
+  name         = "SecretKey" # Used for SecretKey__Url
+  value        = var.app_secret_key
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+# --- MISSING SECRETS (Redis, API Keys, etc.) ---
+
+resource "azurerm_key_vault_secret" "redis_conn" {
+  name         = "RedisConnection"
+  value        = var.redis_connection_string
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+resource "azurerm_key_vault_secret" "vault_db_conn" {
+  name         = "Vault-DbConnection"
+  value        = var.vault_db_connection_string
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+resource "azurerm_key_vault_secret" "general_api_key" {
+  name         = "General-ApiKey"
+  value        = var.general_api_key
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+resource "azurerm_key_vault_secret" "general_api_secret" {
+  name         = "General-ApiSecretKey"
+  value        = var.general_api_secret_key
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+resource "azurerm_key_vault_secret" "client_secret_val" {
+  name         = "ClientSecret-Value"
+  value        = var.client_secret_value # Shared secret for Vault/SecretKey clients
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+resource "azurerm_key_vault_secret" "easylink_key" {
+  name         = "EasyLink-AppKey"
+  value        = var.easylink_app_key
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+resource "azurerm_key_vault_secret" "easylink_secret" {
+  name         = "EasyLink-AppSecret"
+  value        = var.easylink_app_secret
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+# --- INFRASTRUCTURE SECRETS (Auto-Calculated) ---
+
+# We save the Storage Key to Key Vault so the App can reference it securely
+resource "azurerm_key_vault_secret" "storage_key" {
+  name         = "StorageAccount-AccountKey"
+  value        = module.storage_account.primary_access_key
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+# We save the DB Connection String to Key Vault
+resource "azurerm_key_vault_secret" "db_conn" {
+  name         = "ConnectionStrings-DefaultConnection"
+  value        = "Data Source=tcp:${azurerm_windows_virtual_machine.vm.private_ip_address},1433;Initial Catalog=${var.client_name}DB;User Id=${var.client_name}_app_user;Password=${var.app_sql_password};MultipleActiveResultSets=True;TrustServerCertificate=True;"
   key_vault_id = module.key_vault.id
   depends_on   = [azurerm_role_assignment.kv_admin_rbac]
 }

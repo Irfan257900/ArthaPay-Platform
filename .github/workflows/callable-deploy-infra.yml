@@ -6,9 +6,6 @@ on:
       client_name: { type: string, required: true }
       environment: { type: string, required: true }
       vm_admin_username: { type: string, required: true }
-      auth0_domain: { type: string, required: true }
-      mailgun_key: { type: string, required: true }
-      twilio_sid: { type: string, required: true }
       
       # Module selection input
       backend_modules: { type: string, required: false, default: "all" }
@@ -29,6 +26,23 @@ on:
       AZURE_CREDENTIALS: { required: true }
       VM_ADMIN_PASSWORD: { required: true }
       APP_SQL_PASSWORD: { required: true }
+      AUTH0_CLIENT_ID: { required: true }
+      AUTH0_CLIENT_SECRET: { required: true }
+      TWILIO_ACCOUNT_SID: { required: true }
+      TWILIO_AUTH_TOKEN: { required: true }
+      TWILIO_SERVICE_ID: { required: true }
+      SUMSUB_APP_TOKEN: { required: true }
+      SUMSUB_SECRET_KEY: { required: true }
+      POWERBI_PASSWORD: { required: true }
+      APP_SECRET_KEY: { required: true }
+      TOKEN_ENCRYPT_KEY: { required: true }
+      REDIS_CONNECTION: { required: true }
+      VAULT_DB_CONNECTION: { required: true }
+      GENERAL_API_KEY: { required: true }
+      GENERAL_API_SECRET: { required: true }
+      CLIENT_SECRET_VALUE: { required: true }
+      EASYLINK_APP_KEY: { required: true }
+      EASYLINK_APP_SECRET: { required: true }
 
 jobs:
   deploy-infra:
@@ -153,11 +167,27 @@ jobs:
           TF_VAR_client_name: ${{ inputs.client_name }}
           TF_VAR_environment_name: ${{ inputs.environment }}
           TF_VAR_vm_admin_username: ${{ inputs.vm_admin_username }}
+          
+          # Secrets
           TF_VAR_vm_admin_password: ${{ secrets.VM_ADMIN_PASSWORD }}
-          TF_VAR_auth0_domain: ${{ inputs.auth0_domain }}
-          TF_VAR_mailgun_key: ${{ inputs.mailgun_key }}
-          TF_VAR_twilio_sid: ${{ inputs.twilio_sid }}
           TF_VAR_app_sql_password: ${{ secrets.APP_SQL_PASSWORD }}
+          TF_VAR_auth0_client_id: ${{ secrets.AUTH0_CLIENT_ID }}
+          TF_VAR_auth0_client_secret: ${{ secrets.AUTH0_CLIENT_SECRET }}
+          TF_VAR_twilio_account_sid: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TF_VAR_twilio_auth_token: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TF_VAR_twilio_service_id: ${{ secrets.TWILIO_SERVICE_ID }}
+          TF_VAR_sumsub_app_token: ${{ secrets.SUMSUB_APP_TOKEN }}
+          TF_VAR_sumsub_secret_key: ${{ secrets.SUMSUB_SECRET_KEY }}
+          TF_VAR_powerbi_password: ${{ secrets.POWERBI_PASSWORD }}
+          TF_VAR_app_secret_key: ${{ secrets.APP_SECRET_KEY }}
+          TF_VAR_token_encrypt_key: ${{ secrets.TOKEN_ENCRYPT_KEY }}
+          TF_VAR_redis_connection_string: ${{ secrets.REDIS_CONNECTION }}
+          TF_VAR_vault_db_connection_string: ${{ secrets.VAULT_DB_CONNECTION }}
+          TF_VAR_general_api_key: ${{ secrets.GENERAL_API_KEY }}
+          TF_VAR_general_api_secret_key: ${{ secrets.GENERAL_API_SECRET }}
+          TF_VAR_client_secret_value: ${{ secrets.CLIENT_SECRET_VALUE }}
+          TF_VAR_easylink_app_key: ${{ secrets.EASYLINK_APP_KEY }}
+          TF_VAR_easylink_app_secret: ${{ secrets.EASYLINK_APP_SECRET }}
         run: terraform plan -out=tfplan
 
       - name: "6. Terraform Apply"
@@ -167,10 +197,25 @@ jobs:
           TF_VAR_environment_name: ${{ inputs.environment }}
           TF_VAR_vm_admin_username: ${{ inputs.vm_admin_username }}
           TF_VAR_vm_admin_password: ${{ secrets.VM_ADMIN_PASSWORD }}
-          TF_VAR_auth0_domain: ${{ inputs.auth0_domain }}
-          TF_VAR_mailgun_key: ${{ inputs.mailgun_key }}
-          TF_VAR_twilio_sid: ${{ inputs.twilio_sid }}
           TF_VAR_app_sql_password: ${{ secrets.APP_SQL_PASSWORD }}
+          TF_VAR_auth0_client_id: ${{ secrets.AUTH0_CLIENT_ID }}
+          TF_VAR_auth0_client_secret: ${{ secrets.AUTH0_CLIENT_SECRET }}
+          TF_VAR_twilio_account_sid: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TF_VAR_twilio_auth_token: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TF_VAR_twilio_service_id: ${{ secrets.TWILIO_SERVICE_ID }}
+          TF_VAR_sumsub_app_token: ${{ secrets.SUMSUB_APP_TOKEN }}
+          TF_VAR_sumsub_secret_key: ${{ secrets.SUMSUB_SECRET_KEY }}
+          TF_VAR_powerbi_password: ${{ secrets.POWERBI_PASSWORD }}
+          TF_VAR_app_secret_key: ${{ secrets.APP_SECRET_KEY }}
+          TF_VAR_token_encrypt_key: ${{ secrets.TOKEN_ENCRYPT_KEY }}
+          TF_VAR_redis_connection_string: ${{ secrets.REDIS_CONNECTION }}
+          TF_VAR_vault_db_connection_string: ${{ secrets.VAULT_DB_CONNECTION }}
+          TF_VAR_general_api_key: ${{ secrets.GENERAL_API_KEY }}
+          TF_VAR_general_api_secret_key: ${{ secrets.GENERAL_API_SECRET }}
+          TF_VAR_client_secret_value: ${{ secrets.CLIENT_SECRET_VALUE }}
+          TF_VAR_easylink_app_key: ${{ secrets.EASYLINK_APP_KEY }}
+          TF_VAR_easylink_app_secret: ${{ secrets.EASYLINK_APP_SECRET }}
+          
         run: |
           terraform apply -auto-approve tfplan
           
