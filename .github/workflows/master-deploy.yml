@@ -83,6 +83,7 @@ jobs:
       # We now fetch Auth0 details from Secrets inside the callable workflow, 
       # or you can pass them as secrets here too if the UI workflow needs them.
       auth0_domain: "rapidz-stg.us.auth0.com" # If static, or fetch from secret
-      auth0_client_id: ${{ secrets.AUTH0_CLIENT_ID }} # Passed as input or secret
+       # Passed as input or secret
     secrets:
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+      AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}

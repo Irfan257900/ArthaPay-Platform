@@ -12,11 +12,12 @@ on:
       webapp_rg_name: { type: string, required: true }
       
       auth0_domain: { type: string, required: true }
-      auth0_client_id: { type: string, required: true }
+      
       # Note: backend_modules is not needed here, we configure all URLs assuming they exist.
       
     secrets:
       AZURE_CREDENTIALS: { required: true }
+      AUTH0_CLIENT_ID: { required: true }
 
 jobs:
   configure-ui:
