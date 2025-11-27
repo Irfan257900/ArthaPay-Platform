@@ -336,21 +336,21 @@ resource "azurerm_windows_web_app" "backend_apps" {
     "EasyLink_AppId"          = "ERShFBl3EdW5HFB" # Seems static/non-secret
     "EasyLink_BaseUrl"        = "http://sandbox.easylink.id:900"
 
-    # --- B. SERVICE BUS (Actual Values from Infrastructure) ---
-    # We use the Namespace Connection String for all "Publisher" variables
+    # --- B. SERVICE BUS (Updated to use Data Source) ---
+    # We use the 'data' block lookup because the module output is missing
     
-    "aMLRiskScoreExchangaPay__ServiceBusPublisher"     = module.service_bus.default_primary_connection_string
-    "auditlogs__ServiceBusPublisher"                   = module.service_bus.default_primary_connection_string
-    "cardsactionqueue__ServiceBusPublisher"            = module.service_bus.default_primary_connection_string
-    "depositandwithdrawqueue__ServiceBusPublisher"     = module.service_bus.default_primary_connection_string
-    "EmailNotifications__ServiceBusPublisher"          = module.service_bus.default_primary_connection_string
-    "fillgasfee__ServiceBusPublisher"                  = module.service_bus.default_primary_connection_string
-    "KycVerification__ServiceBusPublisher"             = module.service_bus.default_primary_connection_string
-    "LoyaltyAzureQueue__ServiceBusConnectionString"    = module.service_bus.default_primary_connection_string
-    "merchantwalletsVerification__ServiceBusPublisher" = module.service_bus.default_primary_connection_string
-    "mestaAzureQueue__ServiceBusPublisher"             = module.service_bus.default_primary_connection_string
-    "MestaSenderCreation__ServiceBusPublisher"         = module.service_bus.default_primary_connection_string
-    "mobilenotifications__ServiceBusPublisher"         = module.service_bus.default_primary_connection_string
+    "aMLRiskScoreExchangaPay__ServiceBusPublisher"     = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
+    "auditlogs__ServiceBusPublisher"                   = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
+    "cardsactionqueue__ServiceBusPublisher"            = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
+    "depositandwithdrawqueue__ServiceBusPublisher"     = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
+    "EmailNotifications__ServiceBusPublisher"          = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
+    "fillgasfee__ServiceBusPublisher"                  = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
+    "KycVerification__ServiceBusPublisher"             = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
+    "LoyaltyAzureQueue__ServiceBusConnectionString"    = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
+    "merchantwalletsVerification__ServiceBusPublisher" = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
+    "mestaAzureQueue__ServiceBusPublisher"             = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
+    "MestaSenderCreation__ServiceBusPublisher"         = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
+    "mobilenotifications__ServiceBusPublisher"         = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
 
     # --- C. TOPIC & QUEUE NAMES (Actual Names from Resources) ---
     # Topics
