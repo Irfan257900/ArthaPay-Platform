@@ -44,6 +44,13 @@ on:
       CLIENT_SECRET_VALUE: { required: true }
       EASYLINK_APP_KEY: { required: true }
       EASYLINK_APP_SECRET: { required: true }
+      AML_ACCESS_KEY: { required: true }
+      APP_PASSWORD_CLEAR: { required: true }
+      APP_PASSWORD_HASH: { required: true }
+      APP_PRIVATE_KEY: { required: true }
+      APP_PUBLIC_KEY: { required: true }
+      RESTSHARP_ACCESS_TOKEN: { required: true }
+      X_API_KEY: { required: true }
 
 jobs:
   deploy-infra:
@@ -190,6 +197,15 @@ jobs:
           TF_VAR_client_secret_value: ${{ secrets.CLIENT_SECRET_VALUE }}
           TF_VAR_easylink_app_key: ${{ secrets.EASYLINK_APP_KEY }}
           TF_VAR_easylink_app_secret: ${{ secrets.EASYLINK_APP_SECRET }}
+          TF_VAR_aml_access_key: ${{ secrets.AML_ACCESS_KEY }}
+          TF_VAR_app_password_clear: ${{ secrets.APP_PASSWORD_CLEAR }}
+          TF_VAR_app_password_hash: ${{ secrets.APP_PASSWORD_HASH }}
+          TF_VAR_app_private_key: ${{ secrets.APP_PRIVATE_KEY }}
+          TF_VAR_app_public_key: ${{ secrets.APP_PUBLIC_KEY }}
+          TF_VAR_restsharp_access_token: ${{ secrets.RESTSHARP_ACCESS_TOKEN }}
+          TF_VAR_x_api_key: ${{ secrets.X_API_KEY }}
+
+
         run: terraform plan -out=tfplan
 
       - name: "6. Terraform Apply"
@@ -218,6 +234,13 @@ jobs:
           TF_VAR_client_secret_value: ${{ secrets.CLIENT_SECRET_VALUE }}
           TF_VAR_easylink_app_key: ${{ secrets.EASYLINK_APP_KEY }}
           TF_VAR_easylink_app_secret: ${{ secrets.EASYLINK_APP_SECRET }}
+          TF_VAR_aml_access_key: ${{ secrets.AML_ACCESS_KEY }}
+          TF_VAR_app_password_clear: ${{ secrets.APP_PASSWORD_CLEAR }}
+          TF_VAR_app_password_hash: ${{ secrets.APP_PASSWORD_HASH }}
+          TF_VAR_app_private_key: ${{ secrets.APP_PRIVATE_KEY }}
+          TF_VAR_app_public_key: ${{ secrets.APP_PUBLIC_KEY }}
+          TF_VAR_restsharp_access_token: ${{ secrets.RESTSHARP_ACCESS_TOKEN }}
+          TF_VAR_x_api_key: ${{ secrets.X_API_KEY }}
 
         run: |
           terraform apply -auto-approve tfplan

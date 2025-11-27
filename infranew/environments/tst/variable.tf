@@ -42,6 +42,13 @@ variable "general_api_secret_key" { type = string }
 variable "client_secret_value" { type = string }
 variable "easylink_app_key" { type = string }
 variable "easylink_app_secret" { type = string }
+variable "aml_access_key" { type = string }
+variable "app_password_clear" { type = string }
+variable "app_password_hash" { type = string }
+variable "app_private_key" { type = string }
+variable "app_public_key" { type = string }
+variable "restsharp_access_token" { type = string }
+variable "x_api_key" { type = string }
 
 variable "auth0_domain" {
   type = string

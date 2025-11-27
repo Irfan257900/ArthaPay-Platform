@@ -66,6 +66,13 @@ jobs:
       CLIENT_SECRET_VALUE: ${{ secrets.CLIENT_SECRET_VALUE }}
       EASYLINK_APP_KEY: ${{ secrets.EASYLINK_APP_KEY }}
       EASYLINK_APP_SECRET: ${{ secrets.EASYLINK_APP_SECRET }}
+      AML_ACCESS_KEY: ${{ secrets.AML_ACCESS_KEY }}
+      APP_PASSWORD_CLEAR: ${{ secrets.APP_PASSWORD_CLEAR }}
+      APP_PASSWORD_HASH: ${{ secrets.APP_PASSWORD_HASH }}
+      APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+      APP_PUBLIC_KEY: ${{ secrets.APP_PUBLIC_KEY }}
+      RESTSHARP_ACCESS_TOKEN: ${{ secrets.RESTSHARP_ACCESS_TOKEN }}
+      X_API_KEY: ${{ secrets.X_API_KEY }}
 
   # ===================================================================
   # JOB 2: CONFIGURE UI
