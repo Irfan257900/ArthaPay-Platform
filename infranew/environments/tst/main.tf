@@ -390,7 +390,7 @@ resource "azurerm_windows_web_app" "backend_apps" {
     "Redis__IsEnable"                     = "true"
     "UseCustomizationData"                = "false"
     "UseVault"                            = "false"
-    "WEBSITE_HEALTHCHECK_MAXPINGFAILURES" = "0"
+    
     "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
     "RateLimit__Enabled"                  = "true"
     "RateLimit__PermitLimit"              = "1000"
