@@ -43,6 +43,10 @@ variable "client_secret_value" { type = string }
 variable "easylink_app_key" { type = string }
 variable "easylink_app_secret" { type = string }
 
+variable "auth0_domain" {
+  type = string
+}
+
 
 variable "backend_modules" {
   description = "List of backend modules to create Web Apps for"
