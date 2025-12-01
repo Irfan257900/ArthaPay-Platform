@@ -73,6 +73,10 @@ jobs:
       APP_PUBLIC_KEY: ${{ secrets.APP_PUBLIC_KEY }}
       RESTSHARP_ACCESS_TOKEN: ${{ secrets.RESTSHARP_ACCESS_TOKEN }}
       X_API_KEY: ${{ secrets.X_API_KEY }}
+      CORE_MAIN_ACCOUNT_ID: ${{ secrets.CORE_MAIN_ACCOUNT_ID }}
+      CORE_EXTERNAL_BASE_URL: ${{ secrets.CORE_EXTERNAL_BASE_URL }}
+      AUTH0_MOBILE_CLIENT_ID: ${{ secrets.AUTH0_MOBILE_CLIENT_ID }}
+      SENDGRID_TEMPLATE_ID: ${{ secrets.SENDGRID_TEMPLATE_ID }}
 
   # ===================================================================
   # JOB 2: CONFIGURE UI

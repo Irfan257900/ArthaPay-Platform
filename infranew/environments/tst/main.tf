@@ -188,9 +188,9 @@ resource "azurerm_managed_disk" "sql_disks" {
   for_each             = local.sql_data_disks
   name                 = "${local.vm_name}-${each.value.name}"
   
-  # Note: TST uses 'rg_infra', STG/PRD use 'rg_vm'
+  # Note: TST uses 'rg_infra'
   location             = azurerm_resource_group.rg_infra.location 
-  resource_group_name  = azurerm_resource_group.rg_infra.name     
+  resource_group_name  = azurerm_resource_group.rg_infra.name      
   
   storage_account_type = each.value.storage_account_type
   create_option        = "Empty"
@@ -202,8 +202,6 @@ resource "azurerm_managed_disk" "sql_disks" {
 resource "azurerm_virtual_machine_data_disk_attachment" "sql_disk_attach" {
   for_each           = local.sql_data_disks
   managed_disk_id    = azurerm_managed_disk.sql_disks[each.key].id
-  
-  # Note: TST resource name is 'vm'
   virtual_machine_id = azurerm_windows_virtual_machine.vm.id 
   
   lun                = each.value.lun
@@ -287,6 +285,79 @@ resource "azurerm_linux_web_app" "ui_admin" {
   }
 }
 
+# ==============================================================================
+#  APP CONFIGURATION MODULE (REPLACES MONOLITHIC BLOCK)
+# ==============================================================================
+module "app_configuration" {
+  source   = "../../modules/app_configuration"
+  for_each = toset(var.backend_modules)
+
+  app_name    = each.key
+  client_name = var.client_name
+  environment = var.environment_name
+
+  # --- Secret URIs (Mapping created resources to Module) ---
+  secret_uris = {
+    twilio_sid         = azurerm_key_vault_secret.twilio_sid.id
+    twilio_auth        = azurerm_key_vault_secret.twilio_auth.id
+    twilio_service     = azurerm_key_vault_secret.twilio_service.id
+    sumsub_token       = azurerm_key_vault_secret.sumsub_token.id
+    sumsub_key         = azurerm_key_vault_secret.sumsub_key.id
+    token_key          = azurerm_key_vault_secret.token_key.id
+    app_secret         = azurerm_key_vault_secret.app_secret.id
+    powerbi_pass       = azurerm_key_vault_secret.powerbi_pass.id
+    storage_key        = azurerm_key_vault_secret.storage_key.id
+    db_conn            = azurerm_key_vault_secret.db_conn.id
+    redis_conn         = azurerm_key_vault_secret.redis_conn.id
+    vault_db_conn      = azurerm_key_vault_secret.vault_db_conn.id
+    general_api_key    = azurerm_key_vault_secret.general_api_key.id
+    general_api_secret = azurerm_key_vault_secret.general_api_secret.id
+    client_secret_val  = azurerm_key_vault_secret.client_secret_val.id
+    easylink_key       = azurerm_key_vault_secret.easylink_key.id
+    easylink_secret    = azurerm_key_vault_secret.easylink_secret.id
+    aml_key            = azurerm_key_vault_secret.aml_key.id
+    app_password       = azurerm_key_vault_secret.app_password.id
+    app_password_hash  = azurerm_key_vault_secret.app_password_hash.id
+    private_key        = azurerm_key_vault_secret.private_key.id
+    public_key         = azurerm_key_vault_secret.public_key.id
+    restsharp_token    = azurerm_key_vault_secret.restsharp_token.id
+    x_api_key          = azurerm_key_vault_secret.x_api_key.id
+  }
+
+  # --- Service URLs (For Inter-App Communication) ---
+  service_urls = {
+    coreapi       = "https://${local._name_prefix}-coreapi.azurewebsites.net"
+    banksapi      = "https://${local._name_prefix}-banksapi.azurewebsites.net"
+    cardsapi      = "https://${local._name_prefix}-cardsapi.azurewebsites.net"
+    exchangeapi   = "https://${local._name_prefix}-exchangeapi.azurewebsites.net"
+    paymentsapi   = "https://${local._name_prefix}-paymentsapi.azurewebsites.net"
+    paylinks      = "https://${local._name_prefix}-paylinks.azurewebsites.net"
+    signalr       = "https://${local._name_prefix}-signalr.azurewebsites.net"
+    integration   = "https://${local._name_prefix}-integration.azurewebsites.net"
+  }
+
+  # --- Configs ---
+  sb_connection_string = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
+  auth0_domain         = var.auth0_domain
+  auth0_client_id      = var.auth0_client_id
+  auth0_client_secret  = var.auth0_client_secret
+  
+
+  # --- Core API Specific Inputs ---
+  core_main_account_id    = var.core_main_account_id
+  core_external_base_url  = var.core_external_base_url
+  auth0_mobile_client_id  = var.auth0_mobile_client_id
+
+  # --- Dynamic SendGrid Configuration ---
+  sendgrid_config = {
+    template_id = var.sendgrid_template_id
+    # Automatically generate email based on client name (e.g. contact@artha.money)
+    from_email  = "contact@${lower(var.client_name)}.money" 
+    from_name   = "${var.client_name} Money"
+  }
+
+}
+
 # --- DYNAMIC BACKEND APPS (.NET) ---
 resource "azurerm_windows_web_app" "backend_apps" {
   for_each            = toset(var.backend_modules)
@@ -295,189 +366,14 @@ resource "azurerm_windows_web_app" "backend_apps" {
   resource_group_name = azurerm_resource_group.rg_apps.name
   service_plan_id     = azurerm_service_plan.windows_plan.id
   tags                = local.common_tags
-  # --- 1. ENABLE IDENTITY (Required for Key Vault Access) ---
+
   identity { 
     type = "SystemAssigned" 
   }
 
-  # --- 2. INJECT SECRETS AS ENV VARS ---
-  app_settings = {
-    # ---------------------------------------------------------
-    # 1. KEY VAULT SECRETS (Existing + New)
-    # ---------------------------------------------------------
-    "AccountSid"                      = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.twilio_sid.id})"
-    "AuthToken"                       = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.twilio_auth.id})"
-    "ServiceId"                       = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.twilio_service.id})"
-    "SUMSUB_APP_TOKEN"                = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.sumsub_token.id})"
-    "SUMSUB_SECRET_KEY"               = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.sumsub_key.id})"
-    "TokenEncryptkey"                 = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.token_key.id})"
-    "SecretKey__Url"                  = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.app_secret.id})"
-    "powerbi__pbiPassword"            = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.powerbi_pass.id})"
-    "StorageAccount__AccountKey"      = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.storage_key.id})"
-    "ConnectionStrings__DefaultConnection" = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.db_conn.id})"
-    "ConnectionString"                     = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.db_conn.id})"
-    "StorageAccount__ConnectionStrings"    = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.db_conn.id})" # Assuming same DB conn for logic
-    
-    "Redis__ConnectionString"         = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.redis_conn.id})"
-    "Vault__Url"                      = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.vault_db_conn.id})"
-    "ApiKey"                          = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.general_api_key.id})"
-    "APISecretKey"                    = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.general_api_secret.id})"
-    "ClientSecret"                    = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.client_secret_val.id})"
-    "Vault__ClientSecret"             = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.client_secret_val.id})"
-    "SecretKey__ClientSecret"         = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.client_secret_val.id})"
-    "EasyLink_AppKey"                 = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.easylink_key.id})"
-    "EasyLink_AppSecret"              = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.easylink_secret.id})"
+  # --- APP SETTINGS INJECTION (FROM MODULE) ---
+  app_settings = module.app_configuration[each.key].app_settings
 
-    # --- NEW SECRETS ADDED IN STEP A ---
-    "AML__AccessKey"                  = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.aml_key.id})"
-    "Password"                        = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.app_password.id})"
-    "PasswordHash"                    = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.app_password_hash.id})"
-    "Private_Key"                     = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.private_key.id})"
-    "public_Key"                      = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.public_key.id})"
-    "RestSharpApiConfig__AccessToken" = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.restsharp_token.id})"
-    "X_Api_Key"                       = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.x_api_key.id})"
-
-    # ---------------------------------------------------------
-    # 2. DYNAMIC URLs (Constructed from Terraform Locals)
-    # ---------------------------------------------------------
-    "ActivityLog__LogUrl"  = "https://${local._name_prefix}-banksapi.azurewebsites.net/api/"
-    "BaseUrl"              = "https://${local._name_prefix}-coreapi.azurewebsites.net" # Assuming Core is Base
-    "CardProviderBaseUrl"  = "https://${local._name_prefix}-cardsapi.azurewebsites.net"
-    "ExchangaAPIURL"       = "https://${local._name_prefix}-exchangeapi.azurewebsites.net"
-    "ExchangaPayAPIURL"    = "https://${local._name_prefix}-exchangeapi.azurewebsites.net" # Verify if diff
-    "IntegrationURL"       = "https://${local._name_prefix}-integration.azurewebsites.net/"
-    "PaymentUrl"           = "https://${local._name_prefix}-paymentsapi.azurewebsites.net"
-    "MestaProviderBaseUrl" = "https://${local._name_prefix}-paymentsapi.azurewebsites.net/" # Assuming Payments
-    "ProviderBaseUrl"      = "https://${local._name_prefix}-coreapi.azurewebsites.net" # Assuming Core
-    "DocApprovedURL"       = "https://${local._name_prefix}-signalR.azurewebsites.net/api/notification/DocApproved"
-    "DocRequestedURL"      = "https://${local._name_prefix}-signalR.azurewebsites.net/api/notification/DocRequested"
-    "NotificationURL"      = "https://${local._name_prefix}-signalR.azurewebsites.net/api/notification/SndMultipleUsers"
-    
-    # ---------------------------------------------------------
-    # 3. STATIC CONFIGURATION (From Sample JSON)
-    # ---------------------------------------------------------
-    "Env"                   = "TST"
-    "BaseCurrency"          = "USD"
-    "ClientHashId"          = "Burgo Blan"
-    "ClientId"              = "d0b22a54-7347-4518-9482-32404981ca0f" # Non-secret ID
-    "CustomerToken"         = "bc36ea33c7397da280c4cabb91840ef7c28239d0c83d2b97f7a828a457c43797"
-    "FromEmailAddress"      = "nkrajukumar734@yopmail.com"
-    "ToEmailAddress"        = "nkrajukumar734@yopmail.com"
-    "IdentityType"          = "auth0"
-    "Provider"              = "Fireblocks"
-    "RiskScore"             = "80"
-    "RetryCount"            = "4"
-    "SubUrl"                = ""
-    "TimeOutinMilliseconds" = "50400"
-    "X_Client_Name"         = "Musala Ravikiran"
-    "X_Request_Id"          = "03cc727c-ffb8-4440-86c0-c875d1fda254"
-    "TronScanExplorer"      = "https://shasta.tronscan.org/#/transaction/"
-    "EasyLink_AppId"        = "ERShFBl3REdW5HFB"
-    "EasyLink_BaseUrl"      = "http://sandbox.easylink.id:9080"
-    "AML__AccessId"         = "B8D4A-264E4-18AD636"
-    "AML__ServerUrl"        = "https://extrnlapiendpoint.silencatech.com"
-    "SUMSUB_TEST_BASE_URL"  = "https://api.sumsub.com"
-    "RestSharpApiConfig__BaseUrl" = "https://superhedpi.com/api/"
-    
-    # Booleans
-    "AzureStorageEnabled"                 = "false"
-    "IsAMLEnabled"                        = "true"
-    "IsAuthorize"                         = "true"
-    "IsCardProvider"                      = "true"
-    "IsCommissionAllowed"                 = "true"
-    "IsPhoneNumberUnique"                 = "true"
-    "IsSandbox"                           = "false"
-    "Redis__IsEnable"                     = "true"
-    "UseCustomizationData"                = "false"
-    "UseVault"                            = "false"
-    
-    "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
-    "RateLimit__Enabled"                  = "true"
-    "RateLimit__PermitLimit"              = "1000"
-    "RateLimit__TimeWindow"               = "1"
-
-    # ---------------------------------------------------------
-    # 4. AUTH0 CONFIGURATION
-    # ---------------------------------------------------------
-    "Authority"                = "https://${var.auth0_domain}/"
-    "Aut0_audience"            = "https://${var.client_name}${var.environment_name}.net/"
-    "Aut0_Client_id"           = var.auth0_client_id
-    "Aut0_client_secret"       = var.auth0_client_secret
-    "Aut0_Connection"          = "${var.client_name}-${var.environment_name}" # e.g. Rapidz-stg
-    "Aut0_grant_type"          = "client_credentials"
-    "Aut0_scope"               = "openid profile email"
-    "Aut0_token_audience"      = "https://yellowblockllp.us.auth0.com/api/v2/" # Keep static if fixed
-    "Aut0_token_Client_id"     = var.auth0_client_id
-    "Aut0_token_client_secret" = var.auth0_client_secret
-    "SecretKey__ClientId"      = var.auth0_client_id
-    "Vault__ClientId"          = var.auth0_client_id
-    "Vault__Name"              = "DevKeyvaultSb" # Static name
-
-    # ---------------------------------------------------------
-    # 5. POWER BI & STORAGE
-    # ---------------------------------------------------------
-    "powerbi__apiUrl"               = "https://api.powerbi.com"
-    "powerbi__applicationId"        = "c56403f5-32ee-45cf-a45e-d0e44e34f6b1"
-    "powerbi__applicationSecret"    = ""
-    "powerbi__AuthenticationType"   = "MasterUser"
-    "powerbi__authorityUrl"         = "https://login.windows.net/common/oauth2/token/"
-    "powerbi__pbiUsername"          = "${var.environment_name}${var.client_name}@yellowblock.net"
-    "powerbi__resourceUrl"          = "https://analysis.windows.net/powerbi/api"
-    "powerbi__tenant"               = ""
-    "StorageAccount__AccountName"   = module.storage_account.name
-    "StorageAccount__ContainerName" = "rapidz${lower(var.environment_name)}"
-
-    # ---------------------------------------------------------
-    # 6. LOGGING (SERILOG)
-    # ---------------------------------------------------------
-    "Serilog__MinimumLevel__Default"                       = "Warning"
-    "Serilog__MinimumLevel__Override__Cards.API"           = "Warning"
-    "Serilog__MinimumLevel__Override__System"              = "Warning"
-    "Serilog__MinimumLevel__WriteTo__0__Args__formatter"   = "Serilog.Formatting.Json.JsonFormatter, Serilog"
-    "Serilog__MinimumLevel__WriteTo__0__Args__path"        = "D:\\Logs\\structuredLog.json"
-    "Serilog__MinimumLevel__WriteTo__0__Name"              = "Console"
-    "Serilog__MinimumLevel__WriteTo__1__Args__instrumentationKey" = "" # Or var.app_insights_key if you have one
-    "Serilog__MinimumLevel__WriteTo__1__Args__outputTemplate" = "[{Component}|{MachineName}|{ThreadId}] {Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] <{SourceContext}> {Message:lj}{NewLine}{Exception}"
-    "Serilog__MinimumLevel__WriteTo__1__Args__telemetryConverter" = "Serilog.Sinks.ApplicationInsights.Sinks.ApplicationInsights.TelemetryConverters.TraceTelemetryConverter, Serilog.Sinks.ApplicationInsights"
-    "Serilog__MinimumLevel__WriteTo__1__Name"              = "ApplicationInsights"
-    "Serilog__SeqServerUrl"                                = "http://localhost:5341"
-    "Serilog__Using__0"                                    = "Serilog.Sinks.Console"
-    "Serilog__Using__1"                                    = "Serilog.Sinks.File"
-    "Serilog__Using__2"                                    = "Serilog.Sinks.ApplicationInsights"
-
-    # ---------------------------------------------------------
-    # 7. SERVICE BUS (Keep your existing working block here)
-    # ---------------------------------------------------------
-    "aMLRiskScoreExchangaPay__ServiceBusPublisher"     = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
-    "auditlogs__ServiceBusPublisher"                   = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
-    "cardsactionqueue__ServiceBusPublisher"            = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
-    "depositandwithdrawqueue__ServiceBusPublisher"     = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
-    "EmailNotifications__ServiceBusPublisher"          = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
-    "fillgasfee__ServiceBusPublisher"                  = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
-    "KycVerification__ServiceBusPublisher"             = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
-    "LoyaltyAzureQueue__ServiceBusConnectionString"    = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
-    "merchantwalletsVerification__ServiceBusPublisher" = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
-    "mestaAzureQueue__ServiceBusPublisher"             = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
-    "MestaSenderCreation__ServiceBusPublisher"         = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
-    "mobilenotifications__ServiceBusPublisher"         = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
-
-    "aMLRiskScoreExchangaPay__ServiceBusTopic"     = azurerm_servicebus_topic.t_aml.name
-    "auditlogs__ServiceBusTopic"                   = azurerm_servicebus_topic.t_audit.name
-    "EmailNotifications__ServiceBusTopic"          = azurerm_servicebus_topic.t_email.name
-    "fillgasfee__ServiceBusTopic"                  = azurerm_servicebus_topic.t_gas.name
-    "KycVerification__ServiceBusTopic"             = azurerm_servicebus_topic.t_kyc.name
-    "merchantwalletsVerification__ServiceBusTopic" = azurerm_servicebus_topic.t_merchant.name
-    "MestaSenderCreation__ServiceBusTopic"         = azurerm_servicebus_topic.t_mesta.name
-    "mobilenotifications__ServiceBusTopic"         = azurerm_servicebus_topic.t_mobile.name
-
-    "cardsactionqueue__ServiceBusQueue"        = azurerm_servicebus_queue.q_cards.name
-    "depositandwithdrawqueue__ServiceBusQueue" = azurerm_servicebus_queue.q_deposit.name
-    "LoyaltyAzureQueue__LoyaltyQueueName"      = azurerm_servicebus_queue.q_loyalty.name
-    "mestaAzureQueue__ServiceBusQueue"         = azurerm_servicebus_queue.q_order.name
-  }
-
-
-  # Expanded to multi-line to avoid syntax errors
   site_config {
     application_stack {
       dotnet_version = "v8.0"
@@ -544,12 +440,12 @@ module "storage_account" {
 }
 
 module "service_bus" {
-  source                     = "../../modules/service_bus"
+  source                       = "../../modules/service_bus"
   service_bus_namespace_name = local.service_bus_namespace_name
-  location                   = azurerm_resource_group.rg_apps.location
-  resource_group_name        = azurerm_resource_group.rg_apps.name
-  sku                        = "Standard"
-  tags                       = local.common_tags
+  location                     = azurerm_resource_group.rg_apps.location
+  resource_group_name          = azurerm_resource_group.rg_apps.name
+  sku                          = "Standard"
+  tags                         = local.common_tags
 }
 
 # --- SERVICE BUS LOOKUP ---

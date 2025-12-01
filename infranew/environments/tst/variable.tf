@@ -50,6 +50,14 @@ variable "app_public_key" { type = string }
 variable "restsharp_access_token" { type = string }
 variable "x_api_key" { type = string }
 
+# ... existing variables ...
+
+# --- NEW VARIABLES FOR CORE API ---
+variable "core_main_account_id" { type = string }
+variable "core_external_base_url" { type = string }
+variable "auth0_mobile_client_id" { type = string }
+variable "sendgrid_template_id" { type = string }
+
 variable "auth0_domain" {
   type = string
 }
