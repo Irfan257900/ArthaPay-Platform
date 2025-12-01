@@ -16,7 +16,7 @@ locals {
     # Function Apps
     "marketdata"  = try(local.marketdata_settings, {})
     "subscriber"  = try(local.subscriber_settings, {})
-    "publisher"   = try(local.publisher_settings, {})
+    "sweep"   = try(local.sweep_settings, {})
   }
 
   # Directly use the specific settings. No merging with common defaults.

@@ -120,5 +120,5 @@ locals {
     "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "true" # Sample explicitly says true here
     "WEBSITE_ENABLE_SYNC_UPDATE_SITE"   = "true"
   } 
-  publisher_settings  = {} 
+  sweep_settings  = {} 
 }

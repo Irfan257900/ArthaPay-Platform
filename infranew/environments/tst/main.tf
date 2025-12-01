@@ -37,7 +37,7 @@ locals {
   # --- FIXED FUNCTION NAMES (.NET) ---
   func_market_name         = "${local._name_prefix}-Marketdata"
   func_subscriber_name     = "${local._name_prefix}-Subscriber"
-  func_publisher_name      = "${local._name_prefix}-Publisher"
+  func_sweep_name      = "${local._name_prefix}-Sweep"
 
   # Network Config
   vnet_address_space       = ["10.0.0.0/16"]
@@ -45,7 +45,7 @@ locals {
     "vm-subnet" = { address_prefixes = ["10.0.1.0/24"] }
     "pep-subnet" = { address_prefixes = ["10.0.2.0/24"] }
   }
-  function_config_keys = ["marketdata", "subscriber", "publisher"]
+  function_config_keys = ["marketdata", "subscriber", "sweep"]
   # --- SQL DATA DISKS CONFIGURATION ---
   sql_data_disks = {
     "disk1" = {
@@ -495,15 +495,15 @@ resource "azurerm_windows_function_app" "func_subscriber" {
   }
 }
 
-resource "azurerm_windows_function_app" "func_publisher" {
-  name                = local.func_publisher_name
+resource "azurerm_windows_function_app" "func_sweep" {
+  name                = local.func_sweep_name
   location            = azurerm_resource_group.rg_apps.location
   resource_group_name = azurerm_resource_group.rg_apps.name
   service_plan_id     = azurerm_service_plan.windows_plan.id
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
-  app_settings = module.function_app_configuration["publisher"].app_settings
+  app_settings = module.function_app_configuration["sweep"].app_settings
   
   site_config {
     application_stack {
@@ -947,4 +947,9 @@ resource "azurerm_role_assignment" "webapp_kv_access" {
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Secrets User" # This is the specific role needed
   principal_id         = each.value.identity[0].principal_id
+}
+resource "azurerm_role_assignment" "func_sweep_kv" { # Was "func_pub_kv"
+  scope                = module.key_vault.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = azurerm_windows_function_app.func_sweep.identity[0].principal_id # Updated reference
 }
