@@ -323,6 +323,8 @@ module "app_configuration" {
     public_key         = azurerm_key_vault_secret.public_key.id
     restsharp_token    = azurerm_key_vault_secret.restsharp_token.id
     x_api_key          = azurerm_key_vault_secret.x_api_key.id
+    firebase_key                   = ""  # Empty because Web Apps don't use it
+    app_insights_connection_string = azurerm_key_vault_secret.app_insights_conn.id
   }
 
   # --- Service URLs (For Inter-App Communication) ---
@@ -406,6 +408,7 @@ module "function_app_configuration" {
     
     # --- NEW: Firebase Key for Subscriber ---
     firebase_key       = azurerm_key_vault_secret.firebase_key.id
+    app_insights_connection_string = azurerm_key_vault_secret.app_insights_conn.id
   }
 
   # --- Service URLs ---
@@ -955,6 +958,16 @@ resource "azurerm_key_vault_secret" "x_api_key" {
 resource "azurerm_key_vault_secret" "firebase_key" {
   name         = "Firebase-ServerKey"
   value        = var.firebase_server_key
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+# --- APP INSIGHTS CONNECTION STRING ---
+resource "azurerm_key_vault_secret" "app_insights_conn" {
+  name         = "AppInsights-ConnectionString"
+  value        = module.app_platform.app_insights_connection_string 
+  # Note: Ensure your app_platform module outputs 'app_insights_connection_string'
+  # If it doesn't, use: azurerm_application_insights.appinsights.connection_string
+  
   key_vault_id = module.key_vault.id
   depends_on   = [azurerm_role_assignment.kv_admin_rbac]
 }
