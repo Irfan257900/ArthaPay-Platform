@@ -79,6 +79,9 @@ jobs:
       SENDGRID_TEMPLATE_ID: ${{ secrets.SENDGRID_TEMPLATE_ID }}
       AML_ACCESS_ID: ${{ secrets.AML_ACCESS_ID }}
       FIREBASE_SERVER_KEY: ${{ secrets.FIREBASE_SERVER_KEY }}
+      COLLECTION_VAULT_ID: ${{ secrets.COLLECTION_VAULT_ID }}
+      POLYGON_WALLET_ADDRESS: ${{ secrets.POLYGON_WALLET_ADDRESS }}
+      TRON_WALLET_ADDRESS: ${{ secrets.TRON_WALLET_ADDRESS }}
 
   # ===================================================================
   # JOB 2: CONFIGURE UI

@@ -120,5 +120,76 @@ locals {
     "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "true" # Sample explicitly says true here
     "WEBSITE_ENABLE_SYNC_UPDATE_SITE"   = "true"
   } 
-  sweep_settings  = {} 
+  sweep_settings  = {
+    # ---------------------------------------------------------
+    # 1. CORE CONFIGURATION
+    # ---------------------------------------------------------
+    "Provider"                          = "Fireblocks"
+    "ClientId"                          = var.auth0_client_id
+    "ClientSecret"                      = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.client_secret_val})"
+    
+    # --- SWEEP SPECIFIC LOGIC ---
+    "CollectionVaultId"                 = var.collection_vault_id
+    "CollectionWalletPolyGonAddress"    = var.polygon_wallet_address
+    "CollectionWalletTRONAddress"       = var.tron_wallet_address
+    "FloatAmount"                       = "10000"
+    "TriggerAmount"                     = "5000"
+    "IsEncrypted"                       = "false"
+    "IsTronEngerySweep"                 = "true"
+
+    # ---------------------------------------------------------
+    # 2. DYNAMIC URLs
+    # ---------------------------------------------------------
+    "CardsCoreURL"                      = "${var.service_urls.coreapi}/"
+    "RestAPIBankURL"                    = var.service_urls.banksapi
+    "RestAPICoreURL"                    = var.service_urls.coreapi
+    "RestAPIURL"                        = "${var.service_urls.coreapi}/"
+    "IntegrationURL"                    = "${var.service_urls.integration}/"
+    "SubUrl"                            = ""
+
+    # ---------------------------------------------------------
+    # 3. DATABASE CONNECTION
+    # ---------------------------------------------------------
+    # Note: Sample uses 'dBConnection' (camelCase), not standard connection string name
+    "dBConnection"                      = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.db_conn})"
+
+    # ---------------------------------------------------------
+    # 4. SERVICE BUS
+    # ---------------------------------------------------------
+    # Publishers
+    "fillgasfee.ServiceBusPublisher"                  = var.sb_connection_string
+    "UpdateCustomerAddressAndStatusServiceBusListener"= var.sb_connection_string
+
+    # Topics
+    "fillgasfee.ServiceBusTopic"                      = "fillgasfee"
+    "UpdateCustomerAddressAndStatusServiceBusTopic"   = "updatecustomeraddressandstatus"
+
+    # Subscriptions
+    "UpdateCustomerAddressAndStatusServiceBusSubscription" = "updatecustomeraddressandstatussubscriber"
+
+    # ---------------------------------------------------------
+    # 5. WEBJOBS / TRIGGER TOGGLES
+    # ---------------------------------------------------------
+    "AzureWebJobs.Activity.Disabled"                  = "1"
+    "AzureWebJobs.BanksActivity.Disabled"             = "1"
+    "AzureWebJobs.BatchPayOutTransaction.Disabled"    = "1" # From sample list
+    # ... (Add other WebJobs disabled flags if strictly needed, otherwise defaults usually 0) ...
+
+    # ---------------------------------------------------------
+    # 6. PLATFORM SETTINGS
+    # ---------------------------------------------------------
+    "FUNCTIONS_EXTENSION_VERSION"       = "~4"
+    "FUNCTIONS_WORKER_RUNTIME"          = "dotnet"
+    "WEBSITE_RUN_FROM_PACKAGE"          = "1"
+    "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "true"
+    "WEBSITE_ENABLE_SYNC_UPDATE_SITE"   = "true"
+    
+    # App Insights (Modern Connection String)
+    "APPLICATIONINSIGHTS_CONNECTION_STRING" = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.app_insights_connection_string})" 
+    # Note: Ensure app_insights_connection_string is passed in secret_uris map if you want to use KV, 
+    # OR just let the module handle it naturally if you added it to common settings previously.
+    # For now, assuming we rely on the standard injection or if you want to force it:
+    # "APPLICATIONINSIGHTS_CONNECTION_STRING" = "..." 
+    # (Usually handled by the resource block in main.tf, but can be overridden here)
+  } 
 }

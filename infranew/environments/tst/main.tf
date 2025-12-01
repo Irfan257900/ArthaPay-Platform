@@ -371,6 +371,11 @@ module "function_app_configuration" {
   client_name = var.client_name
   environment = var.environment_name
 
+  # --- NEW: SWEEP SPECIFIC INPUTS ---
+  collection_vault_id    = var.collection_vault_id
+  polygon_wallet_address = var.polygon_wallet_address
+  tron_wallet_address    = var.tron_wallet_address
+
   # --- Secret URIs ---
   # (Must match the Web App module list, plus the NEW Firebase Key)
   secret_uris = {
@@ -630,6 +635,19 @@ resource "azurerm_servicebus_subscription" "sub_email" {
   topic_id           = azurerm_servicebus_topic.t_email.id
   max_delivery_count = 10
   requires_session   = true # Added
+}
+
+# --- M. Update Customer Address And Status ---
+resource "azurerm_servicebus_topic" "t_cust_update" {
+  name                = "updatecustomeraddressandstatus"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  partitioning_enabled = true
+}
+resource "azurerm_servicebus_subscription" "sub_cust_update" {
+  name               = "updatecustomeraddressandstatussubscriber"
+  topic_id           = azurerm_servicebus_topic.t_cust_update.id
+  max_delivery_count = 10
+  requires_session   = true
 }
 
 # --- E. Fill Gas Fee ---

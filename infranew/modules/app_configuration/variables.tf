@@ -78,3 +78,7 @@ variable "company_logo_url" {
   type        = string
   default     = ""
 }
+
+variable "collection_vault_id" { type = string }
+variable "polygon_wallet_address" { type = string }
+variable "tron_wallet_address" { type = string }

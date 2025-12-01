@@ -103,3 +103,22 @@ variable "company_logo_url" {
   type    = string
   default = "" # You can set a default or pass it
 }
+
+# --- SWEEP FUNCTION SPECIFIC ---
+variable "collection_vault_id" {
+  description = "Fireblocks Vault ID for collection"
+  type        = string
+  default     = "202"
+}
+
+variable "polygon_wallet_address" {
+  description = "Polygon Wallet Address"
+  type        = string
+  default     = ""
+}
+
+variable "tron_wallet_address" {
+  description = "TRON Wallet Address"
+  type        = string
+  default     = ""
+}
