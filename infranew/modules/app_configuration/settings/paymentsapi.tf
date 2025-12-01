@@ -1,0 +1,1 @@
+locals { paymentsapi_settings = {} }

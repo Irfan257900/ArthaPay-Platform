@@ -1,0 +1,1 @@
+locals { paylinks_settings = {} }

@@ -1,0 +1,1 @@
+locals { exchangeapi_settings = {} }

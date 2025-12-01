@@ -1,0 +1,1 @@
+locals { api_settings = {} }

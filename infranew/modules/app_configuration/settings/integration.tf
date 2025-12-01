@@ -1,0 +1,1 @@
+locals { integration_settings = {} }

@@ -1,0 +1,1 @@
+locals { cardsapi_settings = {} }

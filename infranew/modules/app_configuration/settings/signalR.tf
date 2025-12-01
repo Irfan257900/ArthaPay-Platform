@@ -1,0 +1,1 @@
+locals { signalr_settings = {} }
