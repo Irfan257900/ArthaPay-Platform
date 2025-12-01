@@ -38,10 +38,14 @@ locals {
     # 4. SECRETS (Key Vault)
     # ---------------------------------------------------------
     # "Url" in your sample pointed to a DB connection string secret
-    "Url"                               = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.db_conn})"
-    "ClientSecret"                      = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.client_secret_val})"
-    "TokenEncryptkey"                   = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.token_key})"
-    "firebaseserverKey"                 = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.firebase_key})"
+    "Url"                               = var.secret_uris.db_conn
+    "ClientSecret"                      = var.secret_uris.client_secret_val
+    "TokenEncryptkey"                   = var.secret_uris.token_key
+    "firebaseserverKey"                 = var.secret_uris.firebase_key
+
+    # App Insights (Raw Values)
+    "APPLICATIONINSIGHTS_CONNECTION_STRING" = var.app_insights_connection_string
+    "APPINSIGHTS_INSTRUMENTATIONKEY"        = var.app_insights_instrumentation_key
 
     # ---------------------------------------------------------
     # 5. SERVICE BUS (Listeners & Topics)
@@ -126,7 +130,7 @@ locals {
     # ---------------------------------------------------------
     "Provider"                          = "Fireblocks"
     "ClientId"                          = var.auth0_client_id
-    "ClientSecret"                      = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.client_secret_val})"
+    "ClientSecret"                      = var.secret_uris.client_secret_val
     
     # --- SWEEP SPECIFIC LOGIC ---
     "CollectionVaultId"                 = var.collection_vault_id
@@ -151,7 +155,7 @@ locals {
     # 3. DATABASE CONNECTION
     # ---------------------------------------------------------
     # Note: Sample uses 'dBConnection' (camelCase), not standard connection string name
-    "dBConnection"                      = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.db_conn})"
+    "dBConnection"                      = var.secret_uris.db_conn
 
     # ---------------------------------------------------------
     # 4. SERVICE BUS
@@ -185,7 +189,7 @@ locals {
     "WEBSITE_ENABLE_SYNC_UPDATE_SITE"   = "true"
     
     # App Insights (Modern Connection String)
-    "APPLICATIONINSIGHTS_CONNECTION_STRING" = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.app_insights_connection_string})" 
+    "APPLICATIONINSIGHTS_CONNECTION_STRING" = var.app_insights_connection_string
     # Note: Ensure app_insights_connection_string is passed in secret_uris map if you want to use KV, 
     # OR just let the module handle it naturally if you added it to common settings previously.
     # For now, assuming we rely on the standard injection or if you want to force it:

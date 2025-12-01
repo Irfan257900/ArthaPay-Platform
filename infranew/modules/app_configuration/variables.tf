@@ -93,3 +93,10 @@ variable "tron_wallet_address" {
   type    = string
   default = ""  # <--- Add this
 }
+
+# --- NEW: Raw App Insights Connection String ---
+variable "app_insights_connection_string" {
+  description = "The actual Connection String value (not Key Vault URI)"
+  type        = string
+}
+variable "app_insights_instrumentation_key" { type = string }

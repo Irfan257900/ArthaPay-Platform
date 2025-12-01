@@ -66,34 +66,41 @@ locals {
     # ---------------------------------------------------------
     # 4. KEY VAULT REFERENCES (Security)
     # ---------------------------------------------------------
-    "AccountSid"                        = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.twilio_sid})"
-    "AuthToken"                         = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.twilio_auth})"
-    "ServiceId"                         = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.twilio_service})"
-    "SUMSUB_APP_TOKEN"                  = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.sumsub_token})"
-    "SUMSUB_SECRET_KEY"                 = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.sumsub_key})"
-    "TokenEncryptkey"                   = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.token_key})"
-    "SecretKey__Url"                    = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.app_secret})"
-    "powerbi__pbiPassword"              = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.powerbi_pass})"
-    "StorageAccount__AccountKey"        = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.storage_key})"
-    "ConnectionStrings__DefaultConnection" = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.db_conn})"
-    "ConnectionString"                     = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.db_conn})"
-    "StorageAccount__ConnectionStrings"    = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.db_conn})"
-    "Redis__ConnectionString"           = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.redis_conn})"
-    "Vault__Url"                        = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.vault_db_conn})"
-    "ApiKey"                            = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.general_api_key})"
-    "APISecretKey"                      = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.general_api_secret})"
-    "ClientSecret"                      = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.client_secret_val})"
-    "Vault__ClientSecret"               = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.client_secret_val})"
-    "SecretKey__ClientSecret"           = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.client_secret_val})"
-    "EasyLink_AppKey"                   = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.easylink_key})"
-    "EasyLink_AppSecret"                = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.easylink_secret})"
-    "AML__AccessKey"                    = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.aml_key})"
-    "Password"                          = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.app_password})"
-    "PasswordHash"                      = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.app_password_hash})"
-    "Private_Key"                       = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.private_key})"
-    "public_Key"                        = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.public_key})"
-    "RestSharpApiConfig__AccessToken"   = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.restsharp_token})"
-    "X_Api_Key"                         = "@Microsoft.KeyVault(SecretUri=${var.secret_uris.x_api_key})"
+    "AccountSid"                        = var.secret_uris.twilio_sid
+    "AuthToken"                         = var.secret_uris.twilio_auth
+    "ServiceId"                         = var.secret_uris.twilio_service
+    "SUMSUB_APP_TOKEN"                  = var.secret_uris.sumsub_token
+    "SUMSUB_SECRET_KEY"                 = var.secret_uris.sumsub_key
+    "TokenEncryptkey"                   = var.secret_uris.token_key
+    "SecretKey__Url"                    = var.secret_uris.app_secret
+    "powerbi__pbiPassword"              = var.secret_uris.powerbi_pass
+    "StorageAccount__AccountKey"        = var.secret_uris.storage_key
+    "ConnectionStrings__DefaultConnection" = var.secret_uris.db_conn
+    "ConnectionString"                     = var.secret_uris.db_conn
+    "StorageAccount__ConnectionStrings"    = var.secret_uris.db_conn
+    "Redis__ConnectionString"           = var.secret_uris.redis_conn
+    "Vault__Url"                        = var.secret_uris.vault_db_conn
+    "ApiKey"                            = var.secret_uris.general_api_key
+    "APISecretKey"                      = var.secret_uris.general_api_secret
+    "ClientSecret"                      = var.secret_uris.client_secret_val
+    "Vault__ClientSecret"               = var.secret_uris.client_secret_val
+    "SecretKey__ClientSecret"           = var.secret_uris.client_secret_val
+    "EasyLink_AppKey"                   = var.secret_uris.easylink_key
+    "EasyLink_AppSecret"                = var.secret_uris.easylink_secret
+    "AML__AccessKey"                    = var.secret_uris.aml_key
+    "Password"                          = var.secret_uris.app_password
+    "PasswordHash"                      = var.secret_uris.app_password_hash
+    "Private_Key"                       = var.secret_uris.private_key
+    "public_Key"                        = var.secret_uris.public_key
+    "RestSharpApiConfig__AccessToken"   = var.secret_uris.restsharp_token
+    "X_Api_Key"                         = var.secret_uris.x_api_key
+
+    # ---------------------------------------------------------
+    # APP INSIGHTS (RAW VALUES)
+    # ---------------------------------------------------------
+    "APPLICATIONINSIGHTS_CONNECTION_STRING"   = var.app_insights_connection_string
+    "ApplicationInsights__InstrumentationKey" = var.app_insights_instrumentation_key
+    "APPINSIGHTS_INSTRUMENTATIONKEY"          = var.app_insights_instrumentation_key
 
     # ---------------------------------------------------------
     # 5. DYNAMIC URLs

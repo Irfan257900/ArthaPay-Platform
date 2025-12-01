@@ -327,6 +327,8 @@ module "app_configuration" {
   app_name    = each.key
   client_name = var.client_name
   environment = var.environment_name
+  app_insights_connection_string   = azurerm_application_insights.appinsights.connection_string
+  app_insights_instrumentation_key = azurerm_application_insights.appinsights.instrumentation_key
 
   # --- Secret URIs (Mapping created resources to Module) ---
   secret_uris = {
@@ -355,7 +357,7 @@ module "app_configuration" {
     restsharp_token    = azurerm_key_vault_secret.restsharp_token.id
     x_api_key          = azurerm_key_vault_secret.x_api_key.id
     firebase_key                   = ""  # Empty because Web Apps don't use it
-    app_insights_connection_string = azurerm_key_vault_secret.app_insights_conn.id
+    
   }
 
   # --- Service URLs (For Inter-App Communication) ---
@@ -404,6 +406,9 @@ module "function_app_configuration" {
   client_name = var.client_name
   environment = var.environment_name
 
+  app_insights_connection_string   = azurerm_application_insights.appinsights.connection_string
+  app_insights_instrumentation_key = azurerm_application_insights.appinsights.instrumentation_key
+
   # --- NEW: SWEEP SPECIFIC INPUTS ---
   collection_vault_id    = var.collection_vault_id
   polygon_wallet_address = var.polygon_wallet_address
@@ -439,7 +444,7 @@ module "function_app_configuration" {
     
     # --- NEW: Firebase Key for Subscriber ---
     firebase_key       = azurerm_key_vault_secret.firebase_key.id
-    app_insights_connection_string = azurerm_key_vault_secret.app_insights_conn.id
+    app_insights_connection_string = azurerm_application_insights.appinsights.connection_string
   }
 
   # --- Service URLs ---
