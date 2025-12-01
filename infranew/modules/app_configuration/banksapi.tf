@@ -154,8 +154,8 @@ locals {
     "XDT_MicrosoftApplicationInsights_BaseExtensions" = "disabled"
     "XDT_MicrosoftApplicationInsights_Mode"           = "recommended"
     "XDT_MicrosoftApplicationInsights_PreemptSdk"     = "disabled"
-    "WEBSITE_HEALTHCHECK_MAXPINGFAILURES"             = "0"
-    "WEBSITE_HTTPLOGGING_RETENTION_DAYS"              = "0"
+    #"WEBSITE_HEALTHCHECK_MAXPINGFAILURES"             = "0"
+    #"WEBSITE_HTTPLOGGING_RETENTION_DAYS"              = "0"
 
     # ---------------------------------------------------------
     # 8. SERVICE BUS
