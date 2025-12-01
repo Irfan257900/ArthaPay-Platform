@@ -5,7 +5,7 @@ locals {
     "IsCardProvider"            = "false" 
     "IsBankProvider"            = "true"
     
-    # Example: Specific Service Bus Queue for Banks
+    ## Example: Specific Service Bus Queue for Banks
     "ServiceBusQueueName"       = "banks-processing-queue"
   }
 }
