@@ -992,16 +992,7 @@ resource "azurerm_key_vault_secret" "firebase_key" {
   key_vault_id = module.key_vault.id
   depends_on   = [azurerm_role_assignment.kv_admin_rbac]
 }
-# --- APP INSIGHTS CONNECTION STRING ---
-resource "azurerm_key_vault_secret" "app_insights_conn" {
-  name         = "AppInsights-ConnectionString"
-  value        = module.app_platform.app_insights_connection_string 
-  # Note: Ensure your app_platform module outputs 'app_insights_connection_string'
-  # If it doesn't, use: azurerm_application_insights.appinsights.connection_string
-  
-  key_vault_id = module.key_vault.id
-  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
-}
+
 
 # --- GRANT ACCESS (RBAC METHOD) ---
 resource "azurerm_role_assignment" "webapp_kv_access" {
