@@ -543,6 +543,9 @@ resource "azurerm_windows_function_app" "func_sweep" {
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
   app_settings = module.function_app_configuration["sweep"].app_settings
+  identity {
+    type = "SystemAssigned"
+  }
   
   site_config {
     application_stack {
@@ -1005,7 +1008,5 @@ resource "azurerm_role_assignment" "func_sweep_kv" { # Was "func_pub_kv"
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Secrets User"
   principal_id         = azurerm_windows_function_app.func_sweep.identity[0].principal_id # Updated reference
-  identity {
-    type = "SystemAssigned"
-  }
+  
 }
