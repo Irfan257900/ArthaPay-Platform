@@ -56,6 +56,7 @@ on:
       AUTH0_MOBILE_CLIENT_ID: { required: true }
       SENDGRID_TEMPLATE_ID: { required: true }
       AML_ACCESS_ID: { required: true }
+      FIREBASE_SERVER_KEY: { required: true }
 
 jobs:
   deploy-infra:
@@ -214,6 +215,7 @@ jobs:
           TF_VAR_auth0_mobile_client_id: ${{ secrets.AUTH0_MOBILE_CLIENT_ID }}
           TF_VAR_sendgrid_template_id: ${{ secrets.SENDGRID_TEMPLATE_ID }}
           TF_VAR_aml_access_id: ${{ secrets.AML_ACCESS_ID }}
+          TF_VAR_firebase_server_key: ${{ secrets.FIREBASE_SERVER_KEY }}
 
 
         run: terraform plan -out=tfplan
@@ -256,6 +258,7 @@ jobs:
           TF_VAR_auth0_mobile_client_id: ${{ secrets.AUTH0_MOBILE_CLIENT_ID }}
           TF_VAR_sendgrid_template_id: ${{ secrets.SENDGRID_TEMPLATE_ID }}
           TF_VAR_aml_access_id: ${{ secrets.AML_ACCESS_ID }}
+          TF_VAR_firebase_server_key: ${{ secrets.FIREBASE_SERVER_KEY }}
 
         run: |
           terraform apply -auto-approve tfplan

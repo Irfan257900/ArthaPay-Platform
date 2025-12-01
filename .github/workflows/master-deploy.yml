@@ -78,6 +78,7 @@ jobs:
       AUTH0_MOBILE_CLIENT_ID: ${{ secrets.AUTH0_MOBILE_CLIENT_ID }}
       SENDGRID_TEMPLATE_ID: ${{ secrets.SENDGRID_TEMPLATE_ID }}
       AML_ACCESS_ID: ${{ secrets.AML_ACCESS_ID }}
+      FIREBASE_SERVER_KEY: ${{ secrets.FIREBASE_SERVER_KEY }}
 
   # ===================================================================
   # JOB 2: CONFIGURE UI

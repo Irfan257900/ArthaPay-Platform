@@ -45,6 +45,7 @@ locals {
     "vm-subnet" = { address_prefixes = ["10.0.1.0/24"] }
     "pep-subnet" = { address_prefixes = ["10.0.2.0/24"] }
   }
+  function_config_keys = ["marketdata", "subscriber", "publisher"]
   # --- SQL DATA DISKS CONFIGURATION ---
   sql_data_disks = {
     "disk1" = {
@@ -359,6 +360,83 @@ module "app_configuration" {
 
 }
 
+# ==============================================================================
+#  FUNCTION CONFIGURATION MODULE
+# ==============================================================================
+module "function_app_configuration" {
+  source   = "../../modules/app_configuration"
+  for_each = toset(local.function_config_keys)
+
+  app_name    = each.key
+  client_name = var.client_name
+  environment = var.environment_name
+
+  # --- Secret URIs ---
+  # (Must match the Web App module list, plus the NEW Firebase Key)
+  secret_uris = {
+    twilio_sid         = azurerm_key_vault_secret.twilio_sid.id
+    twilio_auth        = azurerm_key_vault_secret.twilio_auth.id
+    twilio_service     = azurerm_key_vault_secret.twilio_service.id
+    sumsub_token       = azurerm_key_vault_secret.sumsub_token.id
+    sumsub_key         = azurerm_key_vault_secret.sumsub_key.id
+    token_key          = azurerm_key_vault_secret.token_key.id
+    app_secret         = azurerm_key_vault_secret.app_secret.id
+    powerbi_pass       = azurerm_key_vault_secret.powerbi_pass.id
+    storage_key        = azurerm_key_vault_secret.storage_key.id
+    db_conn            = azurerm_key_vault_secret.db_conn.id
+    redis_conn         = azurerm_key_vault_secret.redis_conn.id
+    vault_db_conn      = azurerm_key_vault_secret.vault_db_conn.id
+    general_api_key    = azurerm_key_vault_secret.general_api_key.id
+    general_api_secret = azurerm_key_vault_secret.general_api_secret.id
+    client_secret_val  = azurerm_key_vault_secret.client_secret_val.id
+    easylink_key       = azurerm_key_vault_secret.easylink_key.id
+    easylink_secret    = azurerm_key_vault_secret.easylink_secret.id
+    aml_key            = azurerm_key_vault_secret.aml_key.id
+    app_password       = azurerm_key_vault_secret.app_password.id
+    app_password_hash  = azurerm_key_vault_secret.app_password_hash.id
+    private_key        = azurerm_key_vault_secret.private_key.id
+    public_key         = azurerm_key_vault_secret.public_key.id
+    restsharp_token    = azurerm_key_vault_secret.restsharp_token.id
+    x_api_key          = azurerm_key_vault_secret.x_api_key.id
+    
+    # --- NEW: Firebase Key for Subscriber ---
+    firebase_key       = azurerm_key_vault_secret.firebase_key.id
+  }
+
+  # --- Service URLs ---
+  service_urls = {
+    coreapi       = "https://${local._name_prefix}-coreapi.azurewebsites.net"
+    banksapi      = "https://${local._name_prefix}-banksapi.azurewebsites.net"
+    cardsapi      = "https://${local._name_prefix}-cardsapi.azurewebsites.net"
+    exchangeapi   = "https://${local._name_prefix}-exchangeapi.azurewebsites.net"
+    paymentsapi   = "https://${local._name_prefix}-paymentsapi.azurewebsites.net"
+    paylinks      = "https://${local._name_prefix}-paylinks.azurewebsites.net"
+    signalr       = "https://${local._name_prefix}-signalr.azurewebsites.net"
+    integration   = "https://${local._name_prefix}-integration.azurewebsites.net"
+  }
+
+  # --- Standard Configs ---
+  sb_connection_string = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
+  auth0_domain         = var.auth0_domain
+  auth0_client_id      = var.auth0_client_id
+  auth0_client_secret  = var.auth0_client_secret
+  
+  # --- Pass Core API Vars (Required by module structure, even if unused by subscriber) ---
+  core_main_account_id   = var.core_main_account_id
+  core_external_base_url = var.core_external_base_url
+  auth0_mobile_client_id = var.auth0_mobile_client_id
+  sendgrid_config = {
+    template_id = var.sendgrid_template_id
+    from_email  = "contact@${lower(var.client_name)}.money"
+    from_name   = "${var.client_name} Money"
+  }
+
+  # --- NEW: SUBSCRIBER SPECIFIC INPUTS ---
+  company_name     = var.company_name
+  company_logo_url = var.company_logo_url
+  aml_access_id    = var.aml_access_id
+}
+
 # --- DYNAMIC BACKEND APPS (.NET) ---
 resource "azurerm_windows_web_app" "backend_apps" {
   for_each            = toset(var.backend_modules)
@@ -391,6 +469,7 @@ resource "azurerm_windows_function_app" "func_market" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
+  app_settings = module.function_app_configuration["marketdata"].app_settings
   
   site_config {
     application_stack {
@@ -407,6 +486,7 @@ resource "azurerm_windows_function_app" "func_subscriber" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
+  app_settings = module.function_app_configuration["subscriber"].app_settings
   
   site_config {
     application_stack {
@@ -423,6 +503,7 @@ resource "azurerm_windows_function_app" "func_publisher" {
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
   tags                = local.common_tags
+  app_settings = module.function_app_configuration["publisher"].app_settings
   
   site_config {
     application_stack {
@@ -614,6 +695,39 @@ resource "azurerm_servicebus_subscription" "sub_mobile" {
   topic_id           = azurerm_servicebus_topic.t_mobile.id
   max_delivery_count = 10
   requires_session   = true # Added
+}
+# --- J. Avenia Sub Account Creation ---
+resource "azurerm_servicebus_topic" "t_avenia" {
+  name                = "aveniasubaccountcreation"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  partitioning_enabled = true
+}
+resource "azurerm_servicebus_subscription" "sub_avenia" {
+  name               = "AveniaSubAccountCreationSubscription"
+  topic_id           = azurerm_servicebus_topic.t_avenia.id
+  max_delivery_count = 10
+  requires_session   = true 
+}
+
+# --- K. KYC & KYB Verification ---
+resource "azurerm_servicebus_topic" "t_kyc_kyb" {
+  name                = "kycandkybverification"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  partitioning_enabled = true
+}
+# (Sample didn't show a specific subscription name, assuming standard if needed, or just topic)
+
+# --- L. Payees On Bank Account ---
+resource "azurerm_servicebus_topic" "t_payees" {
+  name                = "payeesonbankaccount"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  partitioning_enabled = true
+}
+resource "azurerm_servicebus_subscription" "sub_payees" {
+  name               = "PayeesOnBankAccountSubscription"
+  topic_id           = azurerm_servicebus_topic.t_payees.id
+  max_delivery_count = 10
+  requires_session   = true
 }
 
 #   KEY VAULTS STARTED
@@ -817,6 +931,12 @@ resource "azurerm_key_vault_secret" "restsharp_token" {
 resource "azurerm_key_vault_secret" "x_api_key" {
   name         = "X-Api-Key"
   value        = var.x_api_key
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+resource "azurerm_key_vault_secret" "firebase_key" {
+  name         = "Firebase-ServerKey"
+  value        = var.firebase_server_key
   key_vault_id = module.key_vault.id
   depends_on   = [azurerm_role_assignment.kv_admin_rbac]
 }

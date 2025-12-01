@@ -65,3 +65,16 @@ variable "aml_access_id" {
   description = "The Access ID for the AML Provider"
   type        = string
 }
+# ... existing variables ...
+
+variable "company_name" {
+  description = "Client Company Name"
+  type        = string
+  default     = ""
+}
+
+variable "company_logo_url" {
+  description = "URL for Company Logo"
+  type        = string
+  default     = ""
+}

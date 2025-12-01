@@ -87,3 +87,19 @@ variable "dotnet_version" {
   type    = string
   default = "v8.0"
 }
+# --- SUBSCRIBER FUNCTION SPECIFIC ---
+variable "firebase_server_key" {
+  description = "Firebase Server Key for Notifications"
+  type        = string
+  sensitive   = true
+}
+
+variable "company_name" {
+  type    = string
+  default = "Artha Money"
+}
+
+variable "company_logo_url" {
+  type    = string
+  default = "" # You can set a default or pass it
+}
