@@ -355,6 +355,7 @@ module "app_configuration" {
     from_email  = "contact@${lower(var.client_name)}.money" 
     from_name   = "${var.client_name} Money"
   }
+  aml_access_id = var.aml_access_id
 
 }
 

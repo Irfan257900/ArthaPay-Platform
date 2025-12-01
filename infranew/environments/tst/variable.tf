@@ -61,7 +61,9 @@ variable "sendgrid_template_id" { type = string }
 variable "auth0_domain" {
   type = string
 }
-
+variable "aml_access_id" {
+  type = string
+}
 
 variable "backend_modules" {
   description = "List of backend modules to create Web Apps for"

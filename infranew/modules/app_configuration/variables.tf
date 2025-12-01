@@ -59,3 +59,9 @@ variable "auth0_mobile_client_id" {
   type        = string
   default     = ""
 }
+# ... (existing variables) ...
+
+variable "aml_access_id" {
+  description = "The Access ID for the AML Provider"
+  type        = string
+}

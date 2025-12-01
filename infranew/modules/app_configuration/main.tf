@@ -1,5 +1,6 @@
 locals {
-  # 1. Load the specific settings based on the input 'app_name'
+  # Load the specific settings based on the input 'app_name'.
+  # Now, each setting map MUST be complete on its own.
   specific_settings_map = {
     # Web Apps
     "banksapi"    = try(local.banksapi_settings, {})
@@ -12,14 +13,12 @@ locals {
     "exchangeapi" = try(local.exchangeapi_settings, {})
     "integration" = try(local.integration_settings, {})
 
-    # --- FUNCTION APPS REMOVED FOR NOW ---
-    # "marketdata"  = try(local.marketdata_settings, {})
-    # "subscriber"  = try(local.subscriber_settings, {})
-    # "publisher"   = try(local.publisher_settings, {})
+    # Function Apps
+    "marketdata"  = try(local.marketdata_settings, {})
+    "subscriber"  = try(local.subscriber_settings, {})
+    "publisher"   = try(local.publisher_settings, {})
   }
 
-  current_specific_settings = lookup(local.specific_settings_map, var.app_name, {})
-
-  # 2. MERGE
-  final_app_settings = merge(local.common_app_settings, local.current_specific_settings)
+  # Directly use the specific settings. No merging with common defaults.
+  final_app_settings = lookup(local.specific_settings_map, var.app_name, {})
 }
