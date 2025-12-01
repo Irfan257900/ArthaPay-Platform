@@ -286,6 +286,37 @@ resource "azurerm_linux_web_app" "ui_admin" {
   }
 }
 
+# --- APPLICATION INSIGHTS & LOGS (Missing Resources) ---
+resource "azurerm_log_analytics_workspace" "law" {
+  name                = "${local._name_prefix}-law"
+  location            = azurerm_resource_group.rg_apps.location
+  resource_group_name = azurerm_resource_group.rg_apps.name
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+  tags                = local.common_tags
+}
+
+resource "azurerm_application_insights" "appinsights" {
+  name                = "${local._name_prefix}-insights"
+  location            = azurerm_resource_group.rg_apps.location
+  resource_group_name = azurerm_resource_group.rg_apps.name
+  workspace_id        = azurerm_log_analytics_workspace.law.id
+  application_type    = "web"
+  tags                = local.common_tags
+}
+
+# --- FIXED SECRET RESOURCE ---
+resource "azurerm_key_vault_secret" "app_insights_conn" {
+  name         = "AppInsights-ConnectionString"
+  
+  # 🔴 OLD (Error): value = module.app_platform.app_insights_connection_string
+  # 🟢 NEW (Fixed): Reference the resource directly
+  value        = azurerm_application_insights.appinsights.connection_string
+  
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
 # ==============================================================================
 #  APP CONFIGURATION MODULE (REPLACES MONOLITHIC BLOCK)
 # ==============================================================================
