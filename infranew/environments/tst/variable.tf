@@ -181,23 +181,6 @@ variable "pyrros_url" {
   default = "https://dev.blaze.financial"
 }
 
-# --- Payments API Inputs (Fixed Format) ---
-
-variable "ayolinx_base_url" {
-  type    = string
-  default = ""
-}
-
-variable "pyrros_client_id" {
-  type    = string
-  default = ""
-}
-
-variable "pyrros_url" {
-  type    = string
-  default = ""
-}
-
 variable "web3_api_key" {
   type    = string
   default = ""
