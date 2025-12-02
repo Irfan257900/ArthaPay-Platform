@@ -6,10 +6,10 @@ locals {
     "Env"                               = upper(var.environment)
     "BaseCurrency"                      = "USD"
     "ClientId"                          = var.auth0_client_id
-    "ClientSecret"                      = var.secret_values.client_secret_val
+    "ClientSecret"                      = var.secret_uris.client_secret_val
     "SecretKey__ClientId"               = var.auth0_client_id
-    "SecretKey__ClientSecret"           = var.secret_values.client_secret_val
-    "SecretKey__Url"                    = var.secret_values.app_secret
+    "SecretKey__ClientSecret"           = var.secret_uris.client_secret_val
+    "SecretKey__Url"                    = var.secret_uris.app_secret
     
     # --- EXCHANGE SPECIFIC (HARDCODED) ---
     "BuySpreadValue"                    = "1"
@@ -32,17 +32,17 @@ locals {
     # ---------------------------------------------------------
     # 3. SECRETS (Key Vault Values)
     # ---------------------------------------------------------
-    "AccountSid"                        = var.secret_values.twilio_sid
-    "AuthToken"                         = var.secret_values.twilio_auth
-    "Redis__ConnectionString"           = var.secret_values.redis_conn
-    "RestSharpApiConfig__AccessToken"   = var.secret_values.restsharp_token
-    "StorageAccount__AccountKey"        = var.secret_values.storage_key
-    "StorageAccount__ConnectionStrings" = var.secret_values.db_conn
-    "SUMSUB_APP_TOKEN"                  = var.secret_values.sumsub_token
-    "SUMSUB_SECRET_KEY"                 = var.secret_values.sumsub_key
-    "TokenEncryptkey"                   = var.secret_values.token_key
-    "Vault__ClientSecret"               = var.secret_values.client_secret_val
-    "Vault__Url"                        = var.secret_values.vault_db_conn
+    "AccountSid"                        = var.secret_uris.twilio_sid
+    "AuthToken"                         = var.secret_uris.twilio_auth
+    "Redis__ConnectionString"           = var.secret_uris.redis_conn
+    "RestSharpApiConfig__AccessToken"   = var.secret_uris.restsharp_token
+    "StorageAccount__AccountKey"        = var.secret_uris.storage_key
+    "StorageAccount__ConnectionStrings" = var.secret_uris.db_conn
+    "SUMSUB_APP_TOKEN"                  = var.secret_uris.sumsub_token
+    "SUMSUB_SECRET_KEY"                 = var.secret_uris.sumsub_key
+    "TokenEncryptkey"                   = var.secret_uris.token_key
+    "Vault__ClientSecret"               = var.secret_uris.client_secret_val
+    "Vault__Url"                        = var.secret_uris.vault_db_conn
 
     # ---------------------------------------------------------
     # 4. SERVICE BUS

@@ -236,3 +236,9 @@ variable "cards_customer_token" {
   default     = ""
 }
 
+variable "sendgrid_auth_token" {
+  description = "SendGrid Authentication Token"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

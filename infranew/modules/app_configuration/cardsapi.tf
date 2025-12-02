@@ -7,15 +7,15 @@ locals {
     "AppName"                           = "${var.client_name} Money"
     "BaseCurrency"                      = "USD"
     "ClientId"                          = var.auth0_client_id
-    "ClientSecret"                      = var.secret_values.client_secret_val
+    "ClientSecret"                      = var.secret_uris.client_secret_val
     "SecretKey__ClientId"               = var.auth0_client_id
-    "SecretKey__ClientSecret"           = var.secret_values.client_secret_val
-    "SecretKey__Url"                    = var.secret_values.app_secret
+    "SecretKey__ClientSecret"           = var.secret_uris.client_secret_val
+    "SecretKey__Url"                    = var.secret_uris.app_secret
     
     # --- CARDS SPECIFIC ---
     # These use the new variables we are about to add
-    "Private_Key"                       = var.secret_values.cards_private_key 
-    "CustomerToken"                     = var.secret_values.cards_customer_token
+    "Private_Key"                       = var.secret_uris.cards_private_key 
+    "CustomerToken"                     = var.secret_uris.cards_customer_token
     
     "Web3Exchange"                      = var.web3_exchange_id
     "Web3Payments"                      = var.web3_payments_id
@@ -40,16 +40,16 @@ locals {
     # ---------------------------------------------------------
     # 3. STANDARD SECRETS (Key Vault Values)
     # ---------------------------------------------------------
-    "AccountSid"                        = var.secret_values.twilio_sid
-    "AuthToken"                         = var.secret_values.twilio_auth
-    "RestSharpApiConfig__AccessToken"   = var.secret_values.restsharp_token
-    "StorageAccount__AccountKey"        = var.secret_values.storage_key
-    "StorageAccount__ConnectionStrings" = var.secret_values.db_conn
-    "TokenEncryptkey"                   = var.secret_values.token_key
-    "Vault__ClientSecret"               = var.secret_values.client_secret_val
-    "Vault__Url"                        = var.secret_values.vault_db_conn
-    "ServiceId"                         = var.secret_values.twilio_service
-    "Url"                               = var.secret_values.db_conn 
+    "AccountSid"                        = var.secret_uris.twilio_sid
+    "AuthToken"                         = var.secret_uris.twilio_auth
+    "RestSharpApiConfig__AccessToken"   = var.secret_uris.restsharp_token
+    "StorageAccount__AccountKey"        = var.secret_uris.storage_key
+    "StorageAccount__ConnectionStrings" = var.secret_uris.db_conn
+    "TokenEncryptkey"                   = var.secret_uris.token_key
+    "Vault__ClientSecret"               = var.secret_uris.client_secret_val
+    "Vault__Url"                        = var.secret_uris.vault_db_conn
+    "ServiceId"                         = var.secret_uris.twilio_service
+    "Url"                               = var.secret_uris.db_conn 
 
     # ---------------------------------------------------------
     # 4. SERVICE BUS

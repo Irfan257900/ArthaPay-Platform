@@ -7,19 +7,19 @@ locals {
     "AppName"                           = "Fast-XE" # Or dynamically "${var.client_name}"
     "BaseCurrency"                      = "USD"
     "ClientId"                          = var.auth0_client_id
-    "ClientSecret"                      = var.secret_values.client_secret_val
+    "ClientSecret"                      = var.secret_uris.client_secret_val
     "SecretKey__ClientId"               = var.auth0_client_id
-    "SecretKey__ClientSecret"           = var.secret_values.client_secret_val
-    "SecretKey__Url"                    = var.secret_values.app_secret
+    "SecretKey__ClientSecret"           = var.secret_uris.client_secret_val
+    "SecretKey__Url"                    = var.secret_uris.app_secret
     "ProviderName"                      = "Database"
 
     # ---------------------------------------------------------
     # 2. PAYMENTS SPECIFIC CONFIG
     # ---------------------------------------------------------
-    "Ayolinx_Private_Key"               = var.secret_values.ayolinx_key
+    "Ayolinx_Private_Key"               = var.secret_uris.ayolinx_key
     "AyolinxBaseAddress"                = "${var.service_urls.paymentsapi}" # "https://paymentsapi..."
     "AyolinxBaseUrl"                    = var.ayolinx_base_url
-    "AyolinxCustomerToken"              = var.secret_values.ayolinx_token
+    "AyolinxCustomerToken"              = var.secret_uris.ayolinx_token
     
     "BanksWithdrawUrl"                  = "${var.service_urls.banksapi}"
     
@@ -27,7 +27,7 @@ locals {
     "HyperPayUrl"                       = var.hyperpay_url
     
     "pyrrosclientid"                    = var.pyrros_client_id
-    "pyrrosclientsecret"                = var.secret_values.pyrros_secret
+    "pyrrosclientsecret"                = var.secret_uris.pyrros_secret
     "pyrrosurl"                         = var.pyrros_url
     
     "Web3ApiKey"                        = var.web3_api_key
@@ -39,7 +39,7 @@ locals {
     # 3. SENDGRID (Specific Keys)
     # ---------------------------------------------------------
     "SendGrid__AccountSId"              = var.sendgrid_account_sid
-    "SendGrid__AuthToken"               = var.secret_values.sendgrid_token
+    "SendGrid__AuthToken"               = var.secret_uris.sendgrid_token
     "SendGrid__ServiceId"               = var.sendgrid_service_id
     "SendGrid__DynamicTemplateId"       = var.sendgrid_config.template_id
     "SendGrid__FromEmail"               = var.sendgrid_config.from_email
@@ -62,25 +62,25 @@ locals {
     # ---------------------------------------------------------
     # 5. SECRETS
     # ---------------------------------------------------------
-    "AccountSid"                        = var.secret_values.twilio_sid
-    "AuthToken"                         = var.secret_values.twilio_auth
-    "ConnectionString"                  = var.secret_values.db_conn
-    "ConnectionStrings__DefaultConnection" = "Data Source=localhost;Initial Catalog=MyContactsDB;Integrated Security=True;MultipleActiveResultSets=True" # Sample has LocalDB? Update to var.secret_values.db_conn if needed.
-    "CustomerToken"                     = var.secret_values.ayolinx_token # Sample mapped CustomerToken to Ayolinx token
-    "EasyLink_AppId"                    = var.secret_values.easylink_key # Double check sample values
-    "EasyLink_AppKey"                   = var.secret_values.easylink_key
-    "EasyLink_AppSecret"                = var.secret_values.easylink_secret
+    "AccountSid"                        = var.secret_uris.twilio_sid
+    "AuthToken"                         = var.secret_uris.twilio_auth
+    "ConnectionString"                  = var.secret_uris.db_conn
+    "ConnectionStrings__DefaultConnection" = "Data Source=localhost;Initial Catalog=MyContactsDB;Integrated Security=True;MultipleActiveResultSets=True" # Sample has LocalDB? Update to var.secret_uris.db_conn if needed.
+    "CustomerToken"                     = var.secret_uris.ayolinx_token # Sample mapped CustomerToken to Ayolinx token
+    "EasyLink_AppId"                    = var.secret_uris.easylink_key # Double check sample values
+    "EasyLink_AppKey"                   = var.secret_uris.easylink_key
+    "EasyLink_AppSecret"                = var.secret_uris.easylink_secret
     "EasyLink_BaseUrl"                  = "http://sandbox.easylink.id:9080"
-    "Redis__ConnectionString"           = var.secret_values.redis_conn
-    "RestSharpApiConfig__AccessToken"   = var.secret_values.restsharp_token
-    "ServiceId"                         = var.secret_values.twilio_service
-    "StorageAccount__AccountKey"        = var.secret_values.storage_key
-    "StorageAccount__ConnectionStrings" = var.secret_values.db_conn
-    "SUMSUB_APP_TOKEN"                  = var.secret_values.sumsub_token
-    "SUMSUB_SECRET_KEY"                 = var.secret_values.sumsub_key
-    "TokenEncryptkey"                   = var.secret_values.token_key
-    "Vault__ClientSecret"               = var.secret_values.client_secret_val
-    "Vault__Url"                        = var.secret_values.vault_db_conn
+    "Redis__ConnectionString"           = var.secret_uris.redis_conn
+    "RestSharpApiConfig__AccessToken"   = var.secret_uris.restsharp_token
+    "ServiceId"                         = var.secret_uris.twilio_service
+    "StorageAccount__AccountKey"        = var.secret_uris.storage_key
+    "StorageAccount__ConnectionStrings" = var.secret_uris.db_conn
+    "SUMSUB_APP_TOKEN"                  = var.secret_uris.sumsub_token
+    "SUMSUB_SECRET_KEY"                 = var.secret_uris.sumsub_key
+    "TokenEncryptkey"                   = var.secret_uris.token_key
+    "Vault__ClientSecret"               = var.secret_uris.client_secret_val
+    "Vault__Url"                        = var.secret_uris.vault_db_conn
 
     # ---------------------------------------------------------
     # 6. SERVICE BUS
