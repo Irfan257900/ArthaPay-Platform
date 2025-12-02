@@ -102,7 +102,23 @@ variable "app_insights_connection_string" {
 variable "app_insights_instrumentation_key" { type = string }
 
 # --- MarketData Inputs ---
-variable "admin_transaction_mail" { type = string, default = "" }
-variable "bcc_address_mails" { type = string, default = "" }
-variable "exchange_url" { type = string, default = "" }
-variable "login_url" { type = string, default = "" }
+
+variable "admin_transaction_mail" {
+  type    = string
+  default = ""
+}
+
+variable "bcc_address_mails" {
+  type    = string
+  default = ""
+}
+
+variable "exchange_url" {
+  type    = string
+  default = ""
+}
+
+variable "login_url" {
+  type    = string
+  default = ""
+}
