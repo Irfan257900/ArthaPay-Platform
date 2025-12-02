@@ -701,24 +701,6 @@ resource "azurerm_role_assignment" "func_sweep_kv" {
   principal_id         = azurerm_windows_function_app.func_sweep.identity[0].principal_id
 }
 # --- Core Secrets ---
-resource "azurerm_key_vault_secret" "auth0_domain" {
-  name         = "Auth0-Domain"
-  value        = var.auth0_domain
-  key_vault_id = module.key_vault.id
-  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
-}
-resource "azurerm_key_vault_secret" "mailgun_key" {
-  name         = "Mailgun-ApiKey"
-  value        = var.mailgun_key
-  key_vault_id = module.key_vault.id
-  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
-}
-resource "azurerm_key_vault_secret" "twilio_sid" {
-  name         = "AccountSid" # Standardized Name
-  value        = var.twilio_account_sid
-  key_vault_id = module.key_vault.id
-  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
-}
 resource "azurerm_key_vault_secret" "twilio_auth" {
   name         = "AuthToken"
   value        = var.twilio_auth_token
@@ -815,12 +797,7 @@ resource "azurerm_key_vault_secret" "db_conn" {
   key_vault_id = module.key_vault.id
   depends_on   = [azurerm_role_assignment.kv_admin_rbac]
 }
-resource "azurerm_key_vault_secret" "sql_password" {
-  name         = "SQL-App-Password"
-  value        = var.app_sql_password
-  key_vault_id = module.key_vault.id
-  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
-}
+
 resource "azurerm_key_vault_secret" "aml_key" {
   name         = "AML-AccessKey"
   value        = var.aml_access_key
