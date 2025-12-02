@@ -309,8 +309,8 @@ resource "azurerm_application_insights" "appinsights" {
 resource "azurerm_key_vault_secret" "app_insights_conn" {
   name         = "AppInsights-ConnectionString"
   
-  # 🔴 OLD (Error): value = module.app_platform.app_insights_connection_string
-  # 🟢 NEW (Fixed): Reference the resource directly
+  # OLD (Error): value = module.app_platform.app_insights_connection_string
+  # NEW (Fixed): Reference the resource directly
   value        = azurerm_application_insights.appinsights.connection_string
   
   key_vault_id = module.key_vault.id
