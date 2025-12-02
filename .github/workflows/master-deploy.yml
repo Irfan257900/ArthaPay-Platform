@@ -86,6 +86,21 @@ jobs:
       MARKET_BCC_EMAILS: ${{ secrets.MARKET_BCC_EMAILS }}
       MARKET_EXCHANGE_URL: ${{ secrets.MARKET_EXCHANGE_URL }}
       MARKET_LOGIN_URL: ${{ secrets.MARKET_LOGIN_URL }}
+      AYOLINX_PRIVATE_KEY: ${{ secrets.AYOLINX_PRIVATE_KEY }}
+      AYOLINX_CUSTOMER_TOKEN: ${{ secrets.AYOLINX_CUSTOMER_TOKEN }}
+      AYOLINX_BASE_URL: ${{ secrets.AYOLINX_BASE_URL }}
+      PYRROS_CLIENT_ID: ${{ secrets.PYRROS_CLIENT_ID }}
+      PYRROS_CLIENT_SECRET: ${{ secrets.PYRROS_CLIENT_SECRET }}
+      PYRROS_URL: ${{ secrets.PYRROS_URL }}
+      SENDGRID_AUTH_TOKEN: ${{ secrets.SENDGRID_AUTH_TOKEN }}
+      SENDGRID_ACCOUNT_SID: ${{ secrets.SENDGRID_ACCOUNT_SID }}
+      SENDGRID_SERVICE_ID: ${{ secrets.SENDGRID_SERVICE_ID }}
+      WEB3_API_KEY: ${{ secrets.WEB3_API_KEY }}
+      WEB3_EXCHANGE_ID: ${{ secrets.WEB3_EXCHANGE_ID }}
+      WEB3_PAYMENTS_ID: ${{ secrets.WEB3_PAYMENTS_ID }}
+      WEB3_PAYMENT_LINK_URL: ${{ secrets.WEB3_PAYMENT_LINK_URL }}
+      HYPERPAY_URL: ${{ secrets.HYPERPAY_URL }}
+      COINGECKO_BASE_URL: ${{ secrets.COINGECKO_BASE_URL }}
 
   # ===================================================================
   # JOB 2: CONFIGURE UI

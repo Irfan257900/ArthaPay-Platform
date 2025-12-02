@@ -122,3 +122,15 @@ variable "login_url" {
   type    = string
   default = ""
 }
+
+variable "ayolinx_base_url" { type = string, default = "" }
+variable "pyrros_client_id" { type = string, default = "" }
+variable "pyrros_url" { type = string, default = "" }
+variable "web3_api_key" { type = string, default = "" }
+variable "web3_exchange_id" { type = string, default = "" }
+variable "web3_payments_id" { type = string, default = "" }
+variable "web3_payment_link_url" { type = string, default = "" }
+variable "coingecko_base_url" { type = string, default = "" }
+variable "hyperpay_url" { type = string, default = "" }
+variable "sendgrid_account_sid" { type = string, default = "" }
+variable "sendgrid_service_id" { type = string, default = "" }

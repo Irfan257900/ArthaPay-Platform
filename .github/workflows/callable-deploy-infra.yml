@@ -64,6 +64,21 @@ on:
       MARKET_BCC_EMAILS: { required: false }
       MARKET_EXCHANGE_URL: { required: false }
       MARKET_LOGIN_URL: { required: false }
+      AYOLINX_PRIVATE_KEY: { required: false }
+      AYOLINX_CUSTOMER_TOKEN: { required: false }
+      AYOLINX_BASE_URL: { required: false }
+      PYRROS_CLIENT_ID: { required: false }
+      PYRROS_CLIENT_SECRET: { required: false }
+      PYRROS_URL: { required: false }
+      SENDGRID_AUTH_TOKEN: { required: false }
+      SENDGRID_ACCOUNT_SID: { required: false }
+      SENDGRID_SERVICE_ID: { required: false }
+      WEB3_API_KEY: { required: false }
+      WEB3_EXCHANGE_ID: { required: false }
+      WEB3_PAYMENTS_ID: { required: false }
+      WEB3_PAYMENT_LINK_URL: { required: false }
+      HYPERPAY_URL: { required: false }
+      COINGECKO_BASE_URL: { required: false }
 
 jobs:
   deploy-infra:
@@ -230,6 +245,21 @@ jobs:
           TF_VAR_bcc_address_mails: ${{ secrets.MARKET_BCC_EMAILS }}
           TF_VAR_exchange_url: ${{ secrets.MARKET_EXCHANGE_URL }}
           TF_VAR_login_url: ${{ secrets.MARKET_LOGIN_URL }}
+          TF_VAR_ayolinx_private_key: ${{ secrets.AYOLINX_PRIVATE_KEY }}
+          TF_VAR_ayolinx_customer_token: ${{ secrets.AYOLINX_CUSTOMER_TOKEN }}
+          TF_VAR_ayolinx_base_url: ${{ secrets.AYOLINX_BASE_URL }}
+          TF_VAR_pyrros_client_id: ${{ secrets.PYRROS_CLIENT_ID }}
+          TF_VAR_pyrros_client_secret: ${{ secrets.PYRROS_CLIENT_SECRET }}
+          TF_VAR_pyrros_url: ${{ secrets.PYRROS_URL }}
+          TF_VAR_sendgrid_auth_token: ${{ secrets.SENDGRID_AUTH_TOKEN }}
+          TF_VAR_sendgrid_account_sid: ${{ secrets.SENDGRID_ACCOUNT_SID }}
+          TF_VAR_sendgrid_service_id: ${{ secrets.SENDGRID_SERVICE_ID }}
+          TF_VAR_web3_api_key: ${{ secrets.WEB3_API_KEY }}
+          TF_VAR_web3_exchange_id: ${{ secrets.WEB3_EXCHANGE_ID }}
+          TF_VAR_web3_payments_id: ${{ secrets.WEB3_PAYMENTS_ID }}
+          TF_VAR_web3_payment_link_url: ${{ secrets.WEB3_PAYMENT_LINK_URL }}
+          TF_VAR_hyperpay_url: ${{ secrets.HYPERPAY_URL }}
+          TF_VAR_coingecko_base_url: ${{ secrets.COINGECKO_BASE_URL }}
 
 
         run: terraform plan -out=tfplan
@@ -280,6 +310,21 @@ jobs:
           TF_VAR_bcc_address_mails: ${{ secrets.MARKET_BCC_EMAILS }}
           TF_VAR_exchange_url: ${{ secrets.MARKET_EXCHANGE_URL }}
           TF_VAR_login_url: ${{ secrets.MARKET_LOGIN_URL }}
+          TF_VAR_ayolinx_private_key: ${{ secrets.AYOLINX_PRIVATE_KEY }}
+          TF_VAR_ayolinx_customer_token: ${{ secrets.AYOLINX_CUSTOMER_TOKEN }}
+          TF_VAR_ayolinx_base_url: ${{ secrets.AYOLINX_BASE_URL }}
+          TF_VAR_pyrros_client_id: ${{ secrets.PYRROS_CLIENT_ID }}
+          TF_VAR_pyrros_client_secret: ${{ secrets.PYRROS_CLIENT_SECRET }}
+          TF_VAR_pyrros_url: ${{ secrets.PYRROS_URL }}
+          TF_VAR_sendgrid_auth_token: ${{ secrets.SENDGRID_AUTH_TOKEN }}
+          TF_VAR_sendgrid_account_sid: ${{ secrets.SENDGRID_ACCOUNT_SID }}
+          TF_VAR_sendgrid_service_id: ${{ secrets.SENDGRID_SERVICE_ID }}
+          TF_VAR_web3_api_key: ${{ secrets.WEB3_API_KEY }}
+          TF_VAR_web3_exchange_id: ${{ secrets.WEB3_EXCHANGE_ID }}
+          TF_VAR_web3_payments_id: ${{ secrets.WEB3_PAYMENTS_ID }}
+          TF_VAR_web3_payment_link_url: ${{ secrets.WEB3_PAYMENT_LINK_URL }}
+          TF_VAR_hyperpay_url: ${{ secrets.HYPERPAY_URL }}
+          TF_VAR_coingecko_base_url: ${{ secrets.COINGECKO_BASE_URL }}
 
         run: |
           terraform apply -auto-approve tfplan

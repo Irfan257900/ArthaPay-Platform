@@ -330,6 +330,22 @@ module "app_configuration" {
   app_insights_connection_string   = azurerm_application_insights.appinsights.connection_string
   app_insights_instrumentation_key = azurerm_application_insights.appinsights.instrumentation_key
 
+  # 2. Pass New Variables (Add to module inputs)
+  ayolinx_base_url     = var.ayolinx_base_url
+  pyrros_client_id     = var.pyrros_client_id
+  pyrros_url           = var.pyrros_url
+  web3_api_key         = var.web3_api_key
+  web3_exchange_id     = var.web3_exchange_id
+  web3_payments_id     = var.web3_payments_id
+  web3_payment_link_url= var.web3_payment_link_url
+  coingecko_base_url   = var.coingecko_base_url
+  hyperpay_url         = var.hyperpay_url
+  
+  # SendGrid Specifics
+  sendgrid_account_sid = var.sendgrid_account_sid
+  sendgrid_service_id  = var.sendgrid_service_id
+
+
   # --- Secret URIs (Mapping created resources to Module) ---
   secret_uris = {
     twilio_sid         = azurerm_key_vault_secret.twilio_sid.id
@@ -357,6 +373,10 @@ module "app_configuration" {
     restsharp_token    = azurerm_key_vault_secret.restsharp_token.id
     x_api_key          = azurerm_key_vault_secret.x_api_key.id
     firebase_key                   = ""  # Empty because Web Apps don't use it
+    ayolinx_key    = azurerm_key_vault_secret.ayolinx_key.id
+    ayolinx_token  = azurerm_key_vault_secret.ayolinx_token.id
+    pyrros_secret  = azurerm_key_vault_secret.pyrros_secret.id
+    sendgrid_token = azurerm_key_vault_secret.sendgrid_token.id
     
   }
 
@@ -629,6 +649,14 @@ resource "azurerm_servicebus_queue" "q_order" {
   requires_session    = true # Added
 }
 
+# --- O. Buy and Sell Queue ---
+resource "azurerm_servicebus_queue" "q_buysell" {
+  name                 = "buyandsellqueue"
+  namespace_id         = data.azurerm_servicebus_namespace.sb_lookup.id
+  partitioning_enabled = true
+  requires_session     = true
+}
+
 # ==============================================================================
 # 2. TOPICS & SUBSCRIPTIONS (All Sessions Enabled)
 # ==============================================================================
@@ -658,6 +686,14 @@ resource "azurerm_servicebus_subscription" "sub_aml" {
   max_delivery_count = 10
   requires_session   = true # Added
 }
+
+# --- N. Batch PayOut Transactions ---
+resource "azurerm_servicebus_topic" "t_batch_payout" {
+  name                 = "BatchPayOutTransactions"
+  namespace_id         = data.azurerm_servicebus_namespace.sb_lookup.id
+  partitioning_enabled = true
+}
+# (No subscription listed in sample, skipping subscription resource)
 
 # --- C. Audit Logs ---
 resource "azurerm_servicebus_topic" "t_audit" {
@@ -1006,7 +1042,34 @@ resource "azurerm_key_vault_secret" "firebase_key" {
   key_vault_id = module.key_vault.id
   depends_on   = [azurerm_role_assignment.kv_admin_rbac]
 }
+resource "azurerm_key_vault_secret" "ayolinx_key" {
+  name         = "AyolinxprivateKeyPem"
+  value        = var.ayolinx_private_key
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
 
+resource "azurerm_key_vault_secret" "ayolinx_token" {
+  name         = "AyolinxCustomerToken"
+  value        = var.ayolinx_customer_token
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+resource "azurerm_key_vault_secret" "pyrros_secret" {
+  name         = "pyrrosclientsecret"
+  value        = var.pyrros_client_secret
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+# SendGrid Auth Token (If different from Twilio)
+resource "azurerm_key_vault_secret" "sendgrid_token" {
+  name         = "SendGrid-AuthToken"
+  value        = var.sendgrid_auth_token
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
 
 # --- GRANT ACCESS (RBAC METHOD) ---
 resource "azurerm_role_assignment" "webapp_kv_access" {
