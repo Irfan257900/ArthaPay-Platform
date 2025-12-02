@@ -122,3 +122,27 @@ variable "tron_wallet_address" {
   type        = string
   default     = ""
 }
+# --- MARKETDATA FUNCTION SPECIFIC ---
+variable "admin_transaction_mail" {
+  description = "Admin Email for Transactions"
+  type        = string
+  default     = ""
+}
+
+variable "bcc_address_mails" {
+  description = "BCC Email Addresses"
+  type        = string
+  default     = ""
+}
+
+variable "exchange_url" {
+  description = "Exchange Service URL"
+  type        = string
+  default     = ""
+}
+
+variable "login_url" {
+  description = "Login Page URL"
+  type        = string
+  default     = ""
+}

@@ -414,6 +414,12 @@ module "function_app_configuration" {
   polygon_wallet_address = var.polygon_wallet_address
   tron_wallet_address    = var.tron_wallet_address
 
+  # --- NEW: MARKETDATA SPECIFIC INPUTS ---
+  admin_transaction_mail = var.admin_transaction_mail
+  bcc_address_mails      = var.bcc_address_mails
+  exchange_url           = var.exchange_url
+  login_url              = var.login_url
+
   # --- Secret URIs ---
   # (Must match the Web App module list, plus the NEW Firebase Key)
   secret_uris = {

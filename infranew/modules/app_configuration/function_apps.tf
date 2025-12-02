@@ -1,5 +1,56 @@
 locals { 
-  marketdata_settings = {} 
+  marketdata_settings = {
+    # ---------------------------------------------------------
+    # 1. CORE CONFIGURATION
+    # ---------------------------------------------------------
+    "ClientId"                          = var.auth0_client_id
+    "ClientSecret"                      = var.secret_uris.client_secret_val # Direct URL
+    
+    # --- NEW VARIABLES ---
+    "AdminTransactionMail"              = var.admin_transaction_mail
+    "BccAddressMails"                   = var.bcc_address_mails
+    "ExchangeURL"                       = var.exchange_url
+    "loginurl"                          = var.login_url
+    "SubUrl"                            = ""
+
+    # ---------------------------------------------------------
+    # 2. DYNAMIC URLs
+    # ---------------------------------------------------------
+    "IntegrationURL"                    = var.service_urls.integration
+
+    # ---------------------------------------------------------
+    # 3. DATABASE & STORAGE SECRETS (Direct URLs)
+    # ---------------------------------------------------------
+    "Url"                               = var.secret_uris.db_conn
+    "StorageAccount__AccountKey"        = var.secret_uris.storage_key
+    "StorageAccount__ConnectionStrings" = var.secret_uris.db_conn
+    
+    # Storage Config
+    # Note: AccountName is usually derived or passed. 
+    # If you need the exact name, ensure it's passed as a var or constructed.
+    "StorageAccount__AccountName"       = "st${lower(var.client_name)}${lower(var.environment)}..." 
+    "StorageAccount__ContainerName"     = "rapidz${lower(var.environment)}"
+
+    # ---------------------------------------------------------
+    # 4. WEBJOBS / TRIGGER TOGGLES
+    # ---------------------------------------------------------
+    "AzureWebJobs.BuysellTransaction.Disabled" = "1"
+    "AzureWebJobs.CryptoHourlyData.Disabled"   = "1"
+    "AzureWebJobs.CryptoMarketData.Disabled"   = "1"
+    
+    # ---------------------------------------------------------
+    # 5. PLATFORM SETTINGS
+    # ---------------------------------------------------------
+    "FUNCTIONS_EXTENSION_VERSION"            = "~4"
+    "FUNCTIONS_WORKER_RUNTIME"               = "dotnet"
+    "WEBSITE_RUN_FROM_PACKAGE"               = "1"
+    "WEBSITES_ENABLE_APP_SERVICE_STORAGE"    = "true"
+    "WEBSITE_ENABLE_SYNC_UPDATE_SITE"        = "true"
+    "WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED" = "1" # New flag from sample
+
+    # --- APP INSIGHTS (Raw Value) ---
+    "APPLICATIONINSIGHTS_CONNECTION_STRING" = var.app_insights_connection_string
+  } 
   subscriber_settings = {
     # ---------------------------------------------------------
     # 1. CORE CONFIGURATION

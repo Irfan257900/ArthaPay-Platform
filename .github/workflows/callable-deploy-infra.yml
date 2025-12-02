@@ -60,6 +60,10 @@ on:
       COLLECTION_VAULT_ID: { required: true }
       POLYGON_WALLET_ADDRESS: { required: true }
       TRON_WALLET_ADDRESS: { required: true }
+      MARKET_ADMIN_EMAIL: { required: false }
+      MARKET_BCC_EMAILS: { required: false }
+      MARKET_EXCHANGE_URL: { required: false }
+      MARKET_LOGIN_URL: { required: false }
 
 jobs:
   deploy-infra:
@@ -222,6 +226,10 @@ jobs:
           TF_VAR_collection_vault_id: ${{ secrets.COLLECTION_VAULT_ID }}
           TF_VAR_polygon_wallet_address: ${{ secrets.POLYGON_WALLET_ADDRESS }}
           TF_VAR_tron_wallet_address: ${{ secrets.TRON_WALLET_ADDRESS }}
+          TF_VAR_admin_transaction_mail: ${{ secrets.MARKET_ADMIN_EMAIL }}
+          TF_VAR_bcc_address_mails: ${{ secrets.MARKET_BCC_EMAILS }}
+          TF_VAR_exchange_url: ${{ secrets.MARKET_EXCHANGE_URL }}
+          TF_VAR_login_url: ${{ secrets.MARKET_LOGIN_URL }}
 
 
         run: terraform plan -out=tfplan
@@ -268,6 +276,10 @@ jobs:
           TF_VAR_collection_vault_id: ${{ secrets.COLLECTION_VAULT_ID }}
           TF_VAR_polygon_wallet_address: ${{ secrets.POLYGON_WALLET_ADDRESS }}
           TF_VAR_tron_wallet_address: ${{ secrets.TRON_WALLET_ADDRESS }}
+          TF_VAR_admin_transaction_mail: ${{ secrets.MARKET_ADMIN_EMAIL }}
+          TF_VAR_bcc_address_mails: ${{ secrets.MARKET_BCC_EMAILS }}
+          TF_VAR_exchange_url: ${{ secrets.MARKET_EXCHANGE_URL }}
+          TF_VAR_login_url: ${{ secrets.MARKET_LOGIN_URL }}
 
         run: |
           terraform apply -auto-approve tfplan

@@ -82,6 +82,10 @@ jobs:
       COLLECTION_VAULT_ID: ${{ secrets.COLLECTION_VAULT_ID }}
       POLYGON_WALLET_ADDRESS: ${{ secrets.POLYGON_WALLET_ADDRESS }}
       TRON_WALLET_ADDRESS: ${{ secrets.TRON_WALLET_ADDRESS }}
+      MARKET_ADMIN_EMAIL: ${{ secrets.MARKET_ADMIN_EMAIL }}
+      MARKET_BCC_EMAILS: ${{ secrets.MARKET_BCC_EMAILS }}
+      MARKET_EXCHANGE_URL: ${{ secrets.MARKET_EXCHANGE_URL }}
+      MARKET_LOGIN_URL: ${{ secrets.MARKET_LOGIN_URL }}
 
   # ===================================================================
   # JOB 2: CONFIGURE UI
