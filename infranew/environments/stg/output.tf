@@ -55,6 +55,6 @@ output "func_subscriber_name" {
   value = azurerm_windows_function_app.func_subscriber.name
 }
 
-output "func_publisher_name" {
-  value = azurerm_windows_function_app.func_publisher.name
+output "func_sweep_name" {
+  value = azurerm_windows_function_app.func_sweep.name
 }
