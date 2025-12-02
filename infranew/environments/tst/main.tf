@@ -501,6 +501,7 @@ module "function_app_configuration" {
     # --- Firebase (Conditional) ---
     # For Web App Module: Use "" (empty string)
     # For Function App Module: Use azurerm_key_vault_secret.firebase_key.id
+    firebase_key = azurerm_key_vault_secret.firebase_key.id
   }
 
   # --- Service URLs ---
