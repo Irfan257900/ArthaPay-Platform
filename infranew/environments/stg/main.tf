@@ -276,17 +276,224 @@ data "azurerm_servicebus_namespace" "sb_lookup" {
   depends_on          = [module.service_bus]
 }
 
-# --- QUEUES & TOPICS (Standard List) ---
-# Note: We can likely reuse the full list from TST here if STG needs them all
+# ==============================================================================
+#  1. QUEUES (All Sessions Enabled - Matches TST)
+# ==============================================================================
+
 resource "azurerm_servicebus_queue" "q_processing" {
-  name                 = "processing-queue"
-  namespace_id         = data.azurerm_servicebus_namespace.sb_lookup.id
-  partitioning_enabled = true
+  name                = "processing-queue"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true  # FIX: Reverted to enable_partitioning
+  requires_session    = true 
 }
+
 resource "azurerm_servicebus_queue" "q_cards" {
-  name                 = "cardsqueue"
+  name                = "cardsqueue"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+  requires_session    = true
+}
+
+resource "azurerm_servicebus_queue" "q_deposit" {
+  name                = "depositandwithdrawqueue"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+  requires_session    = true
+}
+
+resource "azurerm_servicebus_queue" "q_loyalty" {
+  name                = "loyaltyprogram"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+  requires_session    = true
+}
+
+resource "azurerm_servicebus_queue" "q_order" {
+  name                = "orderqueue"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+  requires_session    = true
+}
+
+resource "azurerm_servicebus_queue" "q_buysell" {
+  name                = "buyandsellqueue"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+  requires_session    = true
+}
+
+# ==============================================================================
+#  2. TOPICS & SUBSCRIPTIONS
+# ==============================================================================
+
+# --- A. Existing Market Topic ---
+resource "azurerm_servicebus_topic" "t_market" {
+  name                = "market-data-events"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+resource "azurerm_servicebus_subscription" "sub_market" {
+  name               = "subscriber-service"
+  topic_id           = azurerm_servicebus_topic.t_market.id
+  max_delivery_count = 10
+  requires_session   = true 
+}
+
+# --- B. AML Risk Score ---
+resource "azurerm_servicebus_topic" "t_aml" {
+  name                = "amlriskscore"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+resource "azurerm_servicebus_subscription" "sub_aml" {
+  name               = "sub-processor"
+  topic_id           = azurerm_servicebus_topic.t_aml.id
+  max_delivery_count = 10
+  requires_session   = true
+}
+
+# --- C. Audit Logs ---
+resource "azurerm_servicebus_topic" "t_audit" {
+  name                = "auditlogs"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+resource "azurerm_servicebus_subscription" "sub_audit" {
+  name               = "sub-processor"
+  topic_id           = azurerm_servicebus_topic.t_audit.id
+  max_delivery_count = 10
+  requires_session   = true
+}
+
+# --- D. Email Notifications ---
+resource "azurerm_servicebus_topic" "t_email" {
+  name                = "emailnotifications"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+resource "azurerm_servicebus_subscription" "sub_email" {
+  name               = "sub-processor"
+  topic_id           = azurerm_servicebus_topic.t_email.id
+  max_delivery_count = 10
+  requires_session   = true
+}
+
+# --- E. Fill Gas Fee ---
+resource "azurerm_servicebus_topic" "t_gas" {
+  name                = "fillgasfee"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+resource "azurerm_servicebus_subscription" "sub_gas" {
+  name               = "sub-processor"
+  topic_id           = azurerm_servicebus_topic.t_gas.id
+  max_delivery_count = 10
+  requires_session   = true
+}
+
+# --- F. KYC Verification ---
+resource "azurerm_servicebus_topic" "t_kyc" {
+  name                = "kycverification"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+resource "azurerm_servicebus_subscription" "sub_kyc" {
+  name               = "sub-processor"
+  topic_id           = azurerm_servicebus_topic.t_kyc.id
+  max_delivery_count = 10
+  requires_session   = true
+}
+
+# --- G. Merchant Wallets ---
+resource "azurerm_servicebus_topic" "t_merchant" {
+  name                = "merchantwalletsVerification"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+resource "azurerm_servicebus_subscription" "sub_merchant" {
+  name               = "sub-processor"
+  topic_id           = azurerm_servicebus_topic.t_merchant.id
+  max_delivery_count = 10
+  requires_session   = true
+}
+
+# --- H. Mesta Sender Creation ---
+resource "azurerm_servicebus_topic" "t_mesta" {
+  name                = "mestasendercreation"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+resource "azurerm_servicebus_subscription" "sub_mesta" {
+  name               = "sub-processor"
+  topic_id           = azurerm_servicebus_topic.t_mesta.id
+  max_delivery_count = 10
+  requires_session   = true
+}
+
+# --- I. Mobile Notifications ---
+resource "azurerm_servicebus_topic" "t_mobile" {
+  name                = "mobilenotifications"
+  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning = true
+}
+resource "azurerm_servicebus_subscription" "sub_mobile" {
+  name               = "sub-processor"
+  topic_id           = azurerm_servicebus_topic.t_mobile.id
+  max_delivery_count = 10
+  requires_session   = true
+}
+
+# --- J. Avenia Sub Account Creation ---
+resource "azurerm_servicebus_topic" "t_avenia" {
+  name                 = "aveniasubaccountcreation"
   namespace_id         = data.azurerm_servicebus_namespace.sb_lookup.id
-  partitioning_enabled = true
+  enable_partitioning  = true
+}
+resource "azurerm_servicebus_subscription" "sub_avenia" {
+  name               = "AveniaSubAccountCreationSubscription"
+  topic_id           = azurerm_servicebus_topic.t_avenia.id
+  max_delivery_count = 10
+  requires_session   = true 
+}
+
+# --- K. KYC & KYB Verification ---
+resource "azurerm_servicebus_topic" "t_kyc_kyb" {
+  name                 = "kycandkybverification"
+  namespace_id         = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning  = true
+}
+
+# --- L. Payees On Bank Account ---
+resource "azurerm_servicebus_topic" "t_payees" {
+  name                 = "payeesonbankaccount"
+  namespace_id         = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning  = true
+}
+resource "azurerm_servicebus_subscription" "sub_payees" {
+  name               = "PayeesOnBankAccountSubscription"
+  topic_id           = azurerm_servicebus_topic.t_payees.id
+  max_delivery_count = 10
+  requires_session   = true
+}
+
+# --- M. Update Customer Address And Status ---
+resource "azurerm_servicebus_topic" "t_cust_update" {
+  name                 = "updatecustomeraddressandstatus"
+  namespace_id         = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning  = true
+}
+resource "azurerm_servicebus_subscription" "sub_cust_update" {
+  name               = "updatecustomeraddressandstatussubscriber"
+  topic_id           = azurerm_servicebus_topic.t_cust_update.id
+  max_delivery_count = 10
+  requires_session   = true
+}
+
+# --- N. Batch PayOut Transactions ---
+resource "azurerm_servicebus_topic" "t_batch_payout" {
+  name                 = "BatchPayOutTransactions"
+  namespace_id         = data.azurerm_servicebus_namespace.sb_lookup.id
+  enable_partitioning  = true
 }
 # ... (Add other queues if STG logic mirrors TST logic)
 
@@ -347,7 +554,7 @@ resource "azurerm_key_vault_secret" "mailgun_key" {
 }
 resource "azurerm_key_vault_secret" "twilio_sid" {
   name         = "Twilio-SID" # Kept old name if critical, or standardize to "AccountSid"
-  value        = var.twilio_sid
+  value        = var.twilio_account_sid
   key_vault_id = module.key_vault.id
   depends_on   = [azurerm_role_assignment.kv_admin_rbac]
 }
