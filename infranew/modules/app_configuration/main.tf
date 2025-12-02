@@ -8,7 +8,7 @@ locals {
     "cardsapi"    = try(local.cardsapi_settings, {})
     "paymentsapi" = try(local.paymentsapi_settings, {})
     "paylinks"    = try(local.paylinks_settings, {})
-    "signalr"     = try(local.signalr_settings, {})
+    "signalR"     = try(local.signalr_settings, {})
     "api"         = try(local.api_settings, {})
     "exchangeapi" = try(local.exchangeapi_settings, {})
     "integration" = try(local.integration_settings, {})
