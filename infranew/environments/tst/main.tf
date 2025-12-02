@@ -351,6 +351,7 @@ module "app_configuration" {
 
   # --- Secret URIs (Mapping created resources to Module) ---
   secret_uris = {
+    # --- Standard Secrets ---
     twilio_sid         = azurerm_key_vault_secret.twilio_sid.id
     twilio_auth        = azurerm_key_vault_secret.twilio_auth.id
     twilio_service     = azurerm_key_vault_secret.twilio_service.id
@@ -375,15 +376,24 @@ module "app_configuration" {
     public_key         = azurerm_key_vault_secret.public_key.id
     restsharp_token    = azurerm_key_vault_secret.restsharp_token.id
     x_api_key          = azurerm_key_vault_secret.x_api_key.id
-    firebase_key                   = ""  # Empty because Web Apps don't use it
-    ayolinx_key    = azurerm_key_vault_secret.ayolinx_key.id
-    ayolinx_token  = azurerm_key_vault_secret.ayolinx_token.id
-    pyrros_secret  = azurerm_key_vault_secret.pyrros_secret.id
-    sendgrid_token = azurerm_key_vault_secret.sendgrid_token.id
-    cards_private_key    = var.cards_private_key
-    cards_customer_token = var.cards_customer_token
-    
-    
+
+    # --- Fix: App Insights ---
+    app_insights_connection_string = azurerm_key_vault_secret.app_insights_conn.id
+
+    # --- Fix: Missing Payments Keys ---
+    ayolinx_key        = azurerm_key_vault_secret.ayolinx_key.id
+    ayolinx_token      = azurerm_key_vault_secret.ayolinx_token.id
+    pyrros_secret      = azurerm_key_vault_secret.pyrros_secret.id
+    sendgrid_token     = azurerm_key_vault_secret.sendgrid_token.id
+
+    # --- Fix: Missing Cards Keys ---
+    cards_private_key    = azurerm_key_vault_secret.cards_private_key.id
+    cards_customer_token = azurerm_key_vault_secret.cards_customer_token.id
+
+    # --- Firebase (Conditional) ---
+    # For Web App Module: Use "" (empty string)
+    # For Function App Module: Use azurerm_key_vault_secret.firebase_key.id
+    firebase_key       = "" 
   }
 
   # --- Service URLs (For Inter-App Communication) ---
@@ -449,6 +459,7 @@ module "function_app_configuration" {
   # --- Secret URIs ---
   # (Must match the Web App module list, plus the NEW Firebase Key)
   secret_uris = {
+    # --- Standard Secrets ---
     twilio_sid         = azurerm_key_vault_secret.twilio_sid.id
     twilio_auth        = azurerm_key_vault_secret.twilio_auth.id
     twilio_service     = azurerm_key_vault_secret.twilio_service.id
@@ -473,11 +484,24 @@ module "function_app_configuration" {
     public_key         = azurerm_key_vault_secret.public_key.id
     restsharp_token    = azurerm_key_vault_secret.restsharp_token.id
     x_api_key          = azurerm_key_vault_secret.x_api_key.id
-    
-    # --- NEW: Firebase Key for Subscriber ---
-    firebase_key       = azurerm_key_vault_secret.firebase_key.id
-    app_insights_connection_string = azurerm_application_insights.appinsights.connection_string
-  }
+
+    # --- Fix: App Insights ---
+    app_insights_connection_string = azurerm_key_vault_secret.app_insights_conn.id
+
+    # --- Fix: Missing Payments Keys ---
+    ayolinx_key        = azurerm_key_vault_secret.ayolinx_key.id
+    ayolinx_token      = azurerm_key_vault_secret.ayolinx_token.id
+    pyrros_secret      = azurerm_key_vault_secret.pyrros_secret.id
+    sendgrid_token     = azurerm_key_vault_secret.sendgrid_token.id
+
+    # --- Fix: Missing Cards Keys ---
+    cards_private_key    = azurerm_key_vault_secret.cards_private_key.id
+    cards_customer_token = azurerm_key_vault_secret.cards_customer_token.id
+
+    # --- Firebase (Conditional) ---
+    # For Web App Module: Use "" (empty string)
+    # For Function App Module: Use azurerm_key_vault_secret.firebase_key.id
+    firebase_key = azurerm_key_vault_secret.firebase_key.id
 
   # --- Service URLs ---
   service_urls = {
@@ -1073,6 +1097,21 @@ resource "azurerm_key_vault_secret" "pyrros_secret" {
 resource "azurerm_key_vault_secret" "sendgrid_token" {
   name         = "SendGrid-AuthToken"
   value        = var.sendgrid_auth_token
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+# --- CARDS SECRETS ---
+resource "azurerm_key_vault_secret" "cards_private_key" {
+  name         = "CardsPrivateKey"
+  value        = var.cards_private_key
+  key_vault_id = module.key_vault.id
+  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
+}
+
+resource "azurerm_key_vault_secret" "cards_customer_token" {
+  name         = "CardsCustomerToken"
+  value        = var.cards_customer_token
   key_vault_id = module.key_vault.id
   depends_on   = [azurerm_role_assignment.kv_admin_rbac]
 }
