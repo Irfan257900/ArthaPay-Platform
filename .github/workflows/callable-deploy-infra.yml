@@ -79,6 +79,8 @@ on:
       WEB3_PAYMENT_LINK_URL: { required: false }
       HYPERPAY_URL: { required: false }
       COINGECKO_BASE_URL: { required: false }
+      CARDS_PRIVATE_KEY: { required: false }
+      CARDS_CUSTOMER_TOKEN: { required: false }
 
 jobs:
   deploy-infra:
@@ -260,6 +262,8 @@ jobs:
           TF_VAR_web3_payment_link_url: ${{ secrets.WEB3_PAYMENT_LINK_URL }}
           TF_VAR_hyperpay_url: ${{ secrets.HYPERPAY_URL }}
           TF_VAR_coingecko_base_url: ${{ secrets.COINGECKO_BASE_URL }}
+          TF_VAR_cards_private_key: ${{ secrets.CARDS_PRIVATE_KEY }}
+          TF_VAR_cards_customer_token: ${{ secrets.CARDS_CUSTOMER_TOKEN }}
 
 
         run: terraform plan -out=tfplan
@@ -325,6 +329,8 @@ jobs:
           TF_VAR_web3_payment_link_url: ${{ secrets.WEB3_PAYMENT_LINK_URL }}
           TF_VAR_hyperpay_url: ${{ secrets.HYPERPAY_URL }}
           TF_VAR_coingecko_base_url: ${{ secrets.COINGECKO_BASE_URL }}
+          TF_VAR_cards_private_key: ${{ secrets.CARDS_PRIVATE_KEY }}
+          TF_VAR_cards_customer_token: ${{ secrets.CARDS_CUSTOMER_TOKEN }}
 
         run: |
           terraform apply -auto-approve tfplan

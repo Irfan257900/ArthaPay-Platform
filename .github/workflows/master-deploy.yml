@@ -101,6 +101,8 @@ jobs:
       WEB3_PAYMENT_LINK_URL: ${{ secrets.WEB3_PAYMENT_LINK_URL }}
       HYPERPAY_URL: ${{ secrets.HYPERPAY_URL }}
       COINGECKO_BASE_URL: ${{ secrets.COINGECKO_BASE_URL }}
+      CARDS_PRIVATE_KEY: ${{ secrets.CARDS_PRIVATE_KEY }}
+      CARDS_CUSTOMER_TOKEN: ${{ secrets.CARDS_CUSTOMER_TOKEN }}
 
   # ===================================================================
   # JOB 2: CONFIGURE UI

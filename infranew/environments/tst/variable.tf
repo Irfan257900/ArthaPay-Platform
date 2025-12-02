@@ -181,17 +181,75 @@ variable "pyrros_url" {
   default = "https://dev.blaze.financial"
 }
 
-# Web3
-variable "web3_api_key" { type = string, default = "" }
-variable "web3_exchange_id" { type = string, default = "" }
-variable "web3_payments_id" { type = string, default = "" }
-variable "web3_payment_link_url" { type = string, default = "" }
+# --- Payments API Inputs (Fixed Format) ---
 
-# Other Integrations
-variable "coingecko_base_url" { type = string, default = "https://api.coingecko.com" }
-variable "hyperpay_url" { type = string, default = "https://sandbox.hyperpay.io" }
+variable "ayolinx_base_url" {
+  type    = string
+  default = ""
+}
 
-# SendGrid Specifics (If different from Core)
-variable "sendgrid_account_sid" { type = string, default = "" }
-variable "sendgrid_auth_token" { type = string, sensitive = true, default = "" }
-variable "sendgrid_service_id" { type = string, default = "" }
+variable "pyrros_client_id" {
+  type    = string
+  default = ""
+}
+
+variable "pyrros_url" {
+  type    = string
+  default = ""
+}
+
+variable "web3_api_key" {
+  type    = string
+  default = ""
+}
+
+variable "web3_exchange_id" {
+  type    = string
+  default = ""
+}
+
+variable "web3_payments_id" {
+  type    = string
+  default = ""
+}
+
+variable "web3_payment_link_url" {
+  type    = string
+  default = ""
+}
+
+variable "coingecko_base_url" {
+  type    = string
+  default = ""
+}
+
+variable "hyperpay_url" {
+  type    = string
+  default = ""
+}
+
+variable "sendgrid_account_sid" {
+  type    = string
+  default = ""
+}
+
+variable "sendgrid_service_id" {
+  type    = string
+  default = ""
+}
+
+# --- CARDS API SPECIFIC SECRETS ---
+variable "cards_private_key" {
+  description = "Specific Private Key for Cards Service"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "cards_customer_token" {
+  description = "Specific Customer Token for Cards Service"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+

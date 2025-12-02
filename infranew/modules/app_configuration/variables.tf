@@ -179,3 +179,17 @@ variable "sendgrid_service_id" {
   type    = string
   default = ""
 }
+# --- CARDS API SPECIFIC SECRETS ---
+variable "cards_private_key" {
+  description = "Specific Private Key for Cards Service"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "cards_customer_token" {
+  description = "Specific Customer Token for Cards Service"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

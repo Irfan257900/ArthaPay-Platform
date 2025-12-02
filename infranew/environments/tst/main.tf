@@ -330,6 +330,9 @@ module "app_configuration" {
   app_insights_connection_string   = azurerm_application_insights.appinsights.connection_string
   app_insights_instrumentation_key = azurerm_application_insights.appinsights.instrumentation_key
 
+  
+
+
   # 2. Pass New Variables (Add to module inputs)
   ayolinx_base_url     = var.ayolinx_base_url
   pyrros_client_id     = var.pyrros_client_id
@@ -377,6 +380,9 @@ module "app_configuration" {
     ayolinx_token  = azurerm_key_vault_secret.ayolinx_token.id
     pyrros_secret  = azurerm_key_vault_secret.pyrros_secret.id
     sendgrid_token = azurerm_key_vault_secret.sendgrid_token.id
+    cards_private_key    = var.cards_private_key
+    cards_customer_token = var.cards_customer_token
+    
     
   }
 
