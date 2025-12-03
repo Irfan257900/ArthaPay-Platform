@@ -329,7 +329,7 @@ module "key_vault" {
     # Legacy / existing secrets
     "Auth0-Domain"            = var.auth0_domain
     "Mailgun-ApiKey"          = var.mailgun_key
-    "Twilio-SID"              = var.twilio_sid # Keeping old name if needed, or use AccountSid
+    "Twilio-SID"              = var.twilio_account_sid # Keeping old name if needed, or use AccountSid
     "SQL-App-Password"        = var.app_sql_password
 
     # Standard App Secrets
