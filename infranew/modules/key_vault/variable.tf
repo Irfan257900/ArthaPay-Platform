@@ -22,3 +22,9 @@ variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)
 }
+variable "secrets" {
+  description = "A map of secrets to create (Name = Value)"
+  type        = map(string)
+  default     = {}
+  sensitive   = true
+}
