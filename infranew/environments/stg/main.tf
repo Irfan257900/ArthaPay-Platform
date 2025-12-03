@@ -727,84 +727,40 @@ resource "azurerm_linux_web_app" "container_apps" {
   )
 }
 
-# --- FUNCTION APPS (Code) ---
-# (Update these to use module.function_app_configuration like TST)
-# ...
-
 # ==============================================================================
-#  KEY VAULT SECRETS (COMPLETE LIST)
+#  FUNCTION APPS (Modularized)
 # ==============================================================================
 
-resource "azurerm_windows_function_app" "func_market" {
-  name                = local.func_market_name
-  location            = azurerm_resource_group.rg_apps.location
-  resource_group_name = azurerm_resource_group.rg_apps.name
-  service_plan_id     = azurerm_service_plan.windows_plan.id
+# Map internal keys (marketdata) to Display Name Suffixes (Marketdata)
+locals {
+  # Defines the suffix for each function: 
+  # "marketdata" -> "Artha-tst-Marketdata"
+  # "subscriber" -> "Artha-tst-Subscriber"
+  # "sweep"      -> "Artha-tst-Sweep"
+  func_name_suffixes = {
+    "marketdata" = "Marketdata"
+    "subscriber" = "Subscriber"
+    "sweep"      = "Sweep"
+  }
+}
+
+module "function_apps" {
+  source   = "../../modules/function_app"
+  for_each = toset(local.function_config_keys) # ["marketdata", "subscriber", "sweep"]
+
+  # 1. Dynamic Naming: Prefix + Suffix from map
+  function_app_name          = "${local._name_prefix}-${local.func_name_suffixes[each.key]}"
+  
+  location                   = azurerm_resource_group.rg_apps.location
+  resource_group_name        = azurerm_resource_group.rg_apps.name
+  service_plan_id            = azurerm_service_plan.windows_plan.id
   storage_account_name       = module.storage_account.name
   storage_account_access_key = module.storage_account.primary_access_key
-  tags                = local.common_tags
+  key_vault_id               = module.key_vault.id # Auto-grants access
+  tags                       = local.common_tags
+
+  # 2. Dynamic Configuration: Pulls from the config module
+  app_settings               = module.function_app_configuration[each.key].app_settings
   
-  app_settings = module.function_app_configuration["marketdata"].app_settings
-
-  site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
-  }
-  identity { type = "SystemAssigned" }
-}
-
-resource "azurerm_windows_function_app" "func_subscriber" {
-  name                = local.func_subscriber_name
-  location            = azurerm_resource_group.rg_apps.location
-  resource_group_name = azurerm_resource_group.rg_apps.name
-  service_plan_id     = azurerm_service_plan.windows_plan.id
-  storage_account_name       = module.storage_account.name
-  storage_account_access_key = module.storage_account.primary_access_key
-  tags                = local.common_tags
-  
-  app_settings = module.function_app_configuration["subscriber"].app_settings
-
-  site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
-  }
-  identity { type = "SystemAssigned" }
-}
-
-resource "azurerm_windows_function_app" "func_sweep" {
-  name                = local.func_sweep_name
-  location            = azurerm_resource_group.rg_apps.location
-  resource_group_name = azurerm_resource_group.rg_apps.name
-  service_plan_id     = azurerm_service_plan.windows_plan.id
-  storage_account_name       = module.storage_account.name
-  storage_account_access_key = module.storage_account.primary_access_key
-  tags                = local.common_tags
-  
-  app_settings = module.function_app_configuration["sweep"].app_settings
-
-  site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
-  }
-  identity { type = "SystemAssigned" }
-}
-
-# --- GRANT ACCESS FOR FUNCTIONS ---
-resource "azurerm_role_assignment" "func_market_kv" {
-  scope                = module.key_vault.id
-  role_definition_name = "Key Vault Secrets User"
-  principal_id         = azurerm_windows_function_app.func_market.identity[0].principal_id
-}
-resource "azurerm_role_assignment" "func_sub_kv" {
-  scope                = module.key_vault.id
-  role_definition_name = "Key Vault Secrets User"
-  principal_id         = azurerm_windows_function_app.func_subscriber.identity[0].principal_id
-}
-resource "azurerm_role_assignment" "func_sweep_kv" {
-  scope                = module.key_vault.id
-  role_definition_name = "Key Vault Secrets User"
-  principal_id         = azurerm_windows_function_app.func_sweep.identity[0].principal_id
+  dotnet_version             = "v8.0"
 }
