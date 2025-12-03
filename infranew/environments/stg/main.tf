@@ -386,31 +386,6 @@ resource "azurerm_role_assignment" "vm_kv_access" {
   principal_id         = module.sql_infrastructure.identity_principal_id
 }
 
-# --- SECRETS (Copy of TST list) ---
-resource "azurerm_key_vault_secret" "auth0_domain" {
-  name         = "Auth0-Domain"
-  value        = var.auth0_domain
-  key_vault_id = module.key_vault.id
-  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
-}
-resource "azurerm_key_vault_secret" "mailgun_key" {
-  name         = "Mailgun-ApiKey"
-  value        = var.mailgun_key
-  key_vault_id = module.key_vault.id
-  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
-}
-resource "azurerm_key_vault_secret" "twilio_sid" {
-  name         = "Twilio-SID" # Kept old name if critical, or standardize to "AccountSid"
-  value        = var.twilio_account_sid
-  key_vault_id = module.key_vault.id
-  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
-}
-resource "azurerm_key_vault_secret" "sql_password" {
-  name         = "SQL-App-Password"
-  value        = var.app_sql_password
-  key_vault_id = module.key_vault.id
-  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
-}
 # ... (Add all the other 20+ secrets here using the exact same resource blocks as TST/main.tf)
 # NOTE: I recommend copying the entire Secrets block from TST/main.tf here to ensure the module has everything.
 

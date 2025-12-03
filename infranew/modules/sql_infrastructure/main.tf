@@ -121,6 +121,11 @@ resource "azurerm_mssql_virtual_machine" "sqlvm" {
   sql_connectivity_type            = "PRIVATE"
   sql_connectivity_update_password = var.admin_password
   sql_connectivity_update_username = var.admin_username
+
+  auto_patching {
+    day_of_week                            = "Sunday"
+    maintenance_window_duration_in_minutes = 60
+    maintenance_window_starting_hour       = 2
 }
 
 # --- 9. DB AUTO-CREATION SCRIPT ---
