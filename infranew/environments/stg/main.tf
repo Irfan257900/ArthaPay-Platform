@@ -223,43 +223,6 @@ resource "azurerm_service_plan" "windows_plan" {
   tags                = local.common_tags
 }
 
-# ==============================================================================
-#  FUNCTION APPS (Modularized)
-# ==============================================================================
-
-# Map internal keys (marketdata) to Display Name Suffixes (Marketdata)
-locals {
-  # Defines the suffix for each function: 
-  # "marketdata" -> "Artha-tst-Marketdata"
-  # "subscriber" -> "Artha-tst-Subscriber"
-  # "sweep"      -> "Artha-tst-Sweep"
-  func_name_suffixes = {
-    "marketdata" = "Marketdata"
-    "subscriber" = "Subscriber"
-    "sweep"      = "Sweep"
-  }
-}
-
-module "function_apps" {
-  source   = "../../modules/function_app"
-  for_each = toset(local.function_config_keys) # ["marketdata", "subscriber", "sweep"]
-
-  # 1. Dynamic Naming: Prefix + Suffix from map
-  function_app_name          = "${local._name_prefix}-${local.func_name_suffixes[each.key]}"
-  
-  location                   = azurerm_resource_group.rg_apps.location
-  resource_group_name        = azurerm_resource_group.rg_apps.name
-  service_plan_id            = azurerm_service_plan.windows_plan.id
-  storage_account_name       = module.storage_account.name
-  storage_account_access_key = module.storage_account.primary_access_key
-  key_vault_id               = module.key_vault.id # Auto-grants access
-  tags                       = local.common_tags
-
-  # 2. Dynamic Configuration: Pulls from the config module
-  app_settings               = module.function_app_configuration[each.key].app_settings
-  
-  dotnet_version             = "v8.0"
-}
 
 # --- SERVICES ---
 module "storage_account" {
