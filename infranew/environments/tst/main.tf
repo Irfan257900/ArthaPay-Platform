@@ -54,6 +54,7 @@ locals {
       lun                  = 0
       caching              = "ReadWrite" 
       storage_account_type = "Standard_LRS"
+      create_option        = "Empty"  # <--- ADD THIS LINE
     },
     "disk2" = {
       name                 = "sql-logs"
@@ -61,6 +62,7 @@ locals {
       lun                  = 1
       caching              = "ReadWrite" 
       storage_account_type = "Standard_LRS"
+      create_option        = "Empty"  # <--- ADD THIS LINE
     }
   }
 }
@@ -117,6 +119,7 @@ module "sql_infrastructure" {
   # Disk Config (Passed from locals)
   data_disks          = local.sql_data_disks
 }
+
 
 # --- APP SERVICE PLANS ---
 resource "azurerm_service_plan" "linux_plan" {
