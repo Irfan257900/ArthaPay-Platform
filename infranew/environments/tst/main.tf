@@ -93,149 +93,29 @@ module "networking" {
   depends_on                    = [azurerm_resource_group.rg_infra]
 }
 
-# --- Public IP & NIC ---
-resource "azurerm_public_ip" "pip" {
-  name                = "pip-${local.vm_name}"
-  location            = azurerm_resource_group.rg_infra.location
-  resource_group_name = azurerm_resource_group.rg_infra.name
-  allocation_method   = "Static"
-  sku                 = "Standard"
-  tags                = local.common_tags
-}
-
-resource "azurerm_network_interface" "nic" {
-  name                = "nic-${local.vm_name}"
+# ==============================================================================
+#  SQL INFRASTRUCTURE MODULE
+# ==============================================================================
+module "sql_infrastructure" {
+  source              = "../../modules/sql_infrastructure"
+  
+  vm_name             = local.vm_name
   location            = azurerm_resource_group.rg_infra.location
   resource_group_name = azurerm_resource_group.rg_infra.name
   tags                = local.common_tags
-  ip_configuration {
-    name                          = "internal"
-    subnet_id                     = module.networking.subnet_ids["vm-subnet"]
-    private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.pip.id
-  }
-}
-
-# --- NETWORK SECURITY GROUP (NSG) ---
-resource "azurerm_network_security_group" "nsg" {
-  name                = "${local._name_prefix}-nsg"
-  location            = azurerm_resource_group.rg_infra.location
-  resource_group_name = azurerm_resource_group.rg_infra.name
-  tags                = local.common_tags
-
-  # Rule 1: Allow SQL (1433)
-  security_rule {
-    name                       = "AllowSQL"
-    priority                   = 100
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "1433"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-
-  # Rule 2: Allow RDP (3389)
-  security_rule {
-    name                       = "AllowRDP"
-    priority                   = 110
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "3389"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-}
-
-# --- ATTACH NSG TO NIC ---
-resource "azurerm_network_interface_security_group_association" "nsg_assoc" {
-  network_interface_id      = azurerm_network_interface.nic.id
-  network_security_group_id = azurerm_network_security_group.nsg.id
-}
-
-# --- SQL Virtual Machine ---
-resource "azurerm_windows_virtual_machine" "vm" {
-  name                = local.vm_name
-  computer_name       = substr(local.vm_name, 0, 15)
-  resource_group_name = azurerm_resource_group.rg_infra.name
-  location            = azurerm_resource_group.rg_infra.location
-  size                = "Standard_B2ms"
+  subnet_id           = module.networking.subnet_ids["vm-subnet"]
+  
+  # Size & Creds
+  vm_size             = "Standard_B2ms"
   admin_username      = var.vm_admin_username
   admin_password      = var.vm_admin_password
-  network_interface_ids = [azurerm_network_interface.nic.id]
-  tags                = local.common_tags
-
-  # Enable Managed Identity for Key Vault Access
-  identity {
-    type = "SystemAssigned"
-  }
-
-  source_image_reference {
-    publisher = "MicrosoftSQLServer"
-    offer     = "sql2022-ws2022"
-    sku       = "sqldev-gen2" # Free License
-    version   = "latest"
-  }
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "StandardSSD_LRS"
-  }
-}
-# --- MANAGED DISKS (Data & Logs) ---
-resource "azurerm_managed_disk" "sql_disks" {
-  for_each             = local.sql_data_disks
-  name                 = "${local.vm_name}-${each.value.name}"
   
-  # Note: TST uses 'rg_infra'
-  location             = azurerm_resource_group.rg_infra.location 
-  resource_group_name  = azurerm_resource_group.rg_infra.name      
-  
-  storage_account_type = each.value.storage_account_type
-  create_option        = "Empty"
-  disk_size_gb         = each.value.disk_size_gb
-  tags                 = local.common_tags
-}
+  # DB Setup Inputs
+  client_name         = var.client_name
+  app_sql_password    = var.app_sql_password
 
-# --- ATTACH DISKS TO VM ---
-resource "azurerm_virtual_machine_data_disk_attachment" "sql_disk_attach" {
-  for_each           = local.sql_data_disks
-  managed_disk_id    = azurerm_managed_disk.sql_disks[each.key].id
-  virtual_machine_id = azurerm_windows_virtual_machine.vm.id 
-  
-  lun                = each.value.lun
-  caching            = each.value.caching
-}
-
-# --- SQL IaaS Agent ---
-resource "azurerm_mssql_virtual_machine" "sqlvm" {
-  virtual_machine_id               = azurerm_windows_virtual_machine.vm.id
-  sql_license_type                 = "PAYG"
-  r_services_enabled               = true
-  sql_connectivity_port            = 1433
-  sql_connectivity_type            = "PRIVATE"
-  sql_connectivity_update_password = var.vm_admin_password
-  sql_connectivity_update_username = var.vm_admin_username
-}
-
-# --- DB Auto-Creation Script ---
-resource "azurerm_virtual_machine_extension" "sql_db_setup" {
-  name                 = "sql-db-setup"
-  virtual_machine_id   = azurerm_windows_virtual_machine.vm.id
-  publisher            = "Microsoft.Compute"
-  type                 = "CustomScriptExtension"
-  type_handler_version = "1.10"
-
-  # Wait for SQL IaaS Agent to finish before trying to connect
-  depends_on           = [azurerm_mssql_virtual_machine.sqlvm]
-
-  protected_settings = <<SETTINGS
-    {
-        "commandToExecute": "powershell.exe -ExecutionPolicy Unrestricted -Command \"$ErrorActionPreference = 'Stop'; $adminUser = '${var.vm_admin_username}'; $adminPass = '${var.vm_admin_password}'; $password = '${var.app_sql_password}'; $dbName = '${var.client_name}DB'; $dbUser = '${var.client_name}_app_user'; $retryCount = 0; while ($true) { try { sqlcmd -S localhost -U $adminUser -P $adminPass -b -Q \\\"SELECT 1\\\" -ConnectionTimeout 5; break } catch { if ($retryCount -ge 20) { throw 'SQL Server not ready after 20 retries' }; Write-Output 'Waiting for SQL...'; Start-Sleep -Seconds 10; $retryCount++ } }; sqlcmd -S localhost -U $adminUser -P $adminPass -b -Q \\\"IF NOT EXISTS(SELECT * FROM sys.databases WHERE name='$dbName') BEGIN CREATE DATABASE [$dbName]; END\\\"; sqlcmd -S localhost -U $adminUser -P $adminPass -b -Q \\\"IF NOT EXISTS(SELECT * FROM sys.server_principals WHERE name='$dbUser') BEGIN CREATE LOGIN [$dbUser] WITH PASSWORD='$password'; END\\\"; sqlcmd -S localhost -U $adminUser -P $adminPass -b -Q \\\"USE [$dbName]; IF NOT EXISTS(SELECT * FROM sys.database_principals WHERE name='$dbUser') BEGIN CREATE USER [$dbUser] FOR LOGIN [$dbUser]; ALTER ROLE db_owner ADD MEMBER [$dbUser]; END;\\\"\""
-    }
-SETTINGS
+  # Disk Config (Passed from locals)
+  data_disks          = local.sql_data_disks
 }
 
 # --- APP SERVICE PLANS ---
@@ -691,7 +571,7 @@ module "key_vault" {
     # Infrastructure Secrets (Constructed)
     "StorageAccount-AccountKey"         = module.storage_account.primary_access_key
     "AppInsights-ConnectionString"      = azurerm_application_insights.appinsights.connection_string
-    "ConnectionStrings-DefaultConnection" = "Data Source=tcp:${azurerm_windows_virtual_machine.vm.private_ip_address},1433;Initial Catalog=${var.client_name}DB;User Id=${var.client_name}_app_user;Password=${var.app_sql_password};MultipleActiveResultSets=True;TrustServerCertificate=True;"
+    "ConnectionStrings-DefaultConnection" = "Data Source=tcp:${module.sql_infrastructure.private_ip_address},1433;Initial Catalog=${var.client_name}DB;User Id=${var.client_name}_app_user;Password=${var.app_sql_password};MultipleActiveResultSets=True;TrustServerCertificate=True;"
     "SQL-App-Password"                  = var.app_sql_password
   }
 }
@@ -701,7 +581,7 @@ module "key_vault" {
 resource "azurerm_role_assignment" "vm_kv_access" {
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Secrets User"
-  principal_id         = azurerm_windows_virtual_machine.vm.identity[0].principal_id
+  principal_id = module.sql_infrastructure.identity_principal_id
 }
 
 # --- GRANT ACCESS (RBAC METHOD) ---
@@ -709,5 +589,5 @@ resource "azurerm_role_assignment" "webapp_kv_access" {
   for_each             = azurerm_windows_web_app.backend_apps
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Secrets User" # This is the specific role needed
-  principal_id         = each.value.identity[0].principal_id
+  principal_id = module.sql_infrastructure.identity_principal_id
 }

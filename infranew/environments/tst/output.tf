@@ -1,5 +1,5 @@
 output "vm_name" {
-  value = azurerm_windows_virtual_machine.vm.name
+  value = module.sql_infrastructure.vm_name
 }
 output "vm_rg_name" {
   value = azurerm_resource_group.rg_infra.name
