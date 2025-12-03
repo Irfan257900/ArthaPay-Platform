@@ -1,32 +1,52 @@
-variable "vm_name" { type = string }
-variable "location" { type = string }
-variable "resource_group_name" { type = string }
-variable "subnet_id" { type = string }
-variable "tags" { type = map(string) }
+variable "vm_name" {
+  type = string
+}
 
-# VM Configuration
-variable "vm_size" { 
-  type    = string 
+variable "location" {
+  type = string
+}
+
+variable "resource_group_name" {
+  type = string
+}
+
+variable "subnet_id" {
+  type = string
+}
+
+variable "tags" {
+  type = map(string)
+}
+
+# --- VM Configuration ---
+variable "vm_size" {
+  type    = string
   default = "Standard_B2ms"
 }
-variable "admin_username" { type = string }
 
-variable "admin_password" { 
+variable "admin_username" {
   type = string
-  sensitive = true }
-
-# SQL Specifics
-variable "client_name" { 
-  description = "Used for DB Name generation"
-  type        = string 
 }
-variable "app_sql_password" { 
+
+# FIX: Use multi-line format here
+variable "admin_password" {
+  type      = string
+  sensitive = true
+}
+
+# --- SQL Specifics ---
+variable "client_name" {
+  description = "Used for DB Name generation"
+  type        = string
+}
+
+variable "app_sql_password" {
   description = "Password for the contained DB User"
-  type        = string 
+  type        = string
   sensitive   = true
 }
 
-# Disks Map
+# --- Disks Map ---
 variable "data_disks" {
   description = "Map of disks to create"
   type = map(object({
@@ -34,6 +54,7 @@ variable "data_disks" {
     lun                  = number
     caching              = string
     storage_account_type = string
+    create_option        = string
   }))
   default = {}
 }
