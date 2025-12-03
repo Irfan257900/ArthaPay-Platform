@@ -526,6 +526,53 @@ module "key_vault" {
   resource_group_name = azurerm_resource_group.rg_security.name
   tenant_id           = data.azurerm_client_config.current.tenant_id
   tags                = local.common_tags
+
+  # --- CREATE ALL SECRETS HERE ---
+  secrets = {
+    # Legacy / existing secrets
+    "Auth0-Domain"            = var.auth0_domain
+    "Mailgun-ApiKey"          = var.mailgun_key
+    "Twilio-SID"              = var.twilio_sid # Keeping old name if needed, or use AccountSid
+    "SQL-App-Password"        = var.app_sql_password
+
+    # Standard App Secrets
+    "AccountSid"              = var.twilio_account_sid
+    "AuthToken"               = var.twilio_auth_token
+    "ServiceId"               = var.twilio_service_id
+    "SUMSUB-APP-TOKEN"        = var.sumsub_app_token
+    "SUMSUB-SECRET-KEY"       = var.sumsub_secret_key
+    "pbiPassword"             = var.powerbi_password
+    "TokenEncryptkey"         = var.token_encrypt_key
+    "SecretKey"               = var.app_secret_key
+    "RedisConnection"         = var.redis_connection_string
+    "Vault-DbConnection"      = var.vault_db_connection_string
+    "General-ApiKey"          = var.general_api_key
+    "General-ApiSecretKey"    = var.general_api_secret_key
+    "ClientSecret-Value"      = var.client_secret_value
+    "EasyLink-AppKey"         = var.easylink_app_key
+    "EasyLink-AppSecret"      = var.easylink_app_secret
+    "AML-AccessKey"           = var.aml_access_key
+    "App-Password"            = var.app_password_clear
+    "App-PasswordHash"        = var.app_password_hash
+    "App-PrivateKey"          = var.app_private_key
+    "App-PublicKey"           = var.app_public_key
+    "RestSharp-AccessToken"   = var.restsharp_access_token
+    "X-Api-Key"               = var.x_api_key
+    "Firebase-ServerKey"      = var.firebase_server_key
+
+    # Payments & Cards
+    "AyolinxprivateKeyPem"    = var.ayolinx_private_key
+    "AyolinxCustomerToken"    = var.ayolinx_customer_token
+    "pyrrosclientsecret"      = var.pyrros_client_secret
+    "SendGrid-AuthToken"      = var.sendgrid_auth_token
+    "CardsPrivateKey"         = var.cards_private_key
+    "CardsCustomerToken"      = var.cards_customer_token
+
+    # Infrastructure Computed Secrets
+    "StorageAccount-AccountKey"         = module.storage_account.primary_access_key
+    "AppInsights-ConnectionString"      = azurerm_application_insights.appinsights.connection_string
+    "ConnectionStrings-DefaultConnection" = "Data Source=tcp:${azurerm_windows_virtual_machine.vm_sql.private_ip_address},1433;Initial Catalog=${var.client_name}DB;User Id=${var.client_name}_app_user;Password=${var.app_sql_password};MultipleActiveResultSets=True;TrustServerCertificate=True;"
+  }
 }
 
 resource "azurerm_role_assignment" "kv_admin_rbac" {
@@ -580,53 +627,43 @@ module "app_configuration" {
 
   # --- 1. SECRET URIs (Direct mapping to Key Vault IDs) ---
   secret_uris = {
-    # Core Infrastructure Secrets
-    twilio_sid         = azurerm_key_vault_secret.twilio_sid.id
-    twilio_auth        = azurerm_key_vault_secret.twilio_auth.id
-    twilio_service     = azurerm_key_vault_secret.twilio_service.id
-    sumsub_token       = azurerm_key_vault_secret.sumsub_token.id
-    sumsub_key         = azurerm_key_vault_secret.sumsub_key.id
-    token_key          = azurerm_key_vault_secret.token_key.id
-    app_secret         = azurerm_key_vault_secret.app_secret.id
-    powerbi_pass       = azurerm_key_vault_secret.powerbi_pass.id
+    twilio_sid         = module.key_vault.secret_ids["AccountSid"]
+    twilio_auth        = module.key_vault.secret_ids["AuthToken"]
+    twilio_service     = module.key_vault.secret_ids["ServiceId"]
+    sumsub_token       = module.key_vault.secret_ids["SUMSUB-APP-TOKEN"]
+    sumsub_key         = module.key_vault.secret_ids["SUMSUB-SECRET-KEY"]
+    token_key          = module.key_vault.secret_ids["TokenEncryptkey"]
+    app_secret         = module.key_vault.secret_ids["SecretKey"]
+    powerbi_pass       = module.key_vault.secret_ids["pbiPassword"]
+    storage_key        = module.key_vault.secret_ids["StorageAccount-AccountKey"]
+    db_conn            = module.key_vault.secret_ids["ConnectionStrings-DefaultConnection"]
+    redis_conn         = module.key_vault.secret_ids["RedisConnection"]
+    vault_db_conn      = module.key_vault.secret_ids["Vault-DbConnection"]
+    general_api_key    = module.key_vault.secret_ids["General-ApiKey"]
+    general_api_secret = module.key_vault.secret_ids["General-ApiSecretKey"]
+    client_secret_val  = module.key_vault.secret_ids["ClientSecret-Value"]
+    easylink_key       = module.key_vault.secret_ids["EasyLink-AppKey"]
+    easylink_secret    = module.key_vault.secret_ids["EasyLink-AppSecret"]
+    aml_key            = module.key_vault.secret_ids["AML-AccessKey"]
+    app_password       = module.key_vault.secret_ids["App-Password"]
+    app_password_hash  = module.key_vault.secret_ids["App-PasswordHash"]
+    private_key        = module.key_vault.secret_ids["App-PrivateKey"]
+    public_key         = module.key_vault.secret_ids["App-PublicKey"]
+    restsharp_token    = module.key_vault.secret_ids["RestSharp-AccessToken"]
+    x_api_key          = module.key_vault.secret_ids["X-Api-Key"]
     
-    # Computed Infrastructure Secrets
-    storage_key        = azurerm_key_vault_secret.storage_key.id
-    db_conn            = azurerm_key_vault_secret.db_conn.id
+    # App Insights
+    app_insights_connection_string = module.key_vault.secret_ids["AppInsights-ConnectionString"]
     
-    # Service Secrets
-    redis_conn         = azurerm_key_vault_secret.redis_conn.id
-    vault_db_conn      = azurerm_key_vault_secret.vault_db_conn.id
-    general_api_key    = azurerm_key_vault_secret.general_api_key.id
-    general_api_secret = azurerm_key_vault_secret.general_api_secret.id
-    client_secret_val  = azurerm_key_vault_secret.client_secret_val.id
-    
-    # Integration Secrets
-    easylink_key       = azurerm_key_vault_secret.easylink_key.id
-    easylink_secret    = azurerm_key_vault_secret.easylink_secret.id
-    aml_key            = azurerm_key_vault_secret.aml_key.id
-    
-    # App Logic Secrets
-    app_password       = azurerm_key_vault_secret.app_password.id
-    app_password_hash  = azurerm_key_vault_secret.app_password_hash.id
-    private_key        = azurerm_key_vault_secret.private_key.id
-    public_key         = azurerm_key_vault_secret.public_key.id
-    restsharp_token    = azurerm_key_vault_secret.restsharp_token.id
-    x_api_key          = azurerm_key_vault_secret.x_api_key.id
-    
-    # Payments / Cards Specific
-    ayolinx_key        = azurerm_key_vault_secret.ayolinx_key.id
-    ayolinx_token      = azurerm_key_vault_secret.ayolinx_token.id
-    pyrros_secret      = azurerm_key_vault_secret.pyrros_secret.id
-    sendgrid_token     = azurerm_key_vault_secret.sendgrid_token.id
-    cards_private_key  = azurerm_key_vault_secret.cards_private_key.id
-    cards_customer_token = azurerm_key_vault_secret.cards_customer_token.id
+    # Payments/Cards
+    ayolinx_key          = module.key_vault.secret_ids["AyolinxprivateKeyPem"]
+    ayolinx_token        = module.key_vault.secret_ids["AyolinxCustomerToken"]
+    pyrros_secret        = module.key_vault.secret_ids["pyrrosclientsecret"]
+    sendgrid_token       = module.key_vault.secret_ids["SendGrid-AuthToken"]
+    cards_private_key    = module.key_vault.secret_ids["CardsPrivateKey"]
+    cards_customer_token = module.key_vault.secret_ids["CardsCustomerToken"]
 
-    # App Insights (Secret ID)
-    app_insights_connection_string = azurerm_key_vault_secret.app_insights_conn.id
-
-    # Empty for Web Apps (Used in Function module only)
-    firebase_key       = "" 
+    firebase_key         = ""
   }
 
   # --- 2. SERVICE URLs (Staging Specific Naming) ---
@@ -699,41 +736,43 @@ module "function_app_configuration" {
 
   # Same secret list as above, but include Firebase
   secret_uris = {
-    twilio_sid         = azurerm_key_vault_secret.twilio_sid.id
-    twilio_auth        = azurerm_key_vault_secret.twilio_auth.id
-    twilio_service     = azurerm_key_vault_secret.twilio_service.id
-    sumsub_token       = azurerm_key_vault_secret.sumsub_token.id
-    sumsub_key         = azurerm_key_vault_secret.sumsub_key.id
-    token_key          = azurerm_key_vault_secret.token_key.id
-    app_secret         = azurerm_key_vault_secret.app_secret.id
-    powerbi_pass       = azurerm_key_vault_secret.powerbi_pass.id
-    storage_key        = azurerm_key_vault_secret.storage_key.id
-    db_conn            = azurerm_key_vault_secret.db_conn.id
-    redis_conn         = azurerm_key_vault_secret.redis_conn.id
-    vault_db_conn      = azurerm_key_vault_secret.vault_db_conn.id
-    general_api_key    = azurerm_key_vault_secret.general_api_key.id
-    general_api_secret = azurerm_key_vault_secret.general_api_secret.id
-    client_secret_val  = azurerm_key_vault_secret.client_secret_val.id
-    easylink_key       = azurerm_key_vault_secret.easylink_key.id
-    easylink_secret    = azurerm_key_vault_secret.easylink_secret.id
-    aml_key            = azurerm_key_vault_secret.aml_key.id
-    app_password       = azurerm_key_vault_secret.app_password.id
-    app_password_hash  = azurerm_key_vault_secret.app_password_hash.id
-    private_key        = azurerm_key_vault_secret.private_key.id
-    public_key         = azurerm_key_vault_secret.public_key.id
-    restsharp_token    = azurerm_key_vault_secret.restsharp_token.id
-    x_api_key          = azurerm_key_vault_secret.x_api_key.id
-    app_insights_connection_string = azurerm_key_vault_secret.app_insights_conn.id
+    twilio_sid         = module.key_vault.secret_ids["AccountSid"]
+    twilio_auth        = module.key_vault.secret_ids["AuthToken"]
+    twilio_service     = module.key_vault.secret_ids["ServiceId"]
+    sumsub_token       = module.key_vault.secret_ids["SUMSUB-APP-TOKEN"]
+    sumsub_key         = module.key_vault.secret_ids["SUMSUB-SECRET-KEY"]
+    token_key          = module.key_vault.secret_ids["TokenEncryptkey"]
+    app_secret         = module.key_vault.secret_ids["SecretKey"]
+    powerbi_pass       = module.key_vault.secret_ids["pbiPassword"]
+    storage_key        = module.key_vault.secret_ids["StorageAccount-AccountKey"]
+    db_conn            = module.key_vault.secret_ids["ConnectionStrings-DefaultConnection"]
+    redis_conn         = module.key_vault.secret_ids["RedisConnection"]
+    vault_db_conn      = module.key_vault.secret_ids["Vault-DbConnection"]
+    general_api_key    = module.key_vault.secret_ids["General-ApiKey"]
+    general_api_secret = module.key_vault.secret_ids["General-ApiSecretKey"]
+    client_secret_val  = module.key_vault.secret_ids["ClientSecret-Value"]
+    easylink_key       = module.key_vault.secret_ids["EasyLink-AppKey"]
+    easylink_secret    = module.key_vault.secret_ids["EasyLink-AppSecret"]
+    aml_key            = module.key_vault.secret_ids["AML-AccessKey"]
+    app_password       = module.key_vault.secret_ids["App-Password"]
+    app_password_hash  = module.key_vault.secret_ids["App-PasswordHash"]
+    private_key        = module.key_vault.secret_ids["App-PrivateKey"]
+    public_key         = module.key_vault.secret_ids["App-PublicKey"]
+    restsharp_token    = module.key_vault.secret_ids["RestSharp-AccessToken"]
+    x_api_key          = module.key_vault.secret_ids["X-Api-Key"]
     
-    ayolinx_key          = azurerm_key_vault_secret.ayolinx_key.id
-    ayolinx_token        = azurerm_key_vault_secret.ayolinx_token.id
-    pyrros_secret        = azurerm_key_vault_secret.pyrros_secret.id
-    sendgrid_token       = azurerm_key_vault_secret.sendgrid_token.id
-    cards_private_key    = azurerm_key_vault_secret.cards_private_key.id
-    cards_customer_token = azurerm_key_vault_secret.cards_customer_token.id
+    # App Insights
+    app_insights_connection_string = module.key_vault.secret_ids["AppInsights-ConnectionString"]
+    
+    # Payments/Cards
+    ayolinx_key          = module.key_vault.secret_ids["AyolinxprivateKeyPem"]
+    ayolinx_token        = module.key_vault.secret_ids["AyolinxCustomerToken"]
+    pyrros_secret        = module.key_vault.secret_ids["pyrrosclientsecret"]
+    sendgrid_token       = module.key_vault.secret_ids["SendGrid-AuthToken"]
+    cards_private_key    = module.key_vault.secret_ids["CardsPrivateKey"]
+    cards_customer_token = module.key_vault.secret_ids["CardsCustomerToken"]
 
-    # Valid for Functions
-    firebase_key         = azurerm_key_vault_secret.firebase_key.id
+    firebase_key = module.key_vault.secret_ids["Firebase-ServerKey"]
   }
 
   # --- Service URLs ---

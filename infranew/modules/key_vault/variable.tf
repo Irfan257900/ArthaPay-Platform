@@ -26,5 +26,5 @@ variable "secrets" {
   description = "A map of secrets to create (Name = Value)"
   type        = map(string)
   default     = {}
-  sensitive   = true
+  
 }
