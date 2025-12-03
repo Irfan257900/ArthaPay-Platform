@@ -20,7 +20,7 @@ resource "azurerm_subnet" "subnets" {
   # Instead of "Disabled"/"Enabled" string, we use Boolean (true/false).
   # If this subnet name matches the Private Endpoint subnet variable -> Disable policies (false).
   # Otherwise -> Enable policies (true).
-  private_endpoint_network_policies_enabled = each.key == var.private_endpoints_subnet_name ? false : true
+  private_endpoint_network_policies = each.key == var.private_endpoints_subnet_name ? "Disabled" : "Enabled"
 }
 
 resource "azurerm_private_dns_zone" "app_service" {

@@ -61,6 +61,25 @@ locals {
     "admin"       = "admin-app"
     "user"        = "user-app"
   }
+  # --- SQL DATA DISKS CONFIGURATION ---
+  sql_data_disks = {
+    "disk1" = {
+      name                 = "sql-data"
+      disk_size_gb         = 32
+      lun                  = 0
+      caching              = "ReadWrite" 
+      storage_account_type = "Standard_LRS"
+      create_option        = "Empty"  # <--- ADD THIS LINE
+    },
+    "disk2" = {
+      name                 = "sql-logs"
+      disk_size_gb         = 32
+      lun                  = 1
+      caching              = "ReadWrite" 
+      storage_account_type = "Standard_LRS"
+      create_option        = "Empty"  # <--- ADD THIS LINE
+    }
+  }
 }
 
 data "azurerm_client_config" "current" {}
@@ -100,80 +119,29 @@ module "networking" {
   depends_on                    = [azurerm_resource_group.rg_network]
 }
 
-# --- SQL VM ---
-resource "azurerm_public_ip" "pip_sql" {
-  name                = "pip-${local.sql_vm_name}"
-  location            = azurerm_resource_group.rg_vm.location
-  resource_group_name = azurerm_resource_group.rg_vm.name
-  allocation_method   = "Static"
-  sku                 = "Standard"
-  tags                = local.common_tags
-}
-
-resource "azurerm_network_interface" "nic_sql" {
-  name                = "nic-${local.sql_vm_name}"
-  location            = azurerm_resource_group.rg_vm.location
-  resource_group_name = azurerm_resource_group.rg_vm.name
-  tags                = local.common_tags
-  ip_configuration {
-    name                          = "internal"
-    subnet_id                     = module.networking.subnet_ids["sqlVmSubnet"]
-    private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.pip_sql.id
-  }
-}
-
-resource "azurerm_windows_virtual_machine" "vm_sql" {
-  name                = local.sql_vm_name
-  computer_name       = substr(local.sql_vm_name, 0, 15)
-  resource_group_name = azurerm_resource_group.rg_vm.name
-  location            = azurerm_resource_group.rg_vm.location
+# ==============================================================================
+#  SQL INFRASTRUCTURE MODULE
+# ==============================================================================
+module "sql_infrastructure" {
+  source              = "../../modules/sql_infrastructure"
   
-  # PRD Size (Ensure this is correct for your budget/needs)
-  size                = "Standard_B2ms" 
+  vm_name             = local.vm_name
+  location            = azurerm_resource_group.rg_infra.location
+  resource_group_name = azurerm_resource_group.rg_infra.name
+  tags                = local.common_tags
+  subnet_id           = module.networking.subnet_ids["vm-subnet"]
   
+  # Size & Creds
+  vm_size             = "Standard_B2ms"
   admin_username      = var.vm_admin_username
   admin_password      = var.vm_admin_password
-  network_interface_ids = [azurerm_network_interface.nic_sql.id]
-  tags                = local.common_tags
   
-  identity { type = "SystemAssigned" }
+  # DB Setup Inputs
+  client_name         = var.client_name
+  app_sql_password    = var.app_sql_password
 
-  source_image_reference {
-    publisher = "MicrosoftSQLServer"
-    offer     = "sql2022-ws2022"
-    sku       = "sqldev-gen2"
-    version   = "latest"
-  }
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "StandardSSD_LRS"
-  }
-}
-
-resource "azurerm_mssql_virtual_machine" "sqlvm" {
-  virtual_machine_id               = azurerm_windows_virtual_machine.vm_sql.id
-  sql_license_type                 = "PAYG"
-  r_services_enabled               = true
-  sql_connectivity_port            = 1433
-  sql_connectivity_type            = "PRIVATE"
-  sql_connectivity_update_password = var.vm_admin_password
-  sql_connectivity_update_username = var.vm_admin_username
-}
-
-resource "azurerm_virtual_machine_extension" "sql_db_setup" {
-  name                 = "sql-db-setup"
-  virtual_machine_id   = azurerm_windows_virtual_machine.vm_sql.id
-  publisher            = "Microsoft.Compute"
-  type                 = "CustomScriptExtension"
-  type_handler_version = "1.10"
-  depends_on           = [azurerm_mssql_virtual_machine.sqlvm]
-
-  protected_settings = <<SETTINGS
-    {
-        "commandToExecute": "powershell.exe -ExecutionPolicy Unrestricted -Command \"$ErrorActionPreference = 'Stop'; $adminUser = '${var.vm_admin_username}'; $adminPass = '${var.vm_admin_password}'; $password = '${var.app_sql_password}'; $dbName = '${var.client_name}DB'; $dbUser = '${var.client_name}_app_user'; $retryCount = 0; while ($true) { try { sqlcmd -S localhost -U $adminUser -P $adminPass -b -Q \\\"SELECT 1\\\" -ConnectionTimeout 5; break } catch { if ($retryCount -ge 20) { throw 'SQL Server not ready after 20 retries' }; Write-Output 'Waiting for SQL...'; Start-Sleep -Seconds 10; $retryCount++ } }; sqlcmd -S localhost -U $adminUser -P $adminPass -b -Q \\\"IF NOT EXISTS(SELECT * FROM sys.databases WHERE name='$dbName') BEGIN CREATE DATABASE [$dbName]; END\\\"; sqlcmd -S localhost -U $adminUser -P $adminPass -b -Q \\\"IF NOT EXISTS(SELECT * FROM sys.server_principals WHERE name='$dbUser') BEGIN CREATE LOGIN [$dbUser] WITH PASSWORD='$password'; END\\\"; sqlcmd -S localhost -U $adminUser -P $adminPass -b -Q \\\"USE [$dbName]; IF NOT EXISTS(SELECT * FROM sys.database_principals WHERE name='$dbUser') BEGIN CREATE USER [$dbUser] FOR LOGIN [$dbUser]; ALTER ROLE db_owner ADD MEMBER [$dbUser]; END;\\\"\""
-    }
-SETTINGS
+  # Disk Config (Passed from locals)
+  data_disks          = local.sql_data_disks
 }
 
 # --- ACR ---
@@ -348,7 +316,7 @@ module "key_vault" {
     # Infrastructure Computed Secrets
     "StorageAccount-AccountKey"         = module.storage_account.primary_access_key
     "AppInsights-ConnectionString"      = azurerm_application_insights.appinsights.connection_string
-    "ConnectionStrings-DefaultConnection" = "Data Source=tcp:${azurerm_windows_virtual_machine.vm_sql.private_ip_address},1433;Initial Catalog=${var.client_name}DB;User Id=${var.client_name}_app_user;Password=${var.app_sql_password};MultipleActiveResultSets=True;TrustServerCertificate=True;"
+    "ConnectionStrings-DefaultConnection" = "Data Source=tcp:${module.sql_infrastructure.private_ip_address},1433;Initial Catalog=${var.client_name}DB;User Id=${var.client_name}_app_user;Password=${var.app_sql_password};MultipleActiveResultSets=True;TrustServerCertificate=True;"
   }
 }
 
@@ -360,7 +328,7 @@ resource "azurerm_role_assignment" "kv_admin_rbac" {
 resource "azurerm_role_assignment" "vm_kv_access" {
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Secrets User"
-  principal_id         = azurerm_windows_virtual_machine.vm_sql.identity[0].principal_id
+  principal_id = module.sql_infrastructure.identity_principal_id
 }
 
 

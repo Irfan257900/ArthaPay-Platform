@@ -1,7 +1,7 @@
 # --- Virtual Machine Outputs ---
 output "vm_name" {
   description = "Name of the SQL Database VM"
-  value       = azurerm_windows_virtual_machine.vm_sql.name
+  value = module.sql_infrastructure.vm_name
 }
 
 output "vm_rg_name" {
