@@ -38,3 +38,13 @@ variable "dotnet_version" {
   description = "The version of the .NET stack for the function app (e.g., '8.0' for Linux)."
   type        = string
 }
+variable "key_vault_id" {
+  description = "ID of the Key Vault to grant the Function access to"
+  type        = string
+}
+
+variable "app_settings" {
+  description = "Map of application settings"
+  type        = map(string)
+  default     = {}
+}

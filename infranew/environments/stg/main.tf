@@ -252,6 +252,44 @@ resource "azurerm_service_plan" "windows_plan" {
   tags                = local.common_tags
 }
 
+# ==============================================================================
+#  FUNCTION APPS (Modularized)
+# ==============================================================================
+
+# Map internal keys (marketdata) to Display Name Suffixes (Marketdata)
+locals {
+  # Defines the suffix for each function: 
+  # "marketdata" -> "Artha-tst-Marketdata"
+  # "subscriber" -> "Artha-tst-Subscriber"
+  # "sweep"      -> "Artha-tst-Sweep"
+  func_name_suffixes = {
+    "marketdata" = "Marketdata"
+    "subscriber" = "Subscriber"
+    "sweep"      = "Sweep"
+  }
+}
+
+module "function_apps" {
+  source   = "../../modules/function_app"
+  for_each = toset(local.function_config_keys) # ["marketdata", "subscriber", "sweep"]
+
+  # 1. Dynamic Naming: Prefix + Suffix from map
+  function_app_name          = "${local._name_prefix}-${local.func_name_suffixes[each.key]}"
+  
+  location                   = azurerm_resource_group.rg_apps.location
+  resource_group_name        = azurerm_resource_group.rg_apps.name
+  service_plan_id            = azurerm_service_plan.windows_plan.id
+  storage_account_name       = module.storage_account.name
+  storage_account_access_key = module.storage_account.primary_access_key
+  key_vault_id               = module.key_vault.id # Auto-grants access
+  tags                       = local.common_tags
+
+  # 2. Dynamic Configuration: Pulls from the config module
+  app_settings               = module.function_app_configuration[each.key].app_settings
+  
+  dotnet_version             = "v8.0"
+}
+
 # --- SERVICES ---
 module "storage_account" {
   source               = "../../modules/storage_account"
@@ -262,12 +300,57 @@ module "storage_account" {
 }
 
 module "service_bus" {
-  source                       = "../../modules/service_bus"
+  source                     = "../../modules/service_bus"
   service_bus_namespace_name = local.service_bus_namespace_name
-  location                     = azurerm_resource_group.rg_apps.location
-  resource_group_name          = azurerm_resource_group.rg_apps.name
-  sku                          = "Standard"
-  tags                         = local.common_tags
+  location                   = azurerm_resource_group.rg_apps.location
+  resource_group_name        = azurerm_resource_group.rg_apps.name
+  sku                        = "Standard"
+  tags                       = local.common_tags
+
+  # --- 1. QUEUES ---
+  queues = {
+    "processing-queue"        = { partitioning_enabled = true, requires_session = true }
+    "cardsqueue"              = { partitioning_enabled = true, requires_session = true }
+    "depositandwithdrawqueue" = { partitioning_enabled = true, requires_session = true }
+    "loyaltyprogram"          = { partitioning_enabled = true, requires_session = true }
+    "orderqueue"              = { partitioning_enabled = true, requires_session = true }
+    "buyandsellqueue"         = { partitioning_enabled = true, requires_session = true }
+  }
+
+  # --- 2. TOPICS ---
+  topics = {
+    "market-data-events"             = { partitioning_enabled = true }
+    "amlriskscore"                   = { partitioning_enabled = true }
+    "auditlogs"                      = { partitioning_enabled = true }
+    "emailnotifications"             = { partitioning_enabled = true }
+    "fillgasfee"                     = { partitioning_enabled = true }
+    "kycverification"                = { partitioning_enabled = true }
+    "merchantwalletsVerification"    = { partitioning_enabled = true }
+    "mestasendercreation"            = { partitioning_enabled = true }
+    "mobilenotifications"            = { partitioning_enabled = true }
+    "aveniasubaccountcreation"       = { partitioning_enabled = true }
+    "kycandkybverification"          = { partitioning_enabled = true }
+    "payeesonbankaccount"            = { partitioning_enabled = true }
+    "updatecustomeraddressandstatus" = { partitioning_enabled = true }
+    "BatchPayOutTransactions"        = { partitioning_enabled = true }
+  }
+
+  # --- 3. SUBSCRIPTIONS ---
+  # Format: "SubscriptionName" = { topic_name = "TopicName", ... }
+  subscriptions = {
+    "subscriber-service"                       = { topic_name = "market-data-events",             max_delivery_count = 10, requires_session = true }
+    "sub-processor-aml"                        = { topic_name = "amlriskscore",                   max_delivery_count = 10, requires_session = true }
+    "sub-processor-audit"                      = { topic_name = "auditlogs",                      max_delivery_count = 10, requires_session = true }
+    "sub-processor-email"                      = { topic_name = "emailnotifications",             max_delivery_count = 10, requires_session = true }
+    "sub-processor-gas"                        = { topic_name = "fillgasfee",                     max_delivery_count = 10, requires_session = true }
+    "sub-processor-kyc"                        = { topic_name = "kycverification",                max_delivery_count = 10, requires_session = true }
+    "sub-processor-merchant"                   = { topic_name = "merchantwalletsVerification",    max_delivery_count = 10, requires_session = true }
+    "sub-processor-mesta"                      = { topic_name = "mestasendercreation",            max_delivery_count = 10, requires_session = true }
+    "sub-processor-mobile"                     = { topic_name = "mobilenotifications",            max_delivery_count = 10, requires_session = true }
+    "AveniaSubAccountCreationSubscription"     = { topic_name = "aveniasubaccountcreation",       max_delivery_count = 10, requires_session = true }
+    "PayeesOnBankAccountSubscription"          = { topic_name = "payeesonbankaccount",            max_delivery_count = 10, requires_session = true }
+    "updatecustomeraddressandstatussubscriber" = { topic_name = "updatecustomeraddressandstatus", max_delivery_count = 10, requires_session = true }
+  }
 }
 
 data "azurerm_servicebus_namespace" "sb_lookup" {
@@ -275,227 +358,6 @@ data "azurerm_servicebus_namespace" "sb_lookup" {
   resource_group_name = azurerm_resource_group.rg_apps.name
   depends_on          = [module.service_bus]
 }
-
-# ==============================================================================
-#  1. QUEUES (All Sessions Enabled - Matches TST)
-# ==============================================================================
-
-resource "azurerm_servicebus_queue" "q_processing" {
-  name                = "processing-queue"
-  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning = true  # FIX: Reverted to enable_partitioning
-  requires_session    = true 
-}
-
-resource "azurerm_servicebus_queue" "q_cards" {
-  name                = "cardsqueue"
-  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning = true
-  requires_session    = true
-}
-
-resource "azurerm_servicebus_queue" "q_deposit" {
-  name                = "depositandwithdrawqueue"
-  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning = true
-  requires_session    = true
-}
-
-resource "azurerm_servicebus_queue" "q_loyalty" {
-  name                = "loyaltyprogram"
-  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning = true
-  requires_session    = true
-}
-
-resource "azurerm_servicebus_queue" "q_order" {
-  name                = "orderqueue"
-  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning = true
-  requires_session    = true
-}
-
-resource "azurerm_servicebus_queue" "q_buysell" {
-  name                = "buyandsellqueue"
-  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning = true
-  requires_session    = true
-}
-
-# ==============================================================================
-#  2. TOPICS & SUBSCRIPTIONS
-# ==============================================================================
-
-# --- A. Existing Market Topic ---
-resource "azurerm_servicebus_topic" "t_market" {
-  name                = "market-data-events"
-  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning = true
-}
-resource "azurerm_servicebus_subscription" "sub_market" {
-  name               = "subscriber-service"
-  topic_id           = azurerm_servicebus_topic.t_market.id
-  max_delivery_count = 10
-  requires_session   = true 
-}
-
-# --- B. AML Risk Score ---
-resource "azurerm_servicebus_topic" "t_aml" {
-  name                = "amlriskscore"
-  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning = true
-}
-resource "azurerm_servicebus_subscription" "sub_aml" {
-  name               = "sub-processor"
-  topic_id           = azurerm_servicebus_topic.t_aml.id
-  max_delivery_count = 10
-  requires_session   = true
-}
-
-# --- C. Audit Logs ---
-resource "azurerm_servicebus_topic" "t_audit" {
-  name                = "auditlogs"
-  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning = true
-}
-resource "azurerm_servicebus_subscription" "sub_audit" {
-  name               = "sub-processor"
-  topic_id           = azurerm_servicebus_topic.t_audit.id
-  max_delivery_count = 10
-  requires_session   = true
-}
-
-# --- D. Email Notifications ---
-resource "azurerm_servicebus_topic" "t_email" {
-  name                = "emailnotifications"
-  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning = true
-}
-resource "azurerm_servicebus_subscription" "sub_email" {
-  name               = "sub-processor"
-  topic_id           = azurerm_servicebus_topic.t_email.id
-  max_delivery_count = 10
-  requires_session   = true
-}
-
-# --- E. Fill Gas Fee ---
-resource "azurerm_servicebus_topic" "t_gas" {
-  name                = "fillgasfee"
-  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning = true
-}
-resource "azurerm_servicebus_subscription" "sub_gas" {
-  name               = "sub-processor"
-  topic_id           = azurerm_servicebus_topic.t_gas.id
-  max_delivery_count = 10
-  requires_session   = true
-}
-
-# --- F. KYC Verification ---
-resource "azurerm_servicebus_topic" "t_kyc" {
-  name                = "kycverification"
-  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning = true
-}
-resource "azurerm_servicebus_subscription" "sub_kyc" {
-  name               = "sub-processor"
-  topic_id           = azurerm_servicebus_topic.t_kyc.id
-  max_delivery_count = 10
-  requires_session   = true
-}
-
-# --- G. Merchant Wallets ---
-resource "azurerm_servicebus_topic" "t_merchant" {
-  name                = "merchantwalletsVerification"
-  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning = true
-}
-resource "azurerm_servicebus_subscription" "sub_merchant" {
-  name               = "sub-processor"
-  topic_id           = azurerm_servicebus_topic.t_merchant.id
-  max_delivery_count = 10
-  requires_session   = true
-}
-
-# --- H. Mesta Sender Creation ---
-resource "azurerm_servicebus_topic" "t_mesta" {
-  name                = "mestasendercreation"
-  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning = true
-}
-resource "azurerm_servicebus_subscription" "sub_mesta" {
-  name               = "sub-processor"
-  topic_id           = azurerm_servicebus_topic.t_mesta.id
-  max_delivery_count = 10
-  requires_session   = true
-}
-
-# --- I. Mobile Notifications ---
-resource "azurerm_servicebus_topic" "t_mobile" {
-  name                = "mobilenotifications"
-  namespace_id        = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning = true
-}
-resource "azurerm_servicebus_subscription" "sub_mobile" {
-  name               = "sub-processor"
-  topic_id           = azurerm_servicebus_topic.t_mobile.id
-  max_delivery_count = 10
-  requires_session   = true
-}
-
-# --- J. Avenia Sub Account Creation ---
-resource "azurerm_servicebus_topic" "t_avenia" {
-  name                 = "aveniasubaccountcreation"
-  namespace_id         = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning  = true
-}
-resource "azurerm_servicebus_subscription" "sub_avenia" {
-  name               = "AveniaSubAccountCreationSubscription"
-  topic_id           = azurerm_servicebus_topic.t_avenia.id
-  max_delivery_count = 10
-  requires_session   = true 
-}
-
-# --- K. KYC & KYB Verification ---
-resource "azurerm_servicebus_topic" "t_kyc_kyb" {
-  name                 = "kycandkybverification"
-  namespace_id         = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning  = true
-}
-
-# --- L. Payees On Bank Account ---
-resource "azurerm_servicebus_topic" "t_payees" {
-  name                 = "payeesonbankaccount"
-  namespace_id         = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning  = true
-}
-resource "azurerm_servicebus_subscription" "sub_payees" {
-  name               = "PayeesOnBankAccountSubscription"
-  topic_id           = azurerm_servicebus_topic.t_payees.id
-  max_delivery_count = 10
-  requires_session   = true
-}
-
-# --- M. Update Customer Address And Status ---
-resource "azurerm_servicebus_topic" "t_cust_update" {
-  name                 = "updatecustomeraddressandstatus"
-  namespace_id         = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning  = true
-}
-resource "azurerm_servicebus_subscription" "sub_cust_update" {
-  name               = "updatecustomeraddressandstatussubscriber"
-  topic_id           = azurerm_servicebus_topic.t_cust_update.id
-  max_delivery_count = 10
-  requires_session   = true
-}
-
-# --- N. Batch PayOut Transactions ---
-resource "azurerm_servicebus_topic" "t_batch_payout" {
-  name                 = "BatchPayOutTransactions"
-  namespace_id         = data.azurerm_servicebus_namespace.sb_lookup.id
-  enable_partitioning  = true
-}
-# ... (Add other queues if STG logic mirrors TST logic)
 
 # --- APP INSIGHTS ---
 resource "azurerm_log_analytics_workspace" "law" {
@@ -680,7 +542,7 @@ module "app_configuration" {
   }
 
   # --- 3. STANDARD CONFIGURATIONS ---
-  sb_connection_string = data.azurerm_servicebus_namespace.sb_lookup.default_primary_connection_string
+  sb_connection_string = module.service_bus.default_primary_connection_string
   auth0_domain         = var.auth0_domain
   auth0_client_id      = var.auth0_client_id
   auth0_client_secret  = var.auth0_client_secret

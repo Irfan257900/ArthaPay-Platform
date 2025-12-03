@@ -1,4 +1,11 @@
 output "name" {
-  description = "The name of the created function app."
-  value       = azurerm_windows_function_app.function_app.name
+  value = azurerm_windows_function_app.func.name
+}
+
+output "id" {
+  value = azurerm_windows_function_app.func.id
+}
+
+output "principal_id" {
+  value = azurerm_windows_function_app.func.identity[0].principal_id
 }

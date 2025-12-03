@@ -533,60 +533,7 @@ resource "azurerm_windows_web_app" "backend_apps" {
   }
 }
 
-# --- FIXED FUNCTION APPS (.NET) ---
-resource "azurerm_windows_function_app" "func_market" {
-  name                = local.func_market_name
-  location            = azurerm_resource_group.rg_apps.location
-  resource_group_name = azurerm_resource_group.rg_apps.name
-  service_plan_id     = azurerm_service_plan.windows_plan.id
-  storage_account_name       = module.storage_account.name
-  storage_account_access_key = module.storage_account.primary_access_key
-  tags                = local.common_tags
-  app_settings = module.function_app_configuration["marketdata"].app_settings
-  
-  site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
-  }
-}
 
-resource "azurerm_windows_function_app" "func_subscriber" {
-  name                = local.func_subscriber_name
-  location            = azurerm_resource_group.rg_apps.location
-  resource_group_name = azurerm_resource_group.rg_apps.name
-  service_plan_id     = azurerm_service_plan.windows_plan.id
-  storage_account_name       = module.storage_account.name
-  storage_account_access_key = module.storage_account.primary_access_key
-  tags                = local.common_tags
-  app_settings = module.function_app_configuration["subscriber"].app_settings
-  
-  site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
-  }
-}
-
-resource "azurerm_windows_function_app" "func_sweep" {
-  name                = local.func_sweep_name
-  location            = azurerm_resource_group.rg_apps.location
-  resource_group_name = azurerm_resource_group.rg_apps.name
-  service_plan_id     = azurerm_service_plan.windows_plan.id
-  storage_account_name       = module.storage_account.name
-  storage_account_access_key = module.storage_account.primary_access_key
-  tags                = local.common_tags
-  app_settings = module.function_app_configuration["sweep"].app_settings
-  identity {
-    type = "SystemAssigned"
-  }
-  
-  site_config {
-    application_stack {
-        dotnet_version = "v8.0"
-    }
-  }
-}
 
 # --- Supporting Services ---
 module "storage_account" {
@@ -596,6 +543,8 @@ module "storage_account" {
   resource_group_name  = azurerm_resource_group.rg_apps.name
   tags                 = local.common_tags
 }
+
+# SERVICE BUS DYNAMIC CREATION (TOPICS, QUEUE, SUBCRIPTIONS)
 
 module "service_bus" {
   source                     = "../../modules/service_bus"
@@ -724,10 +673,4 @@ resource "azurerm_role_assignment" "webapp_kv_access" {
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Secrets User" # This is the specific role needed
   principal_id         = each.value.identity[0].principal_id
-}
-resource "azurerm_role_assignment" "func_sweep_kv" { # Was "func_pub_kv"
-  scope                = module.key_vault.id
-  role_definition_name = "Key Vault Secrets User"
-  principal_id         = azurerm_windows_function_app.func_sweep.identity[0].principal_id # Updated reference
-  
 }
