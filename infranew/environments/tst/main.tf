@@ -592,5 +592,5 @@ resource "azurerm_role_assignment" "webapp_kv_access" {
   for_each             = azurerm_windows_web_app.backend_apps
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Secrets User" # This is the specific role needed
-  principal_id = module.sql_infrastructure.identity_principal_id
+  principal_id         = each.value.identity[0].principal_id
 }
