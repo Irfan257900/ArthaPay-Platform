@@ -10,7 +10,10 @@ variable "vm_size" {
   default = "Standard_B2ms"
 }
 variable "admin_username" { type = string }
-variable "admin_password" { type = string, sensitive = true }
+
+variable "admin_password" { 
+  type = string
+  sensitive = true }
 
 # SQL Specifics
 variable "client_name" { 
