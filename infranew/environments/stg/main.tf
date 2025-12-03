@@ -124,19 +124,20 @@ module "networking" {
 }
 
 # ==============================================================================
-#  SQL INFRASTRUCTURE MODULE
+#  SQL INFRASTRUCTURE MODULE (STG)
 # ==============================================================================
 module "sql_infrastructure" {
   source              = "../../modules/sql_infrastructure"
   
-  vm_name             = local.vm_name
-  location            = azurerm_resource_group.rg_infra.location
-  resource_group_name = azurerm_resource_group.rg_infra.name
+  # STG uses 'sql_vm_name' and 'rg_vm', NOT 'vm_name' and 'rg_infra'
+  vm_name             = local.sql_vm_name
+  location            = azurerm_resource_group.rg_vm.location
+  resource_group_name = azurerm_resource_group.rg_vm.name
   tags                = local.common_tags
-  subnet_id           = module.networking.subnet_ids["vm-subnet"]
+  subnet_id           = module.networking.subnet_ids["sqlVmSubnet"]
   
   # Size & Creds
-  vm_size             = "Standard_B2ms"
+  vm_size             = "Standard_B1ms" # STG specific size
   admin_username      = var.vm_admin_username
   admin_password      = var.vm_admin_password
   
@@ -144,7 +145,7 @@ module "sql_infrastructure" {
   client_name         = var.client_name
   app_sql_password    = var.app_sql_password
 
-  # Disk Config (Passed from locals)
+  # Disk Config
   data_disks          = local.sql_data_disks
 }
 
@@ -367,7 +368,8 @@ module "key_vault" {
     # Infrastructure Computed Secrets
     "StorageAccount-AccountKey"         = module.storage_account.primary_access_key
     "AppInsights-ConnectionString"      = azurerm_application_insights.appinsights.connection_string
-    "ConnectionStrings-DefaultConnection" = "Data Source=tcp:${azurerm_windows_virtual_machine.vm_sql.private_ip_address},1433;Initial Catalog=${var.client_name}DB;User Id=${var.client_name}_app_user;Password=${var.app_sql_password};MultipleActiveResultSets=True;TrustServerCertificate=True;"
+    # CHANGE THIS LINE: Use module.sql_infrastructure.private_ip_address
+    "ConnectionStrings-DefaultConnection" = "Data Source=tcp:${module.sql_infrastructure.private_ip_address},1433;Initial Catalog=${var.client_name}DB;User Id=${var.client_name}_app_user;Password=${var.app_sql_password};MultipleActiveResultSets=True;TrustServerCertificate=True;"
   }
 }
 
@@ -379,7 +381,9 @@ resource "azurerm_role_assignment" "kv_admin_rbac" {
 resource "azurerm_role_assignment" "vm_kv_access" {
   scope                = module.key_vault.id
   role_definition_name = "Key Vault Secrets User"
-  principal_id         = azurerm_windows_virtual_machine.vm_sql.identity[0].principal_id
+  
+  # CHANGE THIS LINE: Use module.sql_infrastructure.identity_principal_id
+  principal_id         = module.sql_infrastructure.identity_principal_id
 }
 
 # --- SECRETS (Copy of TST list) ---
