@@ -305,17 +305,7 @@ resource "azurerm_application_insights" "appinsights" {
   tags                = local.common_tags
 }
 
-# --- FIXED SECRET RESOURCE ---
-resource "azurerm_key_vault_secret" "app_insights_conn" {
-  name         = "AppInsights-ConnectionString"
-  
-  # OLD (Error): value = module.app_platform.app_insights_connection_string
-  # NEW (Fixed): Reference the resource directly
-  value        = azurerm_application_insights.appinsights.connection_string
-  
-  key_vault_id = module.key_vault.id
-  depends_on   = [azurerm_role_assignment.kv_admin_rbac]
-}
+
 
 # ==============================================================================
 #  APP CONFIGURATION MODULE (REPLACES MONOLITHIC BLOCK)
@@ -896,11 +886,6 @@ module "key_vault" {
   }
 }
 
-resource "azurerm_role_assignment" "kv_admin_rbac" {
-  scope                = module.key_vault.id
-  role_definition_name = "Key Vault Administrator"
-  principal_id         = data.azurerm_client_config.current.object_id
-}
 
 # Grant SQL VM Access to Key Vault
 resource "azurerm_role_assignment" "vm_kv_access" {
