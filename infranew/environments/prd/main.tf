@@ -469,8 +469,8 @@ resource "azurerm_linux_web_app" "container_apps" {
       "DOCKER_REGISTRY_SERVER_PASSWORD" = azurerm_container_registry.acr.admin_password
       
       # Secrets that might be needed specifically for Frontend containers (Admin/User) if they aren't in the backend_modules list
-      "AUTH0_DOMAIN"       = "${azurerm_key_vault_secret.auth0_domain.id}"
-      "MAILGUN_API_KEY"    = "${azurerm_key_vault_secret.mailgun_key.id}"
+      "AUTH0_DOMAIN"       = module.key_vault.secret_ids["Auth0-Domain"]
+      "MAILGUN_API_KEY"    = module.key_vault.secret_ids["Mailgun-ApiKey"]
     }
   )
 }
