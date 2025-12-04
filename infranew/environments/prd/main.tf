@@ -122,26 +122,32 @@ module "networking" {
 # ==============================================================================
 #  SQL INFRASTRUCTURE MODULE
 # ==============================================================================
+# ==============================================================================
+#  SQL INFRASTRUCTURE MODULE (PRD FIXED)
+# ==============================================================================
 module "sql_infrastructure" {
   source              = "../../modules/sql_infrastructure"
   
-  vm_name             = local.vm_name
-  location            = azurerm_resource_group.rg_infra.location
-  resource_group_name = azurerm_resource_group.rg_infra.name
+  # FIX 1: Use local.sql_vm_name (PRD name), NOT local.vm_name (TST name)
+  vm_name             = local.sql_vm_name
+  
+  # FIX 2: Use rg_vm (PRD RG), NOT rg_infra (TST RG)
+  location            = azurerm_resource_group.rg_vm.location
+  resource_group_name = azurerm_resource_group.rg_vm.name
+  
   tags                = local.common_tags
-  subnet_id           = module.networking.subnet_ids["vm-subnet"]
+  subnet_id           = module.networking.subnet_ids["sqlVmSubnet"]
   
   # Size & Creds
-  vm_size             = "Standard_B2ms"
+  vm_size             = "Standard_B2ms" # PRD Size
   admin_username      = var.vm_admin_username
   admin_password      = var.vm_admin_password
   
-  # DB Setup Inputs
   client_name         = var.client_name
   app_sql_password    = var.app_sql_password
 
-  # Disk Config (Passed from locals)
-  data_disks          = local.sql_data_disks
+  # Ensure you defined this in locals!
+  data_disks          = local.sql_data_disks 
 }
 
 # --- ACR ---
