@@ -126,6 +126,7 @@ resource "azurerm_mssql_virtual_machine" "sqlvm" {
     day_of_week                            = "Sunday"
     maintenance_window_duration_in_minutes = 60
     maintenance_window_starting_hour       = 2
+  }
 }
 
 # --- 9. DB AUTO-CREATION SCRIPT ---
